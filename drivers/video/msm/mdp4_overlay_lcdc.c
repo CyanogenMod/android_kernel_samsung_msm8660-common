@@ -188,8 +188,8 @@ int mdp_lcdc_on(struct platform_device *pdev)
 		var->lower_margin, var->vsync_len, var->upper_margin,
 		var->pixclock/1000/1000);
 
-	lcdc_width = var->xres;
-	lcdc_height = var->yres;
+	lcdc_width = var->xres + mfd->panel_info.lcdc.xres_pad;
+	lcdc_height = var->yres + mfd->panel_info.lcdc.yres_pad;
 	lcdc_bpp = mfd->panel_info.bpp;
 
 	hsync_period =
