@@ -212,6 +212,15 @@ static inline void fpu_fxsave(struct fpu *fpu)
 
 #endif	/* CONFIG_X86_64 */
 
+/* We need a safe address that is cheap to find and that is already
+   in L1 during context switch. The best choices are unfortunately
+   different for UP and SMP */
+#ifdef CONFIG_SMP
+#define safe_address (__per_cpu_offset[0])
+#else
+#define safe_address (__get_cpu_var(kernel_cpustat).cpustat[CPUTIME_USER])
+#endif
+
 /*
  * These must be called with preempt disabled. Returns
  * 'true' if the FPU state is still intact.
