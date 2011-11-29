@@ -1351,6 +1351,8 @@ static ssize_t enable_store(struct device *pdev, struct device_attribute *attr,
 	printk(KERN_DEBUG "usb: %s enabled=%d, !dev->enabled=%d\n",
 			__func__, enabled, !dev->enabled);
 	if (enabled && !dev->enabled) {
+		cdev->next_string_id = 0;
+		/* update values in composite driver's copy of device descriptor */
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 		struct android_usb_function *f;
 #endif
