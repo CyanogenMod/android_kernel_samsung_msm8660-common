@@ -321,6 +321,27 @@ u32 ddl_encode_start(u32 *ddl_handle, void *client_data)
 				encoder->seq_header.virtual_base_addr,
 				encoder->seq_header.buffer_size,
 				ION_IOC_CLEAN_INV_CACHES);
+	if (encoder->slice_delivery_info.enable) {
+		DDL_MSG_LOW("%s: slice mode allocate memory for struct\n",
+					__func__);
+		ptr = ddl_pmem_alloc(&encoder->batch_frame.slice_batch_in,
+				DDL_ENC_SLICE_BATCH_INPSTRUCT_SIZE,
+				DDL_LINEAR_BUFFER_ALIGN_BYTES);
+		if (ptr) {
+			ptr = ddl_pmem_alloc(
+				&encoder->batch_frame.slice_batch_out,
+				DDL_ENC_SLICE_BATCH_OUTSTRUCT_SIZE,
+				DDL_LINEAR_BUFFER_ALIGN_BYTES);
+		}
+		if (!ptr) {
+			ddl_pmem_free(&encoder->batch_frame.slice_batch_in);
+			ddl_pmem_free(&encoder->batch_frame.slice_batch_out);
+			ddl_free_enc_hw_buffers(ddl);
+			ddl_pmem_free(&encoder->seq_header);
+			DDL_MSG_ERROR("ddlEncStart:SeqHdrAllocFailed");
+			return VCD_ERR_ALLOC_FAIL;
+		}
+	}
 	if (!ddl_take_command_channel(ddl_context, ddl, client_data))
 		return VCD_ERR_BUSY;
 	ddl_vidc_channel_set(ddl);

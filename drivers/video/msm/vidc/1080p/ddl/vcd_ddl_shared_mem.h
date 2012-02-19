@@ -190,5 +190,16 @@ void vidc_sm_set_encoder_batch_config(struct ddl_buf_addr *shared_mem,
 void vidc_sm_get_encoder_batch_output_size(struct ddl_buf_addr *shared_mem,
 	u32 *output_buffer_size);
 void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
-	u32 timeout);
+        u32 timeout);
+void vidc_sm_set_encoder_slice_batch_int_ctrl(struct ddl_buf_addr *shared_mem,
+    u32 slice_batch_int_enable);
+void vidc_sm_get_num_slices_comp(struct ddl_buf_addr *shared_mem,
+    u32 *num_slices_comp);
+void vidc_sm_set_encoder_batch_config(struct ddl_buf_addr *shared_mem,
+        u32 num_slices,
+        u32 input_addr, u32 output_addr,
+        u32 output_buffer_size);
+void vidc_sm_get_encoder_batch_output_size(struct ddl_buf_addr *shared_mem,
+        u32 *output_buffer_size);
+
 #endif

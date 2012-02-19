@@ -793,48 +793,22 @@ void vidc_sm_get_aspect_ratio_info(struct ddl_buf_addr *shared_mem,
 }
 
 void vidc_sm_set_encoder_slice_batch_int_ctrl(struct ddl_buf_addr *shared_mem,
-	u32 slice_batch_int_enable)
+        u32 slice_batch_int_enable)
 {
-	u32 slice_batch_int_ctrl = VIDC_SETFIELD((slice_batch_int_enable) ?
-				1 : 0,
-				VIDC_SM_ENC_EXT_CTRL_HEC_ENABLE_SHFT,
-				VIDC_SM_ENC_EXT_CTRL_HEC_ENABLE_BMSK);
-	DDL_MEM_WRITE_32(shared_mem,
-			VIDC_SM_ENC_SLICE_BATCH_INT_CTRL_ADDR,
-			slice_batch_int_ctrl);
+    u32 slice_batch_int_ctrl = VIDC_SETFIELD((slice_batch_int_enable) ?
+            1 : 0,
+            VIDC_SM_ENC_EXT_CTRL_HEC_ENABLE_SHFT,
+            VIDC_SM_ENC_EXT_CTRL_HEC_ENABLE_BMSK);
+    DDL_MEM_WRITE_32(shared_mem,
+            VIDC_SM_ENC_SLICE_BATCH_INT_CTRL_ADDR,
+            slice_batch_int_ctrl);
 }
 
 void vidc_sm_get_num_slices_comp(struct ddl_buf_addr *shared_mem,
-	u32 *num_slices_comp)
+        u32 *num_slices_comp)
 {
-	*num_slices_comp = DDL_MEM_READ_32(shared_mem,
-				VIDC_SM_ENC_NUM_OF_SLICE_COMP_ADDR);
-}
-
-void vidc_sm_set_encoder_batch_config(struct ddl_buf_addr *shared_mem,
-				u32 num_slices,
-				u32 input_addr, u32 output_addr,
-				u32 output_buffer_size)
-{
-	DDL_MEM_WRITE_32(shared_mem,
-			VIDC_SM_ENC_NUM_OF_SLICE_ADDR,
-			num_slices);
-	DDL_MEM_WRITE_32(shared_mem,
-			VIDC_SM_BATCH_INPUT_ADDR,
-			input_addr);
-	DDL_MEM_WRITE_32(shared_mem,
-			VIDC_SM_BATCH_OUTPUT_ADDR,
-			output_addr);
-	DDL_MEM_WRITE_32(shared_mem,
-			VIDC_SM_BATCH_OUTPUT_SIZE_ADDR,
-			output_buffer_size);
-}
-
-void vidc_sm_get_encoder_batch_output_size(struct ddl_buf_addr *shared_mem,
-	u32 *output_buffer_size)
-{
-	*output_buffer_size = DDL_MEM_READ_32(shared_mem,
-			VIDC_SM_BATCH_OUTPUT_SIZE_ADDR);
+    *num_slices_comp = DDL_MEM_READ_32(shared_mem,
+            VIDC_SM_ENC_NUM_OF_SLICE_COMP_ADDR);
 }
 
 void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
@@ -842,4 +816,30 @@ void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
 {
 	DDL_MEM_WRITE_32(shared_mem, VIDC_SM_TIMEOUT_VALUE_ADDR,
 			timeout);
+}
+
+void vidc_sm_set_encoder_batch_config(struct ddl_buf_addr *shared_mem,
+        u32 num_slices,
+        u32 input_addr, u32 output_addr,
+        u32 output_buffer_size)
+{
+    DDL_MEM_WRITE_32(shared_mem,
+            VIDC_SM_ENC_NUM_OF_SLICE_ADDR,
+            num_slices);
+    DDL_MEM_WRITE_32(shared_mem,
+            VIDC_SM_BATCH_INPUT_ADDR,
+            input_addr);
+    DDL_MEM_WRITE_32(shared_mem,
+            VIDC_SM_BATCH_OUTPUT_ADDR,
+            output_addr);
+    DDL_MEM_WRITE_32(shared_mem,
+            VIDC_SM_BATCH_OUTPUT_SIZE_ADDR,
+            output_buffer_size);
+}
+
+void vidc_sm_get_encoder_batch_output_size(struct ddl_buf_addr *shared_mem,
+        u32 *output_buffer_size)
+{
+    *output_buffer_size = DDL_MEM_READ_32(shared_mem,
+            VIDC_SM_BATCH_OUTPUT_SIZE_ADDR);
 }
