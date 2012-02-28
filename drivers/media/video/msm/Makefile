@@ -70,3 +70,5 @@ else
   obj-$(CONFIG_SENSOR_S5K5BAFX) += sec_s5k5bafx.o
 endif
 obj-$(CONFIG_FLASH_TORCH_MODE) += ledflash_torch.o
+obj-$(CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE) += msm_v4l2_video.o
+
