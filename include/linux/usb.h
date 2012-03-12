@@ -500,7 +500,7 @@ struct usb_device {
 	void (*hcd_suspend) (void *hcd_priv);
 #endif
 	int maxchild;
-	struct usb_device *children[USB_MAXCHILDREN];
+	struct usb_device **children;
 
 	u32 quirks;
 	atomic_t urbnum;
