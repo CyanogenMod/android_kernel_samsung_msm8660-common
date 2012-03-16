@@ -349,6 +349,18 @@ static ssize_t hdmi_common_rda_edid_modes(struct device *dev,
 	return ret;
 }
 
+static ssize_t hdmi_common_rda_edid_physical_address(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = snprintf(buf, PAGE_SIZE, "%d\n",
+		external_common_state->physical_address);
+
+	DEV_DBG("%s: '%d'\n", __func__,
+			external_common_state->physical_address);
+	return ret;
+}
+
+
 static ssize_t hdmi_common_rda_edid_scan_info(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -357,7 +369,6 @@ static ssize_t hdmi_common_rda_edid_scan_info(struct device *dev,
 		external_common_state->it_scan_info,
 		external_common_state->ce_scan_info);
 	DEV_DBG("%s: '%s'\n", __func__, buf);
-
 	return ret;
 }
 
@@ -797,6 +808,8 @@ static DEVICE_ATTR(edid_modes, S_IRUGO, hdmi_common_rda_edid_modes, NULL);
 static DEVICE_ATTR(hpd, S_IRUGO | S_IWUGO, hdmi_common_rda_hpd,
 	hdmi_common_wta_hpd);
 static DEVICE_ATTR(hdcp, S_IRUGO, hdmi_common_rda_hdcp, NULL);
+static DEVICE_ATTR(pa, S_IRUGO,
+	hdmi_common_rda_edid_physical_address, NULL);
 static DEVICE_ATTR(scan_info, S_IRUGO,
 	hdmi_common_rda_edid_scan_info, NULL);
 static DEVICE_ATTR(vendor_name, S_IRUGO | S_IWUSR, hdmi_common_rda_vendor_name,
@@ -822,6 +835,7 @@ static struct attribute *external_common_fs_attrs[] = {
 	&dev_attr_edid_modes.attr,
 	&dev_attr_hdcp.attr,
 	&dev_attr_hpd.attr,
+	&dev_attr_pa.attr,
 	&dev_attr_scan_info.attr,
 	&dev_attr_vendor_name.attr,
 	&dev_attr_product_description.attr,
@@ -1104,7 +1118,9 @@ static uint32 hdmi_edid_extract_ieee_reg_id(const uint8 *in_buf)
 		return 0;
 
 	DEV_DBG("EDID: VSD PhyAddr=%04x, MaxTMDS=%dMHz\n",
-		((uint32)vsd[6] << 8) + (uint32)vsd[5], (uint32)vsd[7] * 5);
+		((uint32)vsd[4] << 8) + (uint32)vsd[5], (uint32)vsd[7] * 5);
+	external_common_state->physical_address =
+		((uint16)vsd[4] << 8) + (uint16)vsd[5];
 	return ((uint32)vsd[3] << 16) + ((uint32)vsd[2] << 8) + (uint32)vsd[1];
 }
 
