@@ -120,6 +120,8 @@ struct msm_sensor_fn_t {
 			uint16_t, uint32_t);
 	int32_t (*sensor_setting) (struct msm_sensor_ctrl_t *,
 			int update_type, int rt);
+	int32_t (*sensor_csi_setting) (struct msm_sensor_ctrl_t *,
+			int update_type, int rt);
 	int32_t (*sensor_set_sensor_mode)
 			(struct msm_sensor_ctrl_t *, int, int);
 	int32_t (*sensor_mode_init) (struct msm_sensor_ctrl_t *,
