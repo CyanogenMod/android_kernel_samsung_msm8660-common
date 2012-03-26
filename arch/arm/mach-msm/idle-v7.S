@@ -257,7 +257,7 @@ msm_pm_pa_to_va:
 	mrceq	p15, 7, r3, c15, c0, 2
 	biceq	r3, r3, #0x400
 	mcreq	p15, 7, r3, c15, c0, 2
-#endif	
+#endif
 #ifdef CONFIG_MSM_JTAG
 	stmfd   sp!, {lr}
 	bl      msm_jtag_restore_state
