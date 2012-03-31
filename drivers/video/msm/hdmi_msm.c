@@ -4765,11 +4765,10 @@ static int __devinit hdmi_msm_probe(struct platform_device *pdev)
 
 #ifdef QCT_SWITCH_STATE_CMD
 	/* Initialize hdmi node and register with switch driver */
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-	external_common_state->sdev.name = "hdmi_as_primary";
-#else
-	external_common_state->sdev.name = "hdmi";
-#endif
+	if (hdmi_prim_display)
+		external_common_state->sdev.name = "hdmi_as_primary";
+	else
+		external_common_state->sdev.name = "hdmi";
 	if (switch_dev_register(&external_common_state->sdev) < 0)
 		DEV_ERR("Hdmi switch registration failed\n");
 #else
