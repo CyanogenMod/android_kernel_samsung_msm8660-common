@@ -269,15 +269,6 @@ static void msm_dmov_clock_timer(unsigned long adm)
 	spin_unlock_irqrestore(&dmov_conf[adm].lock, irq_flags);
 }
 
-void msm_dmov_stop_cmd(unsigned id, struct msm_dmov_cmd *cmd, int graceful)
-{
-	int adm = DMOV_ID_TO_ADM(id);
-	int ch = DMOV_ID_TO_CHAN(id);
-	writel_relaxed((graceful << 31), DMOV_REG(DMOV_FLUSH0(ch), adm));
-	wmb();
-}
-EXPORT_SYMBOL(msm_dmov_stop_cmd);
-
 void msm_dmov_enqueue_cmd_ext(unsigned id, struct msm_dmov_cmd *cmd)
 {
 	unsigned long irq_flags;
@@ -332,16 +323,17 @@ void msm_dmov_enqueue_cmd(unsigned id, struct msm_dmov_cmd *cmd)
 }
 EXPORT_SYMBOL(msm_dmov_enqueue_cmd);
 
-void msm_dmov_flush(unsigned int id)
+void msm_dmov_flush(unsigned int id, int graceful)
 {
 	unsigned long irq_flags;
 	int ch = DMOV_ID_TO_CHAN(id);
 	int adm = DMOV_ID_TO_ADM(id);
+	int flush = graceful ? DMOV_FLUSH_TYPE : 0;
 	spin_lock_irqsave(&dmov_conf[adm].lock, irq_flags);
 	/* XXX not checking if flush cmd sent already */
 	if (!list_empty(&dmov_conf[adm].active_commands[ch])) {
 		PRINT_IO("msm_dmov_flush(%d), send flush cmd\n", id);
-		writel_relaxed(DMOV_FLUSH_TYPE, DMOV_REG(DMOV_FLUSH0(ch), adm));
+		writel_relaxed(flush, DMOV_REG(DMOV_FLUSH0(ch), adm));
 	}
 	/* spin_unlock_irqrestore has the necessary barrier */
 	spin_unlock_irqrestore(&dmov_conf[adm].lock, irq_flags);
