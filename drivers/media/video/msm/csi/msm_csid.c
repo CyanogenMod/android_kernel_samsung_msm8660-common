@@ -82,6 +82,20 @@ static int msm_csid_cid_lut(
 	return rc;
 }
 
+#if DBG_CSID
+static void msm_csid_set_debug_reg(void __iomem *csidbase,
+	struct msm_camera_csid_params *csid_params)
+{
+	uint32_t val = 0;
+	val = ((1 << csid_params->lane_cnt) - 1) << 20;
+	msm_camera_io_w(0x7f010800 | val, csidbase + CSID_IRQ_MASK_ADDR);
+	msm_camera_io_w(0x7f010800 | val, csidbase + CSID_IRQ_CLEAR_CMD_ADDR);
+}
+#else
+static void msm_csid_set_debug_reg(void __iomem *csidbase,
+	struct msm_camera_csid_params *csid_params) {}
+#endif
+
 static int msm_csid_config(struct csid_cfg_params *cfg_params)
 {
 	int rc = 0;
@@ -105,10 +119,8 @@ static int msm_csid_config(struct csid_cfg_params *cfg_params)
 	if (rc < 0)
 		return rc;
 
-	msm_io_w(0x7fF10800, csidbase + CSID_IRQ_MASK_ADDR);
-	msm_io_w(0x7fF10800, csidbase + CSID_IRQ_CLEAR_CMD_ADDR);
+	msm_csid_set_debug_reg(csidbase, csid_params);
 
-	msleep(20);
 	return rc;
 }
 
