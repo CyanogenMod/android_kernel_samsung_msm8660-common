@@ -1604,13 +1604,17 @@ void pm8921_bms_charging_end(int is_battery_full)
 		if (delta_fcc_uah < 0)
 			delta_fcc_uah = -delta_fcc_uah;
 
-		if (delta_fcc_uah * 100  <= (DELTA_FCC_PERCENT * fcc_uah)) {
-			pr_debug("delta_fcc=%d < %d percent of fcc=%d\n",
-				delta_fcc_uah, DELTA_FCC_PERCENT, fcc_uah);
-			last_real_fcc_mah = new_fcc_uah/1000;
-			last_real_fcc_batt_temp = batt_temp;
-			readjust_fcc_table();
-		} else {
+		if (delta_fcc_uah * 100  > (DELTA_FCC_PERCENT * fcc_uah)) {
+			/* new_fcc_uah is outside the scope limit it */
+			if (new_fcc_uah > fcc_uah)
+				new_fcc_uah
+				= (fcc_uah +
+					(DELTA_FCC_PERCENT * fcc_uah) / 100);
+			else
+				new_fcc_uah
+				= (fcc_uah -
+					(DELTA_FCC_PERCENT * fcc_uah) / 100);
+
 			pr_debug("delta_fcc=%d > %d percent of fcc=%d"
 				"will not update real fcc\n",
 				delta_fcc_uah, DELTA_FCC_PERCENT, fcc_uah);
