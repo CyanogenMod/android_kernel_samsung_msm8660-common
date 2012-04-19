@@ -3966,6 +3966,8 @@ static void hdmi_msm_turn_on(void)
 	/* HDMI_USEC_REFTIMER[0x0208] */
 	HDMI_OUTP(0x0208, 0x0001001B);
 
+	hdmi_msm_set_mode(TRUE);
+
 	hdmi_msm_video_setup(external_common_state->video_resolution);
 	if (!hdmi_msm_is_dvi_mode())
 		hdmi_msm_audio_setup();
