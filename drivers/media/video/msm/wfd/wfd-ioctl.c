@@ -1114,6 +1114,7 @@ static int wfd_close(struct file *filp)
 		if (rc)
 			WFD_MSG_ERR("Failed to CLOSE vsg subdev: %d\n", rc);
 
+		wfd_stats_deinit(&inst->stats);
 		kfree(inst);
 	}
 	WFD_MSG_DBG("wfd_close: X\n");
