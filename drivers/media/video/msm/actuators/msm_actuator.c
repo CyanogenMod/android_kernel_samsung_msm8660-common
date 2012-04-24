@@ -82,6 +82,10 @@ int32_t msm_actuator_move_focus(
 		rc = -EINVAL;
 		return rc;
 	}
+	if (NULL == a_ctrl->step_position_table) {
+		pr_err("%s: Invalid step_postion_table\n", __func__);
+		return -EINVAL;
+	}
 
 	/* Determine destination step position */
 	dest_step_pos = a_ctrl->curr_step_pos +
@@ -167,6 +171,10 @@ int32_t msm_actuator_init_table(
 	a_ctrl->step_position_table =
 		kmalloc(sizeof(uint16_t) * (a_ctrl->set_info.total_steps + 1),
 			GFP_KERNEL);
+	if (NULL == a_ctrl->step_position_table) {
+		pr_err("%s: step_postion_table memory alloc fail\n", __func__);
+		return -EINVAL;
+	}
 	cur_code = a_ctrl->initial_code;
 	a_ctrl->step_position_table[step_index++] = cur_code;
 	for (region_index = 0;
@@ -177,6 +185,12 @@ int32_t msm_actuator_init_table(
 		step_boundary =
 			a_ctrl->region_params[region_index].
 			step_bound[MOVE_NEAR];
+		if (a_ctrl->set_info.total_steps < step_boundary) {
+			pr_err("%s: Region params / total steps mismatch\n",
+				__func__);
+			kfree(a_ctrl->step_position_table);
+			return -EINVAL;
+		}
 		for (; step_index <= step_boundary;
 			step_index++) {
 			cur_code += code_per_step;
@@ -203,8 +217,11 @@ int32_t msm_actuator_set_default_focus(
 	int32_t rc = 0;
 	LINFO("%s called\n", __func__);
 
-	if (!a_ctrl->step_position_table)
-		a_ctrl->func_tbl.actuator_init_table(a_ctrl);
+	if (!a_ctrl->step_position_table) {
+		rc = a_ctrl->func_tbl.actuator_init_table(a_ctrl);
+		if (rc < 0)
+			return rc;
+	}
 
 	if (a_ctrl->curr_step_pos != 0)
 		rc = a_ctrl->func_tbl.actuator_move_focus(a_ctrl, MOVE_FAR,
@@ -231,6 +248,7 @@ int32_t msm_actuator_af_power_down(struct msm_actuator_ctrl_t *a_ctrl)
 		LINFO("%s after msm_actuator_set_default_focus\n", __func__);
 	}
 	kfree(a_ctrl->step_position_table);
+	a_ctrl->step_position_table = NULL;
 	return rc;
 }
 
