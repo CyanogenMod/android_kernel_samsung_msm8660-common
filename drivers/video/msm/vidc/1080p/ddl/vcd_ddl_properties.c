@@ -433,6 +433,9 @@ static u32 ddl_set_dec_property(struct ddl_client_context *ddl,
 		}
 	}
 	break;
+	case VCD_REQ_PERF_LEVEL:
+		vcd_status = VCD_S_SUCCESS;
+		break;
 	default:
 		vcd_status = VCD_ERR_ILLEGAL_OP;
 		break;

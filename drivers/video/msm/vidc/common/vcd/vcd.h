@@ -394,5 +394,4 @@ u32 vcd_req_perf_level(struct vcd_clnt_ctxt *cctxt,
 	struct vcd_property_perf_level *);
 
 u32 vcd_set_num_slices(struct vcd_clnt_ctxt *cctxt);
-
 #endif
