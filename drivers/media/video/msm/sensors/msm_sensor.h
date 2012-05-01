@@ -130,6 +130,8 @@ struct msm_sensor_fn_t {
 	int (*sensor_power_down)
 		(struct msm_sensor_ctrl_t *);
 	int (*sensor_power_up) (struct msm_sensor_ctrl_t *);
+	int (*sensor_adjust_frame_lines)
+		(struct msm_sensor_ctrl_t *s_ctrl, uint16_t res);
 };
 
 struct msm_sensor_ctrl_t {
@@ -218,6 +220,9 @@ int msm_sensor_write_res_settings
 	(struct msm_sensor_ctrl_t *s_ctrl, uint16_t res);
 
 int32_t msm_sensor_write_output_settings(struct msm_sensor_ctrl_t *s_ctrl,
+	uint16_t res);
+
+int32_t msm_sensor_adjust_frame_lines(struct msm_sensor_ctrl_t *s_ctrl,
 	uint16_t res);
 
 int32_t msm_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
