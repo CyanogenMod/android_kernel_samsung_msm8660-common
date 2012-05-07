@@ -65,11 +65,10 @@ static struct pc_temp_ocv_lut desay_5200_pc_temp_ocv = {
 	},
 };
 
-static struct sf_lut desay_5200_pc_sf = {
+static struct pc_sf_lut desay_5200_pc_sf = {
 	.rows		= 1,
 	.cols		= 1,
-	/* row_entries are cycles here */
-	.row_entries		= {0},
+	.cycles		= {0},
 	.percent	= {100},
 	.sf			= {
 				{100}
@@ -82,5 +81,4 @@ struct pm8921_bms_battery_data desay_5200_data = {
 	.fcc_sf_lut		= &desay_5200_fcc_sf,
 	.pc_temp_ocv_lut	= &desay_5200_pc_temp_ocv,
 	.pc_sf_lut		= &desay_5200_pc_sf,
-	.default_rbatt_mohm	= 156,
 };
