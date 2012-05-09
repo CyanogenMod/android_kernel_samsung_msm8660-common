@@ -1914,7 +1914,6 @@ u32 ddl_set_default_decoder_buffer_req(struct ddl_decoder_data *decoder,
 				&decoder->buf_format,
 				(!decoder->progressive_only),
 				decoder->hdr.decoding, NULL);
-			decoder->y_cb_cr_size = y_cb_cr_size;
 		} else
 			y_cb_cr_size = decoder->y_cb_cr_size;
 	}
