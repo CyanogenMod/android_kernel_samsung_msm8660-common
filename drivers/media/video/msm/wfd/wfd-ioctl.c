@@ -513,8 +513,10 @@ static int mdp_output_thread(void *data)
 			core, ioctl, MDP_DQ_BUFFER, (void *)&obuf_mdp);
 
 		if (rc) {
-			WFD_MSG_ERR("Either streamoff called or"
-						" MDP REPORTED ERROR\n");
+			if (rc != -ENOBUFS)
+				WFD_MSG_ERR("MDP reported err %d\n", rc);
+
+			WFD_MSG_ERR("Streamoff called\n");
 			break;
 		}
 
