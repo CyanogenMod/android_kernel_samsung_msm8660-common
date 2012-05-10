@@ -119,6 +119,7 @@
 #include <mach/rpm-regulator.h>
 #include <mach/restart.h>
 #include <mach/board-msm8660.h>
+#include <mach/iommu_domains.h>
 
 #include <mach/devices-lte.h>
 #include "devices.h"
@@ -3607,7 +3608,7 @@ unsigned char hdmi_is_primary;
 #define MSM_ION_SF_SIZE		0x4000000 /* 64MB */
 #define MSM_ION_CAMERA_SIZE     MSM_PMEM_ADSP_SIZE
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
-#define MSM_ION_MM_SIZE		0x3600000 /* (54MB) */
+#define MSM_ION_MM_SIZE		0x3600000 /* (54MB) Must be a multiple of 64K */
 #define MSM_ION_MFC_SIZE	SZ_8K
 #define MSM_ION_WB_SIZE		0x600000 /* 6MB */
 #define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
@@ -6327,6 +6328,16 @@ static struct platform_device msm_charger_device = {
  */
 static struct regulator_consumer_supply vreg_consumers_PM8058_L0[] = {
 	REGULATOR_SUPPLY("8058_l0",		NULL),
+#ifdef CONFIG_ION_MSM
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
+	.permission_type = IPT_TYPE_MM_CARVEOUT,
+	.align = SZ_64K,
+	.request_region = request_smi_region,
+	.release_region = release_smi_region,
+	.setup_region = setup_smi_region,
+	.iommu_map_all = 1,
+	.iommu_2x_map_domain = VIDEO_DOMAIN,
 };
 static struct regulator_consumer_supply vreg_consumers_PM8058_L1[] = {
 	REGULATOR_SUPPLY("8058_l1",		NULL),
@@ -6546,15 +6557,32 @@ static struct regulator_consumer_supply vreg_consumers_PM8901_S4_PC[] = {
 		.pin_ctrl = _pin_ctrl, \
 	}
 
-/*
- * The default LPM/HPM state of an RPM controlled regulator can be controlled
- * via the peak_uA value specified in the table below.  If the value is less
- * than the high power min threshold for the regulator, then the regulator will
- * be set to LPM.  Otherwise, it will be set to HPM.
- *
- * This value can be further overridden by specifying an initial mode via
- * .init_data.constraints.initial_mode.
- */
+	/* Verify size of heap is a multiple of 64K */
+	for (i = 0; i < ion_pdata.nr; i++) {
+		struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
+
+		if (heap->extra_data && heap->type == ION_HEAP_TYPE_CP) {
+			int map_all = ((struct ion_cp_heap_pdata *)
+				heap->extra_data)->iommu_map_all;
+
+			if (map_all && (heap->size & (SZ_64K-1))) {
+				heap->size = ALIGN(heap->size, SZ_64K);
+				pr_err("Heap %s size is not a multiple of 64K. Adjusting size to %x\n",
+					heap->name, heap->size);
+
+			}
+		}
+	}
+
+	msm8x60_reserve_table[MEMTYPE_EBI1].size += msm_ion_sf_size;
+	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_FW_SIZE;
+	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_SIZE;
+	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MFC_SIZE;
+	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_CAMERA_SIZE;
+	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_WB_SIZE;
+	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
+#endif
+}
 
 #define RPM_LDO(_id, _always_on, _pd, _sleep_selectable, _min_uV, _max_uV, \
 		_init_peak_uA) \
