@@ -1986,6 +1986,8 @@ static unsigned int msm_poll_config(struct file *fp,
 
 static int msm_close_server(struct inode *inode, struct file *fp)
 {
+	struct v4l2_event_subscription sub;
+	D("%s\n", __func__);
 	mutex_lock(&g_server_dev.server_lock);
 	if (g_server_dev.use_count > 0)
 		g_server_dev.use_count--;
@@ -2001,7 +2003,9 @@ static int msm_close_server(struct inode *inode, struct file *fp)
 			v4l2_event_queue(
 				g_server_dev.pcam_active->pvdev, &v4l2_ev);
 		}
-		msm_queue_drain(&g_server_dev.ctrl_q, list_control);
+	sub.type = V4L2_EVENT_ALL;
+	msm_server_v4l2_unsubscribe_event(
+		&g_server_dev.server_command_queue.eventHandle, &sub);
 	}
 	return 0;
 }
