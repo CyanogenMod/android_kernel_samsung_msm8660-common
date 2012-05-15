@@ -799,6 +799,7 @@ static void __init apq8064_rumi3_init(void)
 {
 	apq8064_common_init();
 	ethernet_init();
+	msm_rotator_set_split_iommu_domain();
 	platform_add_devices(rumi3_devices, ARRAY_SIZE(rumi3_devices));
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
 }
@@ -809,6 +810,11 @@ static void __init apq8064_cdp_init(void)
 	ethernet_init();
 	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	ethernet_init();
+	msm_rotator_set_split_iommu_domain();
+	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
+	spi_register_board_info(spi_board_info,
+						ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(APQ8064_SIM, "QCT APQ8064 SIMULATOR")
