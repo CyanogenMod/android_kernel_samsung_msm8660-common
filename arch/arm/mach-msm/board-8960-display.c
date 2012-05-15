@@ -578,7 +578,8 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
-	.cont_splash_enabled = 0x01,
+	.cont_splash_enabled = 0x0,
+	.mdp_iommu_split_domain = 0,
 };
 
 void __init msm8960_mdp_writeback(struct memtype_reserve* reserve_table)
