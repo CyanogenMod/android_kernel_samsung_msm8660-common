@@ -623,23 +623,23 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 		if (rc < 0) {
 			pr_err("%s: msm_mctl_register_subdevs failed:%d\n",
 				__func__, rc);
-			goto msm_open_done;
+			goto register_sdev_failed;
 		}
 
 		/* then sensor - move sub dev later*/
 		rc = v4l2_subdev_call(p_mctl->sensor_sdev, core, s_power, 1);
-
 		if (rc < 0) {
-			pr_err("%s: isp init failed: %d\n", __func__, rc);
-			goto msm_open_done;
+			pr_err("%s: sensor power up failed: %d\n",
+				__func__, rc);
+			goto sensor_sdev_failed;
 		}
+
 		if (sync->actctrl.a_power_up)
 			rc = sync->actctrl.a_power_up(
 				sync->sdata->actuator_info);
-
 		if (rc < 0) {
 			pr_err("%s: act power failed:%d\n", __func__, rc);
-			goto msm_open_done;
+			goto act_power_up_failed;
 		}
 
 		if (camdev->is_csiphy) {
@@ -647,8 +647,8 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				VIDIOC_MSM_CSIPHY_INIT, NULL);
 			if (rc < 0) {
 				pr_err("%s: csiphy initialization failed %d\n",
-				__func__, rc);
-				goto msm_open_done;
+					__func__, rc);
+				goto csiphy_init_failed;
 			}
 		}
 
@@ -657,8 +657,8 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				VIDIOC_MSM_CSID_INIT, &csid_version);
 			if (rc < 0) {
 				pr_err("%s: csid initialization failed %d\n",
-				__func__, rc);
-				goto msm_open_done;
+					__func__, rc);
+				goto csid_init_failed;
 			}
 		}
 		if (camdev->is_csic) {
@@ -666,8 +666,8 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				VIDIOC_MSM_CSIC_INIT, &csid_version);
 			if (rc < 0) {
 				pr_err("%s: csic initialization failed %d\n",
-				__func__, rc);
-				goto msm_open_done;
+					__func__, rc);
+				goto csic_init_failed;
 			}
 		}
 
@@ -680,7 +680,7 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				sync);
 		if (rc < 0) {
 			pr_err("%s: isp init failed: %d\n", __func__, rc);
-			goto msm_open_done;
+			goto isp_open_failed;
 		}
 
 		if (camdev->is_ispif) {
@@ -688,8 +688,8 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 				VIDIOC_MSM_ISPIF_INIT, &csid_version);
 			if (rc < 0) {
 				pr_err("%s: ispif initialization failed %d\n",
-				__func__, rc);
-				goto msm_open_done;
+					__func__, rc);
+				goto ispif_init_failed;
 			}
 		}
 
@@ -702,9 +702,41 @@ static int msm_mctl_open(struct msm_cam_media_controller *p_mctl,
 		}
 		sync->apps_id = apps_id;
 		sync->opencnt++;
+	} else {
+		D("%s: camera is already open", __func__);
 	}
 
-msm_open_done:
+	mutex_unlock(&sync->lock);
+	return rc;
+
+ispif_init_failed:
+	if (p_mctl->isp_sdev && p_mctl->isp_sdev->isp_release)
+		p_mctl->isp_sdev->isp_release(&p_mctl->sync,
+				p_mctl->gemini_sdev);
+isp_open_failed:
+	if (camdev->is_csic)
+		if (v4l2_subdev_call(p_mctl->csic_sdev, core, ioctl,
+			VIDIOC_MSM_CSIC_RELEASE, NULL) < 0)
+			pr_err("%s: csic release failed %d\n", __func__, rc);
+csic_init_failed:
+	if (camdev->is_csid)
+		if (v4l2_subdev_call(p_mctl->csid_sdev, core, ioctl,
+			VIDIOC_MSM_CSID_RELEASE, NULL) < 0)
+			pr_err("%s: csid release failed %d\n", __func__, rc);
+csid_init_failed:
+	if (camdev->is_csiphy)
+		if (v4l2_subdev_call(p_mctl->csiphy_sdev, core, ioctl,
+			VIDIOC_MSM_CSIPHY_RELEASE, NULL) < 0)
+			pr_err("%s: csiphy release failed %d\n", __func__, rc);
+csiphy_init_failed:
+	if (p_mctl->sync.actctrl.a_power_down)
+		p_mctl->sync.actctrl.a_power_down(
+			p_mctl->sync.sdata->actuator_info);
+act_power_up_failed:
+	v4l2_subdev_call(p_mctl->sensor_sdev, core, s_power, 0);
+sensor_sdev_failed:
+register_sdev_failed:
+	wake_unlock(&p_mctl->sync.wake_lock);
 	mutex_unlock(&sync->lock);
 	return rc;
 }
