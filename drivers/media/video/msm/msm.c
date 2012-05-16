@@ -1459,7 +1459,7 @@ static int msm_open(struct file *f)
 		if (rc < 0) {
 			pr_err("%s: cam_server_open_session failed %d\n",
 			__func__, rc);
-			goto err;
+			goto msm_cam_server_open_session_failed;
 		}
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 		pcam->mctl.client = msm_ion_client_create(-1, "camera");
@@ -1468,10 +1468,10 @@ static int msm_open(struct file *f)
 #endif
 		/* Should be set to sensor ops if any but right now its OK!! */
 		if (!pcam->mctl.mctl_open) {
-			D("%s: media contoller is not inited\n",
+			pr_err("%s: media contoller is not inited\n",
 				 __func__);
 			rc = -ENODEV;
-			goto err;
+			goto mctl_open_failed;
 		}
 
 		/* Now we really have to activate the camera */
@@ -1480,7 +1480,7 @@ static int msm_open(struct file *f)
 
 		if (rc < 0) {
 			pr_err("%s: HW open failed rc = 0x%x\n",  __func__, rc);
-			goto err;
+			goto mctl_open_failed;
 		}
 		pcam->mctl.sync.pcam_sync = pcam;
 
@@ -1490,19 +1490,21 @@ static int msm_open(struct file *f)
 		if (rc < 0) {
 			pr_err("%s: v4l2_device_register_subdev failed rc = %d\n",
 				__func__, rc);
-			goto err;
+			goto mctl_register_isp_sd_failed;
 		}
 		if (pcam->mctl.isp_sdev->sd_vpe) {
 			rc = v4l2_device_register_subdev(&pcam->v4l2_dev,
 						pcam->mctl.isp_sdev->sd_vpe);
 			if (rc < 0) {
-				goto err;
+				goto mctl_register_isp_sd_vpe_failed;
 			}
 		}
 		rc = msm_setup_v4l2_event_queue(&pcam_inst->eventHandle,
 							pcam->pvdev);
 		if (rc < 0) {
-			goto err;
+			pr_err("%s: msm_setup_v4l2_event_queue failed %d",
+				 __func__, rc);
+			goto mctl_event_q_setup_failed;
 		}
 	}
 	pcam_inst->vbqueue_initialized = 0;
@@ -1518,9 +1520,8 @@ static int msm_open(struct file *f)
 		msm_queue_init(&g_server_dev.ctrl_q, "control");
 		rc = msm_send_open_server(pcam->vnode_id);
 		if (rc < 0) {
-			mutex_unlock(&pcam->vid_lock);
-			pr_err("%s failed\n", __func__);
-			return rc;
+			pr_err("%s send open server failed\n", __func__);
+			goto msm_send_open_server_failed;
 		}
 	}
 	mutex_unlock(&pcam->vid_lock);
@@ -1528,7 +1529,20 @@ static int msm_open(struct file *f)
 	/* rc = msm_cam_server_open_session(g_server_dev, pcam);*/
 	return rc;
 
-err:
+msm_send_open_server_failed:
+	v4l2_fh_del(&pcam_inst->eventHandle);
+	v4l2_fh_exit(&pcam_inst->eventHandle);
+
+mctl_event_q_setup_failed:
+	v4l2_device_unregister_subdev(pcam->mctl.isp_sdev->sd_vpe);
+mctl_register_isp_sd_vpe_failed:
+	v4l2_device_unregister_subdev(pcam->mctl.isp_sdev->sd);
+mctl_register_isp_sd_failed:
+	if (pcam->mctl.mctl_release)
+		if (pcam->mctl.mctl_release(&(pcam->mctl)) < 0)
+			pr_err("%s: mctl_release failed\n", __func__);
+
+mctl_open_failed:
 	if (pcam->use_count == 1) {
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 		if (ion_client_created) {
@@ -1536,6 +1550,13 @@ err:
 			kref_put(&pcam->mctl.refcount, msm_release_ion_client);
 		}
 #endif
+		if (msm_cam_server_close_session(&g_server_dev, pcam) < 0)
+			pr_err("%s: msm_cam_server_close_session failed\n",
+				__func__);
+	}
+
+msm_cam_server_open_session_failed:
+	if (pcam->use_count == 1) {
 		pcam->dev_inst[i] = NULL;
 		pcam->use_count = 0;
 	}
