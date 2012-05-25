@@ -888,7 +888,7 @@ static int msm_mctl_dev_open(struct file *f)
 	/* get the video device */
 	struct msm_cam_v4l2_device *pcam  = video_drvdata(f);
 	struct msm_cam_v4l2_dev_inst *pcam_inst;
-	D("%s : E ", __func__);
+	pr_err("%s : E ", __func__);
 
 	if (!pcam) {
 		pr_err("%s NULL pointer passed in!\n", __func__);
@@ -980,7 +980,7 @@ static int msm_mctl_dev_close(struct file *f)
 		struct msm_cam_v4l2_dev_inst, eventHandle);
 	pcam = pcam_inst->pcam;
 
-	D("%s : E ", __func__);
+	pr_err("%s : E ", __func__);
 	if (!pcam) {
 		pr_err("%s NULL pointer of camera device!\n", __func__);
 		return -EINVAL;
@@ -1096,8 +1096,10 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 	D("%s\n", __func__);
 	WARN_ON(pctx != f->private_data);
 	rc = vb2_reqbufs(&pcam_inst->vid_bufq, pb);
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
 	if (rc < 0) {
 		pr_err("%s reqbufs failed %d ", __func__, rc);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 		return rc;
 	}
 	if (!pb->count) {
@@ -1123,6 +1125,7 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 							GFP_KERNEL);
 		if (!pcam_inst->buf_offset) {
 			pr_err("%s out of memory ", __func__);
+			mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 			return -ENOMEM;
 		}
 		for (i = 0; i < pb->count; i++) {
@@ -1135,6 +1138,8 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 					kfree(pcam_inst->buf_offset[j]);
 				kfree(pcam_inst->buf_offset);
 				pcam_inst->buf_offset = NULL;
+				mutex_unlock(
+					&pcam_inst->pcam->mctl_node.dev_lock);
 				return -ENOMEM;
 			}
 		}
@@ -1142,6 +1147,7 @@ static int msm_mctl_v4l2_reqbufs(struct file *f, void *pctx,
 	pcam_inst->buf_count = pb->count;
 	D("%s inst %p, buf count %d ", __func__,
 		pcam_inst, pcam_inst->buf_count);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	return rc;
 }
 
@@ -1169,9 +1175,10 @@ static int msm_mctl_v4l2_qbuf(struct file *f, void *pctx,
 
 	D("%s Inst = %p\n", __func__, pcam_inst);
 	WARN_ON(pctx != f->private_data);
-
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
 	if (!pcam_inst->buf_offset) {
 		pr_err("%s Buffer is already released. Returning. ", __func__);
+		mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 		return -EINVAL;
 	}
 
@@ -1179,6 +1186,7 @@ static int msm_mctl_v4l2_qbuf(struct file *f, void *pctx,
 		/* Reject the buffer if planes array was not allocated */
 		if (pb->m.planes == NULL) {
 			pr_err("%s Planes array is null ", __func__);
+			mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 			return -EINVAL;
 		}
 		for (i = 0; i < pcam_inst->plane_info.num_planes; i++) {
@@ -1199,6 +1207,7 @@ static int msm_mctl_v4l2_qbuf(struct file *f, void *pctx,
 	rc = vb2_qbuf(&pcam_inst->vid_bufq, pb);
 	D("%s, videobuf_qbuf returns %d\n", __func__, rc);
 
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	return rc;
 }
 
@@ -1214,9 +1223,10 @@ static int msm_mctl_v4l2_dqbuf(struct file *f, void *pctx,
 	D("%s\n", __func__);
 	WARN_ON(pctx != f->private_data);
 
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
 	rc = vb2_dqbuf(&pcam_inst->vid_bufq, pb,  f->f_flags & O_NONBLOCK);
 	D("%s, videobuf_dqbuf returns %d\n", __func__, rc);
-
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	return rc;
 }
 
@@ -1225,7 +1235,6 @@ static int msm_mctl_v4l2_streamon(struct file *f, void *pctx,
 {
 	int rc = 0;
 	/* get the camera device */
-	struct msm_cam_v4l2_device *pcam  = video_drvdata(f);
 	struct msm_cam_v4l2_dev_inst *pcam_inst;
 	pcam_inst = container_of(f->private_data,
 		struct msm_cam_v4l2_dev_inst, eventHandle);
@@ -1233,9 +1242,11 @@ static int msm_mctl_v4l2_streamon(struct file *f, void *pctx,
 	D("%s Inst %p\n", __func__, pcam_inst);
 	WARN_ON(pctx != f->private_data);
 
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
 	if ((buf_type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) &&
 		(buf_type != V4L2_BUF_TYPE_VIDEO_CAPTURE)) {
 		pr_err("%s Invalid buffer type ", __func__);
+		mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 		return -EINVAL;
 	}
 
@@ -1243,11 +1254,9 @@ static int msm_mctl_v4l2_streamon(struct file *f, void *pctx,
 	/* if HW streaming on is successful, start buffer streaming */
 	rc = vb2_streamon(&pcam_inst->vid_bufq, buf_type);
 	D("%s, videobuf_streamon returns %d\n", __func__, rc);
-
-	mutex_lock(&pcam->mctl_node.dev_lock);
 	/* turn HW (VFE/sensor) streaming */
 	pcam_inst->streamon = 1;
-	mutex_unlock(&pcam->mctl_node.dev_lock);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	D("%s rc = %d\n", __func__, rc);
 	return rc;
 }
@@ -1257,7 +1266,6 @@ static int msm_mctl_v4l2_streamoff(struct file *f, void *pctx,
 {
 	int rc = 0;
 	/* get the camera device */
-	struct msm_cam_v4l2_device *pcam  = video_drvdata(f);
 	struct msm_cam_v4l2_dev_inst *pcam_inst;
 	pcam_inst = container_of(f->private_data,
 		struct msm_cam_v4l2_dev_inst, eventHandle);
@@ -1265,23 +1273,21 @@ static int msm_mctl_v4l2_streamoff(struct file *f, void *pctx,
 	D("%s Inst %p\n", __func__, pcam_inst);
 	WARN_ON(pctx != f->private_data);
 
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
 	if ((buf_type != V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE) &&
 		(buf_type != V4L2_BUF_TYPE_VIDEO_CAPTURE)) {
 		pr_err("%s Invalid buffer type ", __func__);
+		mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 		return -EINVAL;
 	}
 
 	/* first turn of HW (VFE/sensor) streaming so that buffers are
 		not in use when we free the buffers */
-	mutex_lock(&pcam->mctl_node.dev_lock);
 	pcam_inst->streamon = 0;
-	mutex_unlock(&pcam->mctl_node.dev_lock);
-	if (rc < 0)
-		pr_err("%s: hw failed to stop streaming\n", __func__);
-
 	/* stop buffer streaming */
 	rc = vb2_streamoff(&pcam_inst->vid_bufq, buf_type);
 	D("%s, videobuf_streamoff returns %d\n", __func__, rc);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	return rc;
 }
 
@@ -1507,11 +1513,19 @@ static int msm_mctl_v4l2_s_parm(struct file *f, void *pctx,
 	pcam_inst = container_of(f->private_data,
 		struct msm_cam_v4l2_dev_inst, eventHandle);
 	pcam_inst->image_mode = a->parm.capture.extendedmode;
+	mutex_lock(&pcam_inst->pcam->mctl_node.dev_lock);
+	if (pcam_inst->pcam->mctl_node.dev_inst_map[pcam_inst->image_mode]) {
+		pr_err("%s Stream type %d already used.",
+			__func__, pcam_inst->image_mode);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
+	return -EBUSY;
+	}
 	pcam_inst->pcam->mctl_node.dev_inst_map[pcam_inst->image_mode] =
 		pcam_inst;
 	pcam_inst->path = msm_mctl_vidbuf_get_path(pcam_inst->image_mode);
 	D("%s path=%d, image mode = %d rc=%d\n", __func__,
 		pcam_inst->path, pcam_inst->image_mode, rc);
+	mutex_unlock(&pcam_inst->pcam->mctl_node.dev_lock);
 	return rc;
 }
 
