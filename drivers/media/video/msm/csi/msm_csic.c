@@ -279,6 +279,7 @@ static int msm_csic_init(struct v4l2_subdev *sd, uint32_t *csic_version)
 		csic_dev->csic_clk, ARRAY_SIZE(csic_clk_info), 1);
 	if (rc < 0) {
 		iounmap(csic_dev->base);
+		csic_dev->base = NULL;
 		return rc;
 	}
 
@@ -396,6 +397,7 @@ static int __devinit csic_probe(struct platform_device *pdev)
 	msm_cam_clk_enable(&pdev->dev, &csic_clk_info[2],
 					new_csic_dev->csic_clk, 1, 0);
 	iounmap(new_csic_dev->base);
+	new_csic_dev->base = NULL;
 
 	new_csic_dev->pdev = pdev;
 	return 0;
