@@ -698,6 +698,12 @@ static int msm_fb_ext_suspend(struct device *dev)
 	struct msm_fb_panel_data *pdata = NULL;
 	int ret = 0;
 
+	if (hdmi_prim_display) {
+		MSM_FB_INFO("%s: hdmi primary handles early suspend only\n",
+			__func__);
+		return 0;
+	}
+
 	if ((!mfd) || (mfd->key != MFD_KEY))
 		return 0;
 	mutex_lock(&mfd->entry_mutex);
@@ -725,6 +731,12 @@ static int msm_fb_ext_resume(struct device *dev)
 	struct msm_fb_panel_data *pdata = NULL;
 	int ret = 0;
 
+	if (hdmi_prim_display) {
+		MSM_FB_INFO("%s: hdmi primary handles early resume only\n",
+			__func__);
+		return 0;
+	}
+
 	if ((!mfd) || (mfd->key != MFD_KEY))
 		return 0;
 
@@ -751,7 +763,8 @@ static struct dev_pm_ops msm_fb_dev_pm_ops = {
 	.runtime_suspend = msm_fb_runtime_suspend,
 	.runtime_resume = msm_fb_runtime_resume,
 	.runtime_idle = msm_fb_runtime_idle,
-#if (defined(CONFIG_SUSPEND) && defined(CONFIG_FB_MSM_HDMI_MSM_PANEL))
+#if (defined(CONFIG_SUSPEND) && defined(CONFIG_FB_MSM_HDMI_MSM_PANEL) && \
+	!defined(CONFIG_FB_MSM_HDMI_AS_PRIMARY))
 	.suspend = msm_fb_ext_suspend,
 	.resume = msm_fb_ext_resume,
 #endif
@@ -787,7 +800,10 @@ static void msmfb_early_suspend(struct early_suspend *h)
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
 						early_suspend);
 
+	struct msm_fb_panel_data *pdata = NULL;
+
 	msm_fb_pan_idle(mfd);
+
 #if defined(CONFIG_FB_MSM_MDP303)
 	/*
 	* For MDP with overlay, set framebuffer with black pixels
@@ -805,14 +821,38 @@ static void msmfb_early_suspend(struct early_suspend *h)
 	}
 #endif
 	msm_fb_suspend_sub(mfd);
+
+	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+	if (hdmi_prim_display &&
+		(mfd->panel_info.type == HDMI_PANEL ||
+		 mfd->panel_info.type == DTV_PANEL)) {
+		/* Turn off the HPD circuitry */
+		if (pdata->power_ctrl) {
+			MSM_FB_INFO("%s: Turning off HPD circuitry\n",
+				__func__);
+			pdata->power_ctrl(FALSE);
+		}
+	}
 }
 
 static void msmfb_early_resume(struct early_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
 						early_suspend);
+	struct msm_fb_panel_data *pdata = NULL;
 
 	msm_fb_pan_idle(mfd);
+
+	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+	if (hdmi_prim_display &&
+		(mfd->panel_info.type == HDMI_PANEL ||
+		 mfd->panel_info.type == DTV_PANEL)) {
+		/* Turn on the HPD circuitry */
+		if (pdata->power_ctrl) {
+			MSM_FB_INFO("%s: Turning on HPD circuitry\n", __func__);
+			pdata->power_ctrl(TRUE);
+		}
+	}
 
 	msm_fb_resume_sub(mfd);
 }
@@ -1568,7 +1608,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	ret = 0;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-	if (mfd->panel_info.type != DTV_PANEL) {
+	if (hdmi_prim_display || mfd->panel_info.type != DTV_PANEL) {
 		mfd->early_suspend.suspend = msmfb_early_suspend;
 		mfd->early_suspend.resume = msmfb_early_resume;
 		mfd->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 2;
