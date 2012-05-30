@@ -603,6 +603,7 @@ struct msm_vidc_platform_data apq8930_vidc_platform_data = {
 #endif
 	.disable_dmx = 0,
 	.disable_fullhd = 0,
+	.fw_addr = 0x9fe00000,
 };
 
 struct platform_device apq8930_msm_device_vidc = {

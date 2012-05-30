@@ -2375,10 +2375,12 @@ struct msm_vidc_platform_data vidc_platform_data = {
 #else
 	.memtype = MEMTYPE_SMI_KERNEL,
 	.enable_ion = 0,
+	.secure_wb_heap = 0,
 #endif
 	.disable_dmx = 0,
 	.disable_fullhd = 0,
-	.disable_turbo = 1
+	.disable_turbo = 1,
+	.fw_addr = 0x38000000,
 };
 
 struct platform_device msm_device_vidc = {
