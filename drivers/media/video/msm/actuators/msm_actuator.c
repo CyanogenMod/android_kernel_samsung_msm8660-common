@@ -189,6 +189,7 @@ int32_t msm_actuator_init_table(
 			pr_err("%s: Region params / total steps mismatch\n",
 				__func__);
 			kfree(a_ctrl->step_position_table);
+			a_ctrl->step_position_table = NULL;
 			return -EINVAL;
 		}
 		for (; step_index <= step_boundary;
