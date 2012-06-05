@@ -35,9 +35,10 @@ static int vcd_pmem_alloc(size_t sz, u8 **kernel_vaddr, u8 **phy_addr,
 	u32 memtype, i = 0, flags = 0;
 	struct vcd_msm_map_buffer *map_buffer = NULL;
 	struct msm_mapped_buffer *mapped_buffer = NULL;
-	int rc = 0;
-	ion_phys_addr_t phyaddr = 0;
-	size_t len = 0;
+	unsigned long iova = 0;
+	unsigned long buffer_size = 0;
+	int ret = 0;
+	unsigned long ionflag = 0;
 
 	if (!kernel_vaddr || !phy_addr || !cctxt) {
 		pr_err("\n%s: Invalid parameters", __func__);
@@ -65,6 +66,22 @@ static int vcd_pmem_alloc(size_t sz, u8 **kernel_vaddr, u8 **phy_addr,
 			pr_err("%s() acm alloc failed", __func__);
 			goto free_map_table;
 		}
+		flags = MSM_SUBSYSTEM_MAP_IOVA | MSM_SUBSYSTEM_MAP_KADDR;
+		map_buffer->mapped_buffer =
+		msm_subsystem_map_buffer((unsigned long)map_buffer->phy_addr,
+		sz, flags, vidc_mmu_subsystem,
+		sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
+		if (IS_ERR(map_buffer->mapped_buffer)) {
+			pr_err(" %s() buffer map failed", __func__);
+			goto free_acm_alloc;
+		}
+		mapped_buffer = map_buffer->mapped_buffer;
+		if (!mapped_buffer->vaddr || !mapped_buffer->iova[0]) {
+			pr_err("%s() map buffers failed", __func__);
+			goto free_map_buffers;
+		}
+		*phy_addr = (u8 *) mapped_buffer->iova[0];
+		*kernel_vaddr = (u8 *) mapped_buffer->vaddr;
 	} else {
 		map_buffer->alloc_handle = ion_alloc(
 			    cctxt->vcd_ion_client, sz, SZ_4K,
@@ -73,48 +90,58 @@ static int vcd_pmem_alloc(size_t sz, u8 **kernel_vaddr, u8 **phy_addr,
 			pr_err("%s() ION alloc failed", __func__);
 			goto bailout;
 		}
-		rc = ion_phys(cctxt->vcd_ion_client,
-		map_buffer->alloc_handle, &phyaddr, &len);
-		if (rc) {
-			pr_err("%s() : ION client physical fail\n",
-			 __func__);
-			goto free_acm_alloc;
+		if (ion_handle_get_flags(cctxt->vcd_ion_client,
+				map_buffer->alloc_handle,
+				&ionflag)) {
+			pr_err("%s() ION get flag failed", __func__);
+			goto bailout;
 		}
-		map_buffer->phy_addr = phyaddr;
+		*kernel_vaddr = (u8 *) ion_map_kernel(
+				cctxt->vcd_ion_client,
+				map_buffer->alloc_handle,
+				ionflag);
+		if (!(*kernel_vaddr)) {
+			pr_err("%s() ION map failed", __func__);
+			goto ion_free_bailout;
+		}
+		ret = ion_map_iommu(cctxt->vcd_ion_client,
+				map_buffer->alloc_handle,
+				VIDEO_DOMAIN,
+				VIDEO_MAIN_POOL,
+				SZ_4K,
+				0,
+				(unsigned long *)&iova,
+				(unsigned long *)&buffer_size,
+				UNCACHED, 0);
+		if (ret) {
+			pr_err("%s() ION iommu map failed", __func__);
+			goto ion_map_bailout;
+		}
+		map_buffer->phy_addr = iova;
 		if (!map_buffer->phy_addr) {
 			pr_err("%s() acm alloc failed", __func__);
 			goto free_map_table;
 		}
-
+		*phy_addr = (u8 *)iova;
+		mapped_buffer = NULL;
+		map_buffer->mapped_buffer = NULL;
 	}
 
-	flags = MSM_SUBSYSTEM_MAP_IOVA | MSM_SUBSYSTEM_MAP_KADDR;
-	map_buffer->mapped_buffer =
-	msm_subsystem_map_buffer((unsigned long)map_buffer->phy_addr,
-	sz, flags, vidc_mmu_subsystem,
-	sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
-	if (IS_ERR(map_buffer->mapped_buffer)) {
-		pr_err(" %s() buffer map failed", __func__);
-		goto free_acm_alloc;
-	}
-	mapped_buffer = map_buffer->mapped_buffer;
-	if (!mapped_buffer->vaddr || !mapped_buffer->iova[0]) {
-		pr_err("%s() map buffers failed", __func__);
-		goto free_map_buffers;
-	}
-	*phy_addr = (u8 *) mapped_buffer->iova[0];
-	*kernel_vaddr = (u8 *) mapped_buffer->vaddr;
 	return 0;
 
 free_map_buffers:
-	msm_subsystem_unmap_buffer(map_buffer->mapped_buffer);
+	if (map_buffer->mapped_buffer)
+		msm_subsystem_unmap_buffer(map_buffer->mapped_buffer);
 free_acm_alloc:
 	if (!cctxt->vcd_enable_ion) {
 		free_contiguous_memory_by_paddr(
 		(unsigned long)map_buffer->phy_addr);
-	} else {
-		ion_free(cctxt->vcd_ion_client, map_buffer->alloc_handle);
 	}
+	return -ENOMEM;
+ion_map_bailout:
+	ion_unmap_kernel(cctxt->vcd_ion_client, map_buffer->alloc_handle);
+ion_free_bailout:
+	ion_free(cctxt->vcd_ion_client, map_buffer->alloc_handle);
 free_map_table:
 	map_buffer->in_use = 0;
 bailout:
@@ -144,9 +171,16 @@ static int vcd_pmem_free(u8 *kernel_vaddr, u8 *phy_addr,
 		pr_err("%s() Entry not found", __func__);
 		goto bailout;
 	}
-	msm_subsystem_unmap_buffer(map_buffer->mapped_buffer);
+	if (map_buffer->mapped_buffer)
+		msm_subsystem_unmap_buffer(map_buffer->mapped_buffer);
 	if (cctxt->vcd_enable_ion) {
 		if (map_buffer->alloc_handle) {
+			ion_unmap_kernel(cctxt->vcd_ion_client,
+					map_buffer->alloc_handle);
+			ion_unmap_iommu(cctxt->vcd_ion_client,
+					map_buffer->alloc_handle,
+					VIDEO_DOMAIN,
+					VIDEO_MAIN_POOL);
 			ion_free(cctxt->vcd_ion_client,
 			map_buffer->alloc_handle);
 		}
@@ -188,13 +222,15 @@ u8 *vcd_pmem_get_physical(struct video_client_ctx *client_ctx,
 }
 
 u32 vcd_get_ion_flag(struct video_client_ctx *client_ctx,
-			  unsigned long kernel_vaddr)
+			  unsigned long kernel_vaddr,
+			struct ion_handle **buff_ion_handle)
 {
 	unsigned long phy_addr, user_vaddr;
 	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	u32 ion_flag = 0;
+	struct ion_handle *buff_handle = NULL;
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 					  false, &user_vaddr, &kernel_vaddr,
@@ -202,13 +238,17 @@ u32 vcd_get_ion_flag(struct video_client_ctx *client_ctx,
 					  &buffer_index)) {
 
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
-				pmem_fd, kernel_vaddr, buffer_index);
+				pmem_fd, kernel_vaddr, buffer_index,
+				&buff_handle);
+		*buff_ion_handle = buff_handle;
 		return ion_flag;
 	} else if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_OUTPUT,
 		false, &user_vaddr, &kernel_vaddr, &phy_addr, &pmem_fd, &file,
 		&buffer_index)) {
 		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_OUTPUT,
-				pmem_fd, kernel_vaddr, buffer_index);
+				pmem_fd, kernel_vaddr, buffer_index,
+				&buff_handle);
+		*buff_ion_handle = buff_handle;
 		return ion_flag;
 	} else {
 		VCD_MSG_ERROR("Couldn't get ion flag");
@@ -553,6 +593,7 @@ u32 vcd_set_buffer_internal(
 	struct vcd_buffer_entry *buf_entry;
 	u8 *physical;
 	u32 ion_flag = 0;
+	struct ion_handle *buff_handle = NULL;
 
 	buf_entry = vcd_find_buffer_pool_entry(buf_pool, buffer);
 	if (buf_entry) {
@@ -565,8 +606,8 @@ u32 vcd_set_buffer_internal(
 		cctxt->client_data, (unsigned long)buffer);
 
 	ion_flag = vcd_get_ion_flag(cctxt->client_data,
-				(unsigned long)buffer);
-
+				(unsigned long)buffer,
+				&buff_handle);
 	if (!physical) {
 		VCD_MSG_ERROR("Couldn't get physical address");
 		return VCD_ERR_BAD_POINTER;
@@ -590,6 +631,7 @@ u32 vcd_set_buffer_internal(
 	buf_entry->frame.virtual = buf_entry->virtual;
 	buf_entry->frame.physical = buf_entry->physical;
 	buf_entry->frame.ion_flag = ion_flag;
+	buf_entry->frame.buff_ion_handle = buff_handle;
 
 	buf_pool->validated++;
 
