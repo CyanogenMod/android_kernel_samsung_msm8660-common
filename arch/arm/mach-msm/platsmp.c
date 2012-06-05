@@ -173,8 +173,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	pen_release = cpu;
 	dmac_flush_range((void *)&pen_release,
 			 (void *)(&pen_release + sizeof(pen_release)));
-	__asm__("sev");
-	mb();
 
 	/* Use smp_cross_call() to send a soft interrupt to wake up
 	 * the other core.
