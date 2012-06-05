@@ -179,4 +179,6 @@ void vidc_sm_set_decoder_stuff_bytes_consumption(
 	enum vidc_sm_num_stuff_bytes_consume_info consume_info);
 void vidc_sm_get_aspect_ratio_info(struct ddl_buf_addr *shared_mem,
 	struct vcd_aspect_ratio *aspect_ratio_info);
+void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
+	u32 timeout);
 #endif
