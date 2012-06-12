@@ -1,0 +1,40 @@
+# 
+# Sensors core device. 
+#
+
+config SENSORS_CORE_P5LTE
+	tristate "Sensors core"
+	default n
+	help
+	  Say Y here to enable debugging messages for power supply class
+	  and drivers.
+
+config GYRO_K3G_P5LTE
+	tristate "K3G driver"
+	default n
+	help
+	  This option enables gyro sensors using K3G driver.
+
+config SENSORS_AK8975_P5LTE
+	tristate "AK8975 compass support"
+	default n
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8975.
+
+config SENSORS_K3DH_P5LTE
+	tristate "K3DH acceleration sensor support"
+	depends on I2C
+	default n
+	help
+	  Driver for STMicroelectronic K3DH accelerometer.
+
+config OPTICAL_BH1721_P5LTE
+	depends on I2C
+	tristate "BH1721 driver"
+	default n
+	help
+	  This option enables light sensors using bh1721 driver.
+
+
