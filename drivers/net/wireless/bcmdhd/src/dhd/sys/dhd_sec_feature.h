@@ -60,6 +60,11 @@
 #define WRITE_MACADDR
 #endif
 
+#ifdef CONFIG_TARGET_SERIES_Q1
+#define WRITE_MACADDR
+#define HW_OOB
+#endif
+
 /* REGION CODE */
 
 #if (WLAN_REGION_CODE >= 100) && (WLAN_REGION_CODE < 200) /*EUR*/
