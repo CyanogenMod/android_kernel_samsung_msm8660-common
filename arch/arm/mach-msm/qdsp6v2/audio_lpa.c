@@ -125,8 +125,8 @@ static int audlpa_pause(struct audio *audio);
 static long pcm_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 static int audlpa_set_pcm_params(void *data);
 
-/* Use msm_set_volume() for stream mute control */
-#define LPA_MUTE_CTRL
+// use msm_set_volume() for stream mute control
+// #define LPA_MUTE_CTRL
 
 #ifdef LPA_MUTE_CTRL
 static int audlpa_mute;
@@ -813,8 +813,8 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case AUDIO_SET_VOLUME:
-		/* pr_debug("AUDIO_SET_VOLUME %d, audio->volume=%d", arg, audio->volume); */
-		pr_info("AUDIO_SET_VOLUME %d, audio->volume=%d, mute=%d", (int)arg, audio->volume, audlpa_mute);
+		pr_debug("AUDIO_SET_VOLUME %d, audio->volume=%d", arg, audio->volume);
+		//pr_info("AUDIO_SET_VOLUME %d, audio->volume=%d, mute=%d", (int)arg, audio->volume, audlpa_mute);
 #ifdef LPA_MUTE_CTRL
 		audio->volume = arg;
 #endif
