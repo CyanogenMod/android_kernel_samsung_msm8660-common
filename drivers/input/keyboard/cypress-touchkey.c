@@ -67,7 +67,6 @@ Melfas touchkey register
 #define BUIL_FW_VER	0x05
 #endif
 
-#define CONFIG_TOUCHKEY_BLN
 #ifdef CONFIG_TOUCHKEY_BLN
 #include <linux/miscdevice.h>
 #include <linux/wakelock.h>
