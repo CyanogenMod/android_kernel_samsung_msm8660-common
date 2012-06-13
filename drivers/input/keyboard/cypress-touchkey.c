@@ -68,9 +68,8 @@ Melfas touchkey register
 #define BUIL_FW_VER	0x05
 #endif
 
-#define CONFIG_TOUCHKEY_BLN
-#ifdef CONFIG_TOUCHKEY_BLN
-#include <linux/miscdevice.h>
+//#define CONFIG_KEYPAD_CYPRESS_TOUCH_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
 #include <linux/wakelock.h>
 #define BLN_VERSION 9
 
@@ -434,7 +433,7 @@ void touchkey_resume_func(struct work_struct *p)
 
 static irqreturn_t touchkey_interrupt(int irq, void *dummy)  // ks 79 - threaded irq(becuase of pmic gpio int pin)-> when reg is read in work_func, data0 is always release. so temporarily move the work_func to threaded irq.
 {
-#ifdef CONFIG_TOUCHKEY_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
         printk(KERN_ERR "[TouchKey] interrupt touchkey\n");
 #endif
     u8 data[3];
@@ -917,7 +916,7 @@ schedule_delayed_work(&touch_resume_work, msecs_to_jiffies(500));
 }
 #endif				// End of CONFIG_HAS_EARLYSUSPEND
 
-#ifdef CONFIG_TOUCHKEY_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
 
 static void touchkey_activate(void){
 
@@ -927,7 +926,6 @@ static void touchkey_activate(void){
         }
 
         printk(KERN_DEBUG "[TouchKey] touchkey activate.\n");
-        //touchkey_ldo_on(1);
 		tkey_vdd_enable(1);
 		tkey_led_vdd_enable(1); 
 		
@@ -936,8 +934,6 @@ static void touchkey_activate(void){
 
 static void touchkey_deactivate(void){
 
-        //touchkey_led_ldo_on(0);
-        //touchkey_ldo_on(0);
         tkey_vdd_enable(0);
 		tkey_led_vdd_enable(0);		
 
@@ -1301,7 +1297,7 @@ if (get_hw_rev() >=0x02) {
 }
 #endif
 	set_touchkey_debug('K');
-#ifdef CONFIG_TOUCHKEY_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
         err = misc_register( &bln_device );
         if( err ){
             printk(KERN_ERR "[BLN] sysfs misc_register failed.\n");
@@ -1615,7 +1611,7 @@ static ssize_t touch_led_control(struct device *dev, struct device_attribute *at
 	int int_data = 0;
 	int errnum = 0;
 
-#ifdef CONFIG_TOUCHKEY_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
 	printk(KERN_ERR "[TouchKey] system calling LED Notification control\n");
 #endif
 
@@ -2811,7 +2807,7 @@ static void __exit touchkey_exit(void)
 	i2c_del_driver(&touchkey_i2c_driver);
 	misc_deregister(&touchkey_update_device);
 	
-#ifdef CONFIG_TOUCHKEY_BLN
+#if defined(CONFIG_KEYPAD_CYPRESS_TOUCH_BLN)
         misc_deregister(&bln_device);
         wake_lock_destroy(&bln_wake_lock);
 #endif
