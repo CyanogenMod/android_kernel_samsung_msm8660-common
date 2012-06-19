@@ -193,9 +193,10 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 {
 	int ret = 0;
 	int i = 0;
-	unsigned long order = get_order(page_size);
 	unsigned long phy_addr = ALIGN(virt_to_phys(iommu_dummy), page_size);
 	unsigned long temp_iova = start_iova;
+	unsigned long order = get_order(page_size);
+
 	if (page_size == SZ_4K) {
 		struct scatterlist *sglist;
 		unsigned int nrpages = PFN_ALIGN(size) >> PAGE_SHIFT;
@@ -224,7 +225,7 @@ int msm_iommu_map_extra(struct iommu_domain *domain,
 		unsigned long nrpages = aligned_size >> (PAGE_SHIFT + order);
 
 		for (i = 0; i < nrpages; i++) {
-			ret = iommu_map(domain, temp_iova, phy_addr, page_size,
+			ret = iommu_map(domain, temp_iova, phy_addr, order,
 						cached);
 			if (ret) {
 				pr_err("%s: could not map %lx in domain %p, error: %d\n",
