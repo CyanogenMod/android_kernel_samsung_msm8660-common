@@ -533,6 +533,9 @@ int res_trk_update_bus_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_level)
 	bool turbo_supported =
 		!resource_context.vidc_platform_data->disable_turbo;
 
+	if (dev_ctxt->turbo_mode_set)
+		return rc;
+
 	cctxt_itr = dev_ctxt->cctxt_list_head;
 	while (cctxt_itr) {
 		if (cctxt_itr->decoding)

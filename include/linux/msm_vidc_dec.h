@@ -211,13 +211,8 @@ struct vdec_ioctl_msg {
 #define VDEC_IOCTL_GET_DISABLE_DMX_SUPPORT \
 	_IOR(VDEC_IOCTL_MAGIC, 37, struct vdec_ioctl_msg)
 
-#define VDEC_IOCTL_SET_META_BUFFERS \
-	_IOW(VDEC_IOCTL_MAGIC, 38, struct vdec_ioctl_msg)
-
-#define VDEC_IOCTL_FREE_META_BUFFERS \
-	_IO(VDEC_IOCTL_MAGIC, 39)
-#define VDEC_IOCTL_GET_ENABLE_SEC_METADATA \
-	_IOR(VDEC_IOCTL_MAGIC, 40, struct vdec_ioctl_msg)
+#define VDEC_IOCTL_SET_PERF_CLK \
+	_IOR(VDEC_IOCTL_MAGIC, 38, struct vdec_ioctl_msg)
 
 #define VDEC_IOCTL_SET_META_BUFFERS \
 	_IOW(VDEC_IOCTL_MAGIC, 39, struct vdec_ioctl_msg)

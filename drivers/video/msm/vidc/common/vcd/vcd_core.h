@@ -146,7 +146,7 @@ struct vcd_dev_ctxt {
 	u32 reqd_perf_lvl;
 	u32 curr_perf_lvl;
 	u32 set_perf_lvl_pending;
-	bool turbo_mode_set;
+	u32 turbo_mode_set;
 };
 
 struct vcd_clnt_status {
