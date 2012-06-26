@@ -4024,20 +4024,28 @@ static inline int nohz_kick_needed(struct rq *rq, int cpu)
 	first_pick_cpu = atomic_read(&nohz.first_pick_cpu);
 	second_pick_cpu = atomic_read(&nohz.second_pick_cpu);
 
-	if (first_pick_cpu < nr_cpu_ids && first_pick_cpu != cpu &&
-	    second_pick_cpu < nr_cpu_ids && second_pick_cpu != cpu)
-		return 0;
-
-	ret = atomic_cmpxchg(&nohz.first_pick_cpu, nr_cpu_ids, cpu);
-	if (ret == nr_cpu_ids || ret == cpu) {
-		atomic_cmpxchg(&nohz.second_pick_cpu, cpu, nr_cpu_ids);
-		if (rq->nr_running > 1)
-			return 1;
+	/*
+	 * As long as rq->nr_running is greater than 1, nohz_kick will be
+	 * needed, regardless of whether the current CPU has successfully
+	 * competed for the first or second cpu spot.
+	 */
+	if (rq->nr_running > 1) {
+		ret = atomic_cmpxchg(&nohz.first_pick_cpu, nr_cpu_ids, cpu);
+		if (ret == nr_cpu_ids || ret == cpu)
+			atomic_cmpxchg(&nohz.second_pick_cpu, cpu, nr_cpu_ids);
+		else
+			atomic_cmpxchg(&nohz.second_pick_cpu, nr_cpu_ids, cpu);
+		return 1;
 	} else {
-		ret = atomic_cmpxchg(&nohz.second_pick_cpu, nr_cpu_ids, cpu);
+		ret = atomic_cmpxchg(&nohz.first_pick_cpu, nr_cpu_ids, cpu);
 		if (ret == nr_cpu_ids || ret == cpu) {
-			if (rq->nr_running)
-				return 1;
+			atomic_cmpxchg(&nohz.second_pick_cpu, cpu, nr_cpu_ids);
+		} else {
+			ret = atomic_cmpxchg(&nohz.second_pick_cpu, nr_cpu_ids, cpu);
+			if (ret == nr_cpu_ids || ret == cpu) {
+				if (rq->nr_running)
+					return 1;
+			}
 		}
 	}
 	return 0;
