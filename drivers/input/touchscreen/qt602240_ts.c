@@ -256,6 +256,7 @@ static void TSP_forced_release_for_call(void);
 static int tsp_pattern_tracking(int fingerindex, s16 x, s16 y);
 static void report_input_data(struct mxt224_data *data);
 static void TSP_forced_reboot(void);
+static void TSP_clear_unused_slots(void);
 
 
 extern unsigned int  get_hw_rev(void);
@@ -997,6 +998,10 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 							}
 						}
 				#endif
+
+					// Clear all unused slots after calibration
+					TSP_clear_unused_slots();
+
 					#if 0  // Xtopher blocked, it causes trouble when system wake-up             
 					if ((copy_data->read_ta_status)&&(boot_or_resume == 1)) {
                     boot_or_resume = 0;
@@ -1912,6 +1917,9 @@ static irqreturn_t mxt224_irq_thread(int irq, void *ptr)
 		else if ((msg[0] == 0x1) && ((msg[1]&0x10) == 0x00)) {/* caliration */
 			 Doing_calibration_falg = 0; 
 			printk(KERN_ERR"[TSP] Calibration End!!!!!!");
+
+			// Clear all unused slots after calibration
+			TSP_clear_unused_slots();
 			
 			#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)		
 			if(cal_check_flag == 1)
@@ -2367,6 +2375,35 @@ void Mxt224_force_released(void)
 };
 EXPORT_SYMBOL(Mxt224_force_released);
 
+static void TSP_clear_unused_slots(void)
+{
+#if !defined(TOUCH_NON_SLOT)
+	// It is possible for the state of the framework and the driver to get out
+	// of sync resulting in "stuck" touch points from the framework's perspective.
+	// For all unused slots, send an "unused" message (-1 for ABS_MT_TRACKING_ID).
+	// But, the input_handle_abs_event suppresses any message that it thinks won't
+	// result in a state change. Send a valid ID first then a -1 to trick it.
+	// Since the driver thinks that it has already sent the "unused" message
+	// (a -1 for ABS_MT_TRACKING_ID) but the framework could have missed it,
+	// set the ID to a real number and then immediate set it to -1.
+	//
+	// This *seems* to only be needed after calibration and after error cases.
+
+	int i;
+	printk(KERN_ERR "[TSP] Clearing unused slots\n");
+	for (i = 0; i < copy_data->num_fingers; i++) {
+		if (copy_data->fingers[i].z == -1) {
+			//printk(KERN_ERR "[TSP] TSP_clear_unused_slots clearing slot %d\n", i);
+			input_mt_slot(copy_data->input_dev, i);
+			input_event(copy_data->input_dev, EV_ABS, ABS_MT_TRACKING_ID, i);
+			input_event(copy_data->input_dev, EV_ABS, ABS_MT_TRACKING_ID, -1);
+		}
+	}
+
+	input_sync(copy_data->input_dev);
+#endif
+}
+
 void TSP_forced_release_for_call(void)
 {
 	int i=0;
@@ -2391,7 +2428,26 @@ void TSP_forced_release_for_call(void)
 #else
 	for (i = 0; i < copy_data->num_fingers; i++) {
 
-		if (copy_data->fingers[i].z == -1) continue;
+		if (copy_data->fingers[i].z == -1) {
+#if !defined(TOUCH_NON_SLOT)
+			// It is possible for the state of the framework and the driver to get out
+			// of sync resulting in "stuck" touch points from the framework's perspective.
+			// For all unused slots, send an "unused" message (-1 for ABS_MT_TRACKING_ID).
+			// But, the input_handle_abs_event suppresses any message that it thinks won't
+			// result in a state change. Send a valid ID first then a -1 to trick it.
+			// Since the driver thinks that it has already sent the "unused" message
+			// (a -1 for ABS_MT_TRACKING_ID) but the framework could have missed it,
+			// set the ID to a real number and then immediate set it to -1.
+			//
+			// This *seems* to only be needed after calibration and after error cases.
+
+			//printk(KERN_ERR "[TSP] TSP_forced_release_for_call clearing slot %d\n", i);
+			input_mt_slot(copy_data->input_dev, i);
+			input_event(copy_data->input_dev, EV_ABS, ABS_MT_TRACKING_ID, i);
+			input_event(copy_data->input_dev, EV_ABS, ABS_MT_TRACKING_ID, -1);
+#endif
+			continue;
+		}
 
 		copy_data->fingers[i].z = 0;
 
