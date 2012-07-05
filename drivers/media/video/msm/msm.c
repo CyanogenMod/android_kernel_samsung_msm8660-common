@@ -80,6 +80,15 @@ static void msm_cam_v4l2_subdev_notify(struct v4l2_subdev *sd,
 	if (pcam == NULL)
 		return;
 
+	if (notification == NOTIFY_VFE_CAMIF_ERROR) {
+		struct v4l2_event v4l2_ev;
+		v4l2_ev.type = V4L2_EVENT_PRIVATE_START
+				+ MSM_CAM_APP_NOTIFY_ERROR_EVENT;
+		ktime_get_ts(&v4l2_ev.timestamp);
+		v4l2_event_queue(g_server_dev.pcam_active->pvdev, &v4l2_ev);
+		return;
+	}
+
 	/* forward to media controller for any changes*/
 	if (pcam->mctl.mctl_notify) {
 		pcam->mctl.mctl_notify(&pcam->mctl, notification, arg);

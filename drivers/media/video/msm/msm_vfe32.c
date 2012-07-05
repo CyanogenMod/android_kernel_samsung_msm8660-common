@@ -2770,6 +2770,8 @@ static void vfe32_process_error_irq(uint32_t errStatus)
 	if (errStatus & VFE32_IMASK_CAMIF_ERROR) {
 		pr_err("vfe32_irq: camif errors\n");
 		reg_value = msm_io_r(vfe32_ctrl->vfebase + VFE_CAMIF_STATUS);
+		v4l2_subdev_notify(&vfe32_ctrl->subdev,
+			NOTIFY_VFE_CAMIF_ERROR, (void *)NULL);
 		pr_err("camifStatus  = 0x%x\n", reg_value);
 		vfe32_send_isp_msg(vfe32_ctrl, MSG_ID_CAMIF_ERROR);
 	}
