@@ -29,6 +29,7 @@ GPIOMUX_OBJ_NAME:=gpiomux-8x60_p8lte.o
 endif
 
 CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
+
 obj-y += io.o dma.o memory.o
 ifndef CONFIG_ARM_ARCH_TIMER
 obj-y += timer.o
