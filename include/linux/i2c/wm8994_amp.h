@@ -43,7 +43,7 @@
 
 void wm8994_set_headset(int onoff);
 void wm8994_set_speaker(int onoff);
-#if defined(CONFIG_MACH_P8_LTE) //kks_110915_1
+#if defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR) //kks_110915_1
 void wm8994_set_normal_headset(int onoff); //kks_110916_1
 void wm8994_set_normal_speaker(int onoff);
 #endif

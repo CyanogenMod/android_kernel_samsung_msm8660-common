@@ -38,6 +38,8 @@
 
 #if defined(CONFIG_TARGET_SERIES_P5LTE)
 #include "sec_s5k5bafx_reg_p5.h"
+#elif defined(CONFIG_TARGET_SERIES_P8LTE)
+#include "sec_s5k5bafx_reg_p8_skt.h"
 #else
 #include "s5k5bafx_regs.h"
 #endif
@@ -308,6 +310,12 @@ int s5k5bafx_set_fps(unsigned int mode, unsigned int fps)
 {
 	int rc = 0;
 	
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+	if(s5k5bafx_ctrl->vtcall_mode) {
+		CAM_DEBUG("VT setfile include fps setting, don't set fps mode!\n");
+		return rc;
+	}
+#endif
 	CAM_DEBUG(": fps_mode = %d, fps = %d", mode, fps);
 
 	if(mode){
@@ -351,10 +359,18 @@ int s5k5bafx_set_preview_index(int width, int height) {
 
 	if (width == 640 && height == 480) {
 		printk("[kidggang][%s:%d] S5K5CCGX_PREVIEW_VGA !!!\n", __func__, __LINE__);
-		s5k5bafx_ctrl->settings.preview_size_idx = S5K5BAFX_PREVIEW_SVGA; 
+		s5k5bafx_ctrl->settings.preview_size_idx = S5K5BAFX_PREVIEW_VGA; 
 	} else if (width == 800 && height == 600) {
 		printk("[kidggang][%s:%d] S5K5CCGX_PREVIEW_SVGA !!!\n", __func__, __LINE__);
 		s5k5bafx_ctrl->settings.preview_size_idx = S5K5BAFX_PREVIEW_SVGA;
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+	} else if (width == 528 && height == 432) {
+		printk("[kidggang][%s:%d] S5K5BAFX_PREVIEW_528x432 !!!\n", __func__, __LINE__);
+		s5k5bafx_ctrl->settings.preview_size_idx = S5K5BAFX_PREVIEW_528x432;
+	} else if (width == 1024 && height == 768) {
+		printk("[kidggang][%s:%d] S5K5CCGX_PREVIEW_XGA !!!\n", __func__, __LINE__);
+		s5k5bafx_ctrl->settings.preview_size_idx = S5K5BAFX_PREVIEW_XGA;
+#endif
 	} else {
 		printk("Invalid preview size (%dx%d) !!!\n", width, height);
 		rc = -1;
@@ -376,6 +392,16 @@ int s5k5bafx_set_preview_size(int size)
 		CAM_DEBUG("800x600");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_800_600);
 		break;
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+	case S5K5BAFX_PREVIEW_528x432:	// 528x432
+		CAM_DEBUG("528x432");
+		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_528_432);
+		break;
+	case S5K5BAFX_PREVIEW_XGA:	// 1024x768
+		CAM_DEBUG("1024x768");
+		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_1024_768);
+		break;
+#endif
 
 	default:
 		printk("Invalid preview size!!\n");
@@ -455,7 +481,11 @@ static int s5k5bafx_start(void)
 	CAM_DEBUG("%s E\n", __FUNCTION__);
 	CAM_DEBUG("I2C address : 0x%x\n", s5k5bafx_client->addr);
 	
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+	if(s5k5bafx_ctrl->started && s5k5bafx_ctrl->vtcall_mode == 0 ) { // don't skip during VT test mode (*#7353#)
+#else
 	if(s5k5bafx_ctrl->started) {
+#endif
 		CAM_DEBUG("%s X : already started\n", __FUNCTION__);
 		return rc;
 	}
@@ -495,7 +525,13 @@ void s5k5bafx_set_preview(void)
 	CAM_DEBUG("s5k5bafx_ctrl->settings.preview_size_idx = %d", s5k5bafx_ctrl->settings.preview_size_idx);
 	if(s5k5bafx_ctrl->dtp_mode == 0) {
 		s5k5bafx_ctrl->op_mode = S5K5BAFX_MODE_PREVIEW;	
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+		if( s5k5bafx_ctrl->vtcall_mode == 0 &&
+			(s5k5bafx_ctrl->sensor_mode != 0 || s5k5bafx_ctrl->app_mode==S5K5BAFX_3RD_PARTY_APP || s5k5bafx_ctrl->cam_mode != S5K5BAFX_CAMERA_MODE ))
+#endif
+		{
 		s5k5bafx_set_preview_size(s5k5bafx_ctrl->settings.preview_size_idx);
+		}
 		s5k5bafx_set_brightness(s5k5bafx_ctrl->settings.brightness);
 		if(s5k5bafx_ctrl->cam_mode == S5K5BAFX_MOVIE_MODE || s5k5bafx_ctrl->cam_mode == S5K5BAFX_MMS_MODE) {
 			s5k5bafx_set_fps(s5k5bafx_ctrl->cam_mode, s5k5bafx_ctrl->settings.fps); // temp - fixed fps

@@ -277,7 +277,7 @@ signed char fDetectHiLoTransition(void)
 
     while(1) {
         SCLKLow(); //issp_test_20100709 unblock
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
         udelay(300);   
 #else
 		//udelay(1);
@@ -285,7 +285,7 @@ signed char fDetectHiLoTransition(void)
         if (!fSDATACheck()) {   // exit once SDATA returns LOW
             break;
         }
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		//SCLKHigh(); //issp_test_20100709 unblock
 		udelay(300);   
 #else
@@ -370,7 +370,8 @@ signed char fPowerCycleInitializeTargetForISSP(void)
     SetSDATAHiZ();
 
     // Turn on power to the target device before other signals
-    SetTargetVDDStrong();    
+    SetTargetVDDStrong();
+    
     ApplyTargetVDD();
 
     // wait 1msec for the power to stabilize
@@ -530,6 +531,7 @@ signed char fReadStatus(void)
     }
     if (bTargetStatus[0] == target_status04_v) {
         return(STATUS_ERROR);	//PTJ: Status = 04 means there was a checksum faliure with either the smart write code checksum, or the smart write paramters checksum, for test with PROGRAM-AND-VERIFY
+
     }
     if (bTargetStatus[0] == target_status06_v) {
         return(STATUS_ERROR);	//PTJ: Status = 06 means that Calibrate1 failed, for test with id_setup_1 (ID-SETUP-1)

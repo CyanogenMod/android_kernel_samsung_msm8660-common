@@ -326,6 +326,9 @@ menuconfig WIRELESS
 
 if WIRELESS
 
+config MACH_PX
+	bool "MACH PX"
+
 source "net/wireless/Kconfig"
 source "net/mac80211/Kconfig"
 

@@ -34,6 +34,15 @@
 #define WAKEUP_GPIO_NUM_HERCULES_REV01 33
 #define WAKEUP_GPIO_NUM_CELOX_ATT_REV05 33
 
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+#define phonecall_Bandtype_Init		0x804E0C80
+#define phonecall_Bandtype_NB		0x804C0000
+#define phonecall_Bandtype_WB		0x804C0001
+#define GetRouteChangeStatus 		0x804F0000
+
+static int a2220_WB;
+#endif
+
 static struct i2c_client *this_client;
 static struct a2220_platform_data *pdata;
 static struct task_struct *task;
@@ -551,6 +560,9 @@ set_suspend_err:
 	printk(MODULE_NAME "%s : lsj::a2220_bootup_init 10\n", __func__);
 	a2220_suspended = 1;
 	a2220_current_config = A2220_PATH_SUSPEND;	
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	a2220_WB = A2220_PATH_NARROWBAND;
+#endif
 	//#endif
 	msleep(120);
 	/* Disable A2220 clock */
@@ -1273,6 +1285,41 @@ unsigned char suspend_mode[] = {
 	0x80,0x10,0x00,0x01
 };
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+int a2220_change_network_type(int network_type)
+{
+	int rc = 0, i = 0; 
+	
+	if(a2220_WB == network_type)
+	{
+		printk("%s : already set as same network type\n", __func__);
+		return 0;
+	}
+	a2220_WB = network_type;
+
+	if(a2220_current_config == A2220_PATH_INCALL_RECEIVER_NSON \
+		|| a2220_current_config == A2220_PATH_INCALL_RECEIVER_NSOFF)
+	{
+		rc = execute_cmdmsg(phonecall_Bandtype_Init);
+		
+		if(a2220_WB == A2220_PATH_WIDEBAND){
+			rc = execute_cmdmsg(phonecall_Bandtype_WB);
+			printk("[%s] Wideband setting\n", __func__);
+		}
+		else{
+			rc = execute_cmdmsg(phonecall_Bandtype_NB);
+			printk("[%s] Narrowband setting\n", __func__);
+		}
+
+		for(i=0;i<10;i++)
+			msleep(10);
+
+		rc = execute_cmdmsg(GetRouteChangeStatus);
+	}
+	return 0;
+}
+#endif
+
 static ssize_t chk_wakeup_a2220(void)
 {
 	int i,rc = 0, retry = 4;
@@ -1609,6 +1656,32 @@ int a2220_set_config(char newid, int mode)
 	}
 	//pr_info("END!!!\n");
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	if(a2220_current_config == A2220_PATH_INCALL_RECEIVER_NSON \
+		|| a2220_current_config == A2220_PATH_INCALL_RECEIVER_NSOFF)
+	{
+		rc = execute_cmdmsg(phonecall_Bandtype_Init);
+
+		if(a2220_WB == A2220_PATH_WIDEBAND)
+		{
+			rc = execute_cmdmsg(phonecall_Bandtype_WB);
+			if(rc == 0)
+				printk("%s : Wideband Setting!!\n", __func__);
+		}
+		else
+		{
+			rc = execute_cmdmsg(phonecall_Bandtype_NB);
+			if(rc == 0)
+				printk("%s : Narrowband Setting!!\n", __func__);
+		}
+	
+		for(i=0;i<10;i++)
+			msleep(10);
+
+		rc = execute_cmdmsg(GetRouteChangeStatus);
+	}
+#endif
+
 #else
 	rc = a2220_i2c_write(i2c_cmds, size);
 	if (rc < 0) {
@@ -1855,8 +1928,13 @@ static int a2220_init_thread(void *data)
 	return rc;
 }
 	static int
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+a2220_ioctl(struct file *file, unsigned int cmd,
+		unsigned long arg)
+#else
 a2220_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 		unsigned long arg)
+#endif
 {
 	void __user *argp = (void __user *)arg;
 	struct a2220img img;
@@ -1868,6 +1946,10 @@ a2220_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 #endif
 	//int pathid = 0;
 	unsigned int ns_state;
+
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+	int amr_state;
+#endif
 
 	switch (cmd) {
 		case A2220_BOOTUP_INIT:
@@ -1908,6 +1990,15 @@ a2220_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 				a2220_set_config(a2220_current_config,
 						A2220_CONFIG_VP);
 			break;
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+		case A2220_SET_NETWORK_TYPE:
+			if(copy_from_user(&amr_state, argp, sizeof(amr_state)))
+				return -EFAULT;
+			if(amr_state<0 || amr_state>1)
+				return -EFAULT;
+			a2220_change_network_type(amr_state);
+			break;
+#endif
 #if ENABLE_DIAG_IOCTLS
 		case A2220_SET_MIC_ONOFF:
 			rc = chk_wakeup_a2220();
@@ -1976,7 +2067,11 @@ a2220_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 //lsj +
 int a2220_ioctl2(unsigned int cmd , unsigned long arg)
 {
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	a2220_ioctl(NULL, cmd, arg);
+#else
 	a2220_ioctl(NULL, NULL, cmd, arg);
+#endif
 	return 0;
 }
 

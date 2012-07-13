@@ -29,7 +29,7 @@ unsigned char * Binary;
 
 
 // 4.4 inch
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #include "wacom_i2c_firm_Q1_KOR4P4_0370.h"
 const unsigned int Firmware_version_of_file_44 = 0x370;
 //const char Firmware_checksum[]={0x1F, 0xE1, 0x57, 0x54, 0x11,};   /* checksum for 0x331 */

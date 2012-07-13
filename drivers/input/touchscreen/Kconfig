@@ -861,6 +861,13 @@ config TOUCHSCREEN_MELFAS
    	  
    	  If unsure, say N.
 
+config TOUCHSCREEN_MXT768E
+	tristate "mxt768E I2C Touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have the mxt768E I2C touchscreen.
+
+	  If unsure, say N.
 
 config EPEN_WACOM_G5SP
 	tristate "WACOM I2C Touchscreen"

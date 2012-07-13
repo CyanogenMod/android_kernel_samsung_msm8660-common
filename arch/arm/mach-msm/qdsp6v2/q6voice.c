@@ -52,13 +52,21 @@
 #if defined(CONFIG_KOR_MODEL_SHV_E120L)|| defined(CONFIG_KOR_MODEL_SHV_E160L)
 #define CONFIG_VPCM_INTERFACE_ON_SVLTE2
 #endif
-#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) \
+|| defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D) \
+|| defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define CONFIG_VPCM_INTERFACE_ON_CSFB
 #endif
 
 struct common_data common;
 
 int test_loopback_mode = 0;
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+int wb_handle = VPCM_PATH_NARROWBAND;
+int on_call = 0;
+struct voice_data *voice_wb;
+#endif
 
 int voice_set_loopback_mode(int mode)
 {
@@ -1680,6 +1688,10 @@ static int voice_setup_modem_voice(struct voice_data *v)
 		goto fail;
 	}
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+if(wb_handle==VPCM_PATH_NARROWBAND)
+{
+#endif
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 // (39 tty) (43 hac) (49 loopback) do not apply the diamond solution
@@ -1741,6 +1753,9 @@ if( common.voc_path == VOC_PATH_PASSIVE)  //if( voice.voc_path == VOC_PATH_PASSI
 /* END: VPCM */
  }
 #endif 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+}
+#endif
 
 	pr_err("Start of sending apr packets\n");
 	/* send cvs cal */
@@ -1764,6 +1779,11 @@ if( common.voc_path == VOC_PATH_PASSIVE)  //if( voice.voc_path == VOC_PATH_PASSI
 	/* send cvp vol table cal */
 	voice_send_cvp_vol_tbl_to_modem(v);
 	pr_err("End of sending APR packets\n");
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	on_call = 1;
+	voice_wb = v;
+#endif
 
 	return 0;
 
@@ -1993,6 +2013,10 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 		goto fail;
 	}
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+if(wb_handle==VPCM_PATH_NARROWBAND)
+{
+#endif
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 if((v->dev_rx.dev_id!=39)&&(v->dev_rx.dev_id!=43)&&(v->dev_rx.dev_id!=48)) 
@@ -2049,6 +2073,9 @@ if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
 /* END: VPCM */
 }
 #endif 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+}
+#endif
 
 	/* destrop cvp session */
 	cvp_destroy_session_cmd.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
@@ -2079,11 +2106,129 @@ if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
 	cvp_handle = 0;
 	voice_set_cvp_handle(v, cvp_handle);
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	on_call = 0;
+	voice_wb = NULL;
+#endif
+
 	return 0;
 
 fail:
 	return -EINVAL;
 }
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+int vpcm_start_modem_voice()
+{
+	int ret = 0;
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+	u16 cvp_handle;
+	struct voice_data *v = voice_wb;
+	void *apr_cvp;
+
+	if(on_call ==1)
+	{
+		if((voice_wb->dev_rx.dev_id!=39)) {
+		/* BEGIN: VPCM */
+		// voice.voc_path == VOC_PATH_FULL is VoIP, voice.voc_path == VOC_PATH_PASSIVE is voice call
+			apr_cvp = voice_get_apr_cvp();
+			if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) 
+			{
+			/* Send start vpcm and wait for response. */
+			vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+			vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+	
+			vpcm_start_cmd.hdr.src_port = 0;
+			vpcm_start_cmd.hdr.dest_port = 0xD00D;
+			vpcm_start_cmd.hdr.token = 0;
+	
+			vpcm_start_cmd.hdr.opcode = 0x10001001;
+			cvp_handle = voice_get_cvp_handle(v);
+	
+			vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+			vpcm_start_cmd.vpcm_start.client_token = 0;
+	
+			v->cvp_state = CMD_STATUS_FAIL;
+			ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+			if (ret < 0) {
+				pr_err("Fail in sending OEM_IDEVICE_CMD_START\n");
+				goto fail;
+			}
+			pr_debug("wait for vpcm start\n");
+
+			ret = wait_event_timeout(v->cvp_wait, (v->cvp_state == CMD_STATUS_SUCCESS), msecs_to_jiffies(TIMEOUT_MS));
+			if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;	
+				}	
+			}
+		/* END: VPCM */
+		}
+	}
+
+	wb_handle = VPCM_PATH_NARROWBAND;
+
+	return 0;
+fail:
+	return -EINVAL;
+}
+
+
+int vpcm_stop_modem_voice()
+{
+	int ret = 0;
+	struct voice_data *v = voice_wb;
+	u16 cvp_handle;
+	void *apr_cvp;
+	
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+
+	if(on_call == 1)
+	{
+		if((v->dev_rx.dev_id!=39)) {
+			/* BEGIN: VPCM */
+			cvp_handle = voice_get_cvp_handle(v);
+			apr_cvp = voice_get_apr_cvp();
+			if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
+				/* Send stop vpcm and wait for response. */
+				vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+				vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+	
+				vpcm_start_cmd.hdr.src_port = 0;
+				vpcm_start_cmd.hdr.dest_port = 0xD00D;
+				vpcm_start_cmd.hdr.token = 0;
+				vpcm_start_cmd.hdr.opcode = 0x10001002;
+				cvp_handle = voice_get_cvp_handle(v);
+
+				vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+				vpcm_start_cmd.vpcm_start.client_token = 0;
+
+				v->cvp_state = CMD_STATUS_FAIL;
+				ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+				if (ret < 0) {
+					pr_err("Fail in sending OEM_IDEVICE_CMD_STOP\n");
+					goto fail;
+				}
+
+				ret = wait_event_timeout(v->cvp_wait, (v->cvp_state == CMD_STATUS_SUCCESS), msecs_to_jiffies(TIMEOUT_MS));
+				if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;
+	
+				}
+			}
+		/* END: VPCM */
+		}
+	}
+
+	wb_handle = VPCM_PATH_WIDEBAND;
+
+	return 0;
+
+fail:
+	return -EINVAL;
+}
+#endif
 
 static int voice_send_mute_cmd_to_modem(struct voice_data *v)
 {
@@ -2486,7 +2631,8 @@ static void voice_auddev_cb_function(u32 evt_id,
 		mutex_lock(&v->lock);
 		//printk("%s AUDDEV_EVT_START_VOICE \n", __func__);
 
-#if defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_KOR_MODEL_SHV_E120L) || defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) //kks_111020 // Qualcomm Gon's workaround code to solve the sound mute problem after subsystem reset(SSR) during voice call(QC case 645569)
+#if defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_KOR_MODEL_SHV_E120L) || defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) \
+|| defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D) //kks_111020 // Qualcomm Gon's workaround code to solve the sound mute problem after subsystem reset(SSR) during voice call(QC case 645569)
 		if( (v->voc_state == VOC_RUN) && (NULL == voice_get_apr_mvm())) 
 		{
 			v->voc_state = VOC_RELEASE;

@@ -200,7 +200,7 @@ static bool fc8050_scan_ch(struct ensemble_info_type *e_info
 
 static unsigned long fc8050_int_size(void)
 {
-	return 188*40;
+	return 188*20;
 }
 
 static struct tdmb_drv_func fci_fc8050_drv_func = {

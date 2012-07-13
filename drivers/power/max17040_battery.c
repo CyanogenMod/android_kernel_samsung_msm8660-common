@@ -68,7 +68,7 @@
 #define FULL_SOC_LOW		9250
 #define FULL_SOC_HIGH		9680
 #define FULL_KEEP_SOC		30
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define EMPTY_COND_SOC 		100
 #define EMPTY_SOC 			20
 //#define FULL_SOC		9450
@@ -80,9 +80,9 @@
 #define EMPTY_COND_SOC		100
 #define EMPTY_SOC		0
 //#define FULL_SOC		9450
-#define FULL_SOC_DEFAULT	9600
-#define FULL_SOC_LOW		9600
-#define FULL_SOC_HIGH		9630
+#define FULL_SOC_DEFAULT	9500
+#define FULL_SOC_LOW		9500
+#define FULL_SOC_HIGH		9530
 #define FULL_KEEP_SOC		30
 #define RCOMP_2ND		0xF01F
 #elif defined(CONFIG_USA_MODEL_SGH_T769) || \
@@ -115,7 +115,7 @@
 #define FULL_KEEP_SOC		30
 #endif
 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) ||  defined(CONFIG_KOR_MODEL_SHV_E160K)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) ||  defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define ADJUST_SOC_OFFSET
 #endif
 

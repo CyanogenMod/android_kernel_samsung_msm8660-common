@@ -15,13 +15,11 @@
 #include <linux/wakelock.h>
 
 #include <asm/irq.h>
-//#include <linux/mfd/tps6586x.h>
 
 #ifdef CONFIG_MHL_SII9234
 #include "sii9234.h"
 #endif
 
-//#if defined(CONFIG_MACH_P5_LTE)   || defined(CONFIG_MACH_P8_LTE) || defined(CONFIG_MACH_P4_LTE)
 #ifdef CONFIG_SAMSUNG_8X60_TABLET
 #define FEATURE_PM8058_ADC
 #endif
@@ -67,12 +65,10 @@ struct acc_con_info {
 	enum accessory_type current_accessory;
 	enum dock_type current_dock;
 	int accessory_irq;
+	int dock_irq;
 	int mhl_irq;
 };
 
-#ifdef CONFIG_SEC_KEYBOARD_DOCK
-extern int check_keyboard_dock(bool);
-#endif
 
 extern int hdmi_msm_hpd_switch(bool detect_flag);
 
@@ -83,13 +79,11 @@ static int check_using_stmpe811_adc(void)
 {
 	int ret =0 ;
 
-#if defined(CONFIG_TARGET_LOCALE_USA_ATT) || \
-    defined(CONFIG_TARGET_LOCALE_KOR_SKT) || \
-    defined(CONFIG_TARGET_LOCALE_KOR_LGU) || \
-    defined(CONFIG_TARGET_LOCALE_EUR_OPEN)|| \
-	defined(CONFIG_USA_OPERATOR_ATT)
-	ret = (system_rev>=0x0003) ? 1 : 0;
-#elif defined(CONFIG_TARGET_LOCALE_JPN_NTT)
+#if defined(CONFIG_TARGET_LOCALE_KOR) || \
+    defined(CONFIG_TARGET_LOCALE_JPN) || \
+    defined(CONFIG_EUR_OPERATOR_OPEN) || \
+    defined(CONFIG_JPN_OPERATOR_NTT)  || \
+    defined(CONFIG_USA_OPERATOR_ATT)
 	ret = (system_rev>=0x0003) ? 1 : 0;
 #else
 	ret = 0;
@@ -98,12 +92,12 @@ static int check_using_stmpe811_adc(void)
 	return ret;
 }
 
-static int connector_detect_change(void)
+static int acc_get_accessory_id(void)
 {
 	int i;
 	u32 adc = 0, adc_sum = 0;
 	u32 adc_buff[5] = {0};
-	u32 mili_volt;
+	u32 adc_val;
 	u32 adc_min = 0;
 	u32 adc_max = 0;
 
@@ -111,9 +105,9 @@ static int connector_detect_change(void)
 		/*change this reading ADC function  */
 ////		tps6586x_adc_read(&mili_volt, 0);
 
-		mili_volt=acc_get_adc_value();
+		adc_val=acc_get_adc_value();
 
-		adc_buff[i] = mili_volt;
+		adc_buff[i] = adc_val;
 		adc_sum += adc_buff[i];
 		if (i == 0) {
 			adc_min = adc_buff[0];
@@ -131,18 +125,10 @@ static int connector_detect_change(void)
 	return (int)adc;
 }
 
-#ifdef FEATURE_PM8058_ADC
-extern int64_t acc_get_adc_value(void);
-#else
-// for test by rami.jung
-int64_t acc_get_adc_value1(void)
-{
-// temp code. all accessory is OTG
-	return 2200;
-}
-#endif
 
-void acc_notified(struct acc_con_info *acc, int acc_adc)
+extern int64_t acc_get_adc_value(void);
+
+void acc_accessory_uevent(struct acc_con_info *acc, int acc_adc)
 {
 	enum accessory_type current_accessory = ACCESSORY_NONE;
 	char *env_ptr;
@@ -217,7 +203,7 @@ void acc_notified(struct acc_con_info *acc, int acc_adc)
 			if ((acc->current_accessory == ACCESSORY_OTG) &&
 				acc->pdata->otg_en)
 				acc->pdata->otg_en(0);
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 #else
 			if (acc->current_accessory == ACCESSORY_LINEOUT)
 				switch_set_state(&acc->ear_jack_switch, UEVENT_DOCK_NONE);
@@ -238,12 +224,12 @@ void acc_notified(struct acc_con_info *acc, int acc_adc)
 			if (acc->pdata->acc_power)
 				acc->pdata->acc_power(0, false);
 			msleep(20);
-			
+
 			if (acc->pdata->otg_en)
 				acc->pdata->otg_en(1);
 			msleep(30);
 		} else if (acc->current_accessory == ACCESSORY_LINEOUT) {
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR)  || defined(CONFIG_TARGET_LOCALE_JPN)
 #else
 			switch_set_state(&acc->ear_jack_switch, 1);
 #endif
@@ -256,7 +242,7 @@ void acc_notified(struct acc_con_info *acc, int acc_adc)
 			env_ptr = "ACCESSORY=OTG";
 		else if (acc->current_accessory == ACCESSORY_LINEOUT) {
 			env_ptr = "ACCESSORY=lineout";
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 #else
 			switch_set_state(&acc->ear_jack_switch, UEVENT_DOCK_NONE);
 #endif
@@ -280,7 +266,7 @@ void acc_notified(struct acc_con_info *acc, int acc_adc)
 	}
 }
 
-static void acc_dock_check(struct acc_con_info *acc, bool connected)
+static void acc_dock_uevent(struct acc_con_info *acc, bool connected)
 {
 	char *env_ptr;
 	char *stat_ptr;
@@ -307,36 +293,26 @@ static void acc_dock_check(struct acc_con_info *acc, bool connected)
 	ACC_CONDEV_DBG("%s : %s", env_ptr, stat_ptr);
 }
 
-static void check_acc_dock(struct acc_con_info *acc)
+static void acc_check_dock_detection(struct acc_con_info *acc)
 {
-	if (gpio_get_value(acc->pdata->accessory_irq_gpio)) {
-		if (acc->current_dock == DOCK_NONE)
-			return;
-		ACC_CONDEV_DBG("docking station detached!!!");
-		switch_set_state(&acc->dock_switch, UEVENT_DOCK_NONE);
-#ifdef CONFIG_SEC_KEYBOARD_DOCK
-		check_keyboard_dock(false);
-#endif
-#ifdef CONFIG_MHL_SII9234
-		/*call MHL deinit */
-		MHD_HW_Off();
-		hdmi_msm_hpd_switch(false);
-		/*TVout_LDO_ctrl(false); */
-#endif
-		acc_dock_check(acc, false);
-	} else {
-		ACC_CONDEV_DBG("docking station attached!!!");
+	if (!acc->pdata->get_dock_state()) {
+//		ACC_CONDEV_DBG("[30PIN] failed to get acc state!!!");
 
 		wake_lock(&acc->wake_lock);
 
 #ifdef CONFIG_SEC_KEYBOARD_DOCK
-		if (check_keyboard_dock(true)) {
+		if (acc->pdata->check_keyboard &&
+			acc->pdata->check_keyboard(true)) {
 			acc->current_dock = DOCK_KEYBOARD;
-			ACC_CONDEV_DBG("[30PIN] keyboard dock station attached!!!");
-			switch_set_state(&acc->dock_switch, UEVENT_DOCK_KEYBOARD);
+			ACC_CONDEV_DBG
+			("[30PIN] keyboard dock station attached!!!");
+			switch_set_state(&acc->dock_switch, 
+				UEVENT_DOCK_KEYBOARD);
 		} else
-#endif /* CONFIG_SEC_KEYBOARD_DOCK */
+#endif
 		{
+			ACC_CONDEV_DBG
+				("[30PIN] desktop dock station attached!!!");
 			switch_set_state(&acc->dock_switch, UEVENT_DOCK_DESK);
 			acc->current_dock = DOCK_DESK;
 		}
@@ -347,20 +323,39 @@ static void check_acc_dock(struct acc_con_info *acc)
 		hdmi_msm_hpd_switch(true);
 		mutex_unlock(&acc->lock);
 #endif
-		acc_dock_check(acc, true);
+		acc_dock_uevent(acc, true);
 
 		wake_unlock(&acc->wake_lock);
 
+	} else {
+		if (acc->current_dock == DOCK_NONE)
+			return;
+		ACC_CONDEV_DBG("docking station detached!!!");
+		switch_set_state(&acc->dock_switch, UEVENT_DOCK_NONE);
+#ifdef CONFIG_SEC_KEYBOARD_DOCK
+		if (acc->pdata->check_keyboard)
+			acc->pdata->check_keyboard(false);
+#endif
+#ifdef CONFIG_MHL_SII9234
+		/*call MHL deinit */
+		MHD_HW_Off();
+		hdmi_msm_hpd_switch(false);
+		/*TVout_LDO_ctrl(false); */
+#endif
+		acc_dock_uevent(acc, false);
 	}
+
+
+	
 }
 
-static irqreturn_t acc_con_interrupt(int irq, void *ptr)
+static irqreturn_t acc_dock_isr(int irq, void *ptr)
 {
 	struct acc_con_info *acc = ptr;
 
 	ACC_CONDEV_DBG("");
 
-	check_acc_dock(acc);
+	acc_check_dock_detection(acc);
 
 	return IRQ_HANDLED;
 }
@@ -369,16 +364,16 @@ static irqreturn_t acc_con_interrupt(int irq, void *ptr)
 #define DET_SLEEP_TIME_MS 10
 #define DETECTION_DELAY_MS	200
 
-static irqreturn_t acc_ID_interrupt(int irq, void *dev_id)
+static irqreturn_t acc_accessory_isr(int irq, void *dev_id)
 {
 	struct acc_con_info *acc = (struct acc_con_info *)dev_id;
-	int acc_ID_val=0, pre_acc_ID_val=0;
-	int time_left_ms = DET_CHECK_TIME_MS;
+//	int acc_ID_val=0, pre_acc_ID_val=0;
+//	int time_left_ms = DET_CHECK_TIME_MS;
 
 	ACC_CONDEV_DBG("");
-
+/*
 	while (time_left_ms > 0){
-		acc_ID_val = acc->pdata->get_dock_state();
+		acc_ID_val = acc->pdata->get_acc_state();
 
 		if (acc_ID_val == pre_acc_ID_val) {
 			time_left_ms -= DET_SLEEP_TIME_MS;
@@ -392,14 +387,16 @@ static irqreturn_t acc_ID_interrupt(int irq, void *dev_id)
 	ACC_CONDEV_DBG("IRQ_DOCK_GPIO is %d", acc_ID_val);
 	if (acc_ID_val == 1) {
 		ACC_CONDEV_DBG("Accessory detached");
-		acc_notified(acc, false);
+		acc_accessory_uevent(acc, false);
 	} else
+*/
+	cancel_delayed_work_sync(&acc->acc_id_dwork);
 		schedule_delayed_work(&acc->acc_id_dwork,
 			msecs_to_jiffies(DETECTION_DELAY_MS));
 	return IRQ_HANDLED;
 }
 
-static int acc_con_interrupt_init(struct acc_con_info *acc)
+static int acc_init_dock_int(struct acc_con_info *acc)
 {
 	int ret = 0;
 	ACC_CONDEV_DBG("");
@@ -407,7 +404,7 @@ static int acc_con_interrupt_init(struct acc_con_info *acc)
 	gpio_request(acc->pdata->accessory_irq_gpio, "accessory");
 	gpio_direction_input(acc->pdata->accessory_irq_gpio);
 	acc->accessory_irq = gpio_to_irq(acc->pdata->accessory_irq_gpio);
-	ret = request_threaded_irq(acc->accessory_irq, NULL, acc_con_interrupt,
+	ret = request_threaded_irq(acc->accessory_irq, NULL, acc_dock_isr,
 			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 			"accessory_detect", acc);
 	if (ret)
@@ -419,13 +416,13 @@ static int acc_con_interrupt_init(struct acc_con_info *acc)
 	return ret;
 }
 
-static int acc_ID_interrupt_init(struct acc_con_info *acc)
+static int acc_init_accessory_int(struct acc_con_info *acc)
 {
 	int ret = 0;
 
 	ACC_CONDEV_DBG("");
 
-	ret = request_threaded_irq(acc->pdata->dock_irq, NULL, acc_ID_interrupt,
+	ret = request_threaded_irq(acc->pdata->dock_irq, NULL, acc_accessory_isr,
 			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 			"dock_detect", acc);
 	if (ret)
@@ -434,33 +431,40 @@ static int acc_ID_interrupt_init(struct acc_con_info *acc)
 	ret = enable_irq_wake(acc->pdata->dock_irq);
 	if (ret)
 		ACC_CONDEV_DBG("enable_irq_wake(dock_irq) return : %d\n", ret);
+
 	return ret;
 }
 
-static void acc_delay_work(struct work_struct *work)
+static void acc_dwork_int_init(struct work_struct *work)
 {
 	struct acc_con_info *acc = container_of(work,
 		struct acc_con_info, acc_dwork.work);
 	int retval;
 
-	retval = acc_con_interrupt_init(acc);
+	ACC_CONDEV_DBG("");
+
+	retval = acc_init_dock_int(acc);
 	if (retval) {
-		ACC_CONDEV_DBG(" failed to initialize the accessory detecty irq");
+		ACC_CONDEV_DBG("failed to initialize dock_int irq");
 		goto err_irq_dock;
 	}
 
-	retval = acc_ID_interrupt_init(acc);
+	retval = acc_init_accessory_int(acc);
 	if (retval) {
-		ACC_CONDEV_DBG(" failed to initialize the accessory ID irq");
+		ACC_CONDEV_DBG(" failed to initialize accessory_int irq");
 		goto err_irq_acc;
 	}
 
-	if (!gpio_get_value_cansleep(acc->pdata->accessory_irq_gpio))
-		check_acc_dock(acc);
+	if (acc->pdata->get_dock_state) {
+		if (!acc->pdata->get_dock_state())
+			acc_check_dock_detection(acc);
+	}
 
-	if (!acc->pdata->get_dock_state())
-		schedule_delayed_work(&acc->acc_id_dwork,
-			msecs_to_jiffies(DETECTION_DELAY_MS));
+	if (acc->pdata->get_acc_state) {
+		if (!acc->pdata->get_acc_state())
+			schedule_delayed_work(&acc->acc_id_dwork,
+				msecs_to_jiffies(DETECTION_DELAY_MS));
+	}
 
 	return ;
 
@@ -471,19 +475,24 @@ err_irq_dock:
 	return ;
 }
 
-static void acc_id_delay_work(struct work_struct *work)
+static void acc_dwork_accessory_detect(struct work_struct *work)
 {
 	struct acc_con_info *acc = container_of(work,
 		struct acc_con_info, acc_id_dwork.work);
+
 	int  adc_val=0;
-	if(acc->pdata->get_dock_state()) {
-		ACC_CONDEV_DBG("ACCESSORY detached\n");
-		return;
+	int acc_state = 0;
+
+	acc_state = acc->pdata->get_acc_state();
+
+	if(acc_state) {
+		ACC_CONDEV_DBG("Accessory detached");
+		acc_accessory_uevent(acc, false);
 	} else {
 		ACC_CONDEV_DBG("Accessory attached");
-		adc_val = connector_detect_change();
+		adc_val = acc_get_accessory_id();
 		ACC_CONDEV_DBG("adc_val : %d", adc_val);
-		acc_notified(acc, adc_val);
+		acc_accessory_uevent(acc, adc_val);
 	}
 }
 
@@ -588,7 +597,6 @@ static int acc_con_probe(struct platform_device *pdev)
 		pr_info("[MHL SII9234] add i2c driver\n");
 	}
 #endif
-
 	acc->dock_switch.name = "dock";
 	retval = switch_dev_register(&acc->dock_switch);
 	if (retval < 0)
@@ -600,15 +608,11 @@ static int acc_con_probe(struct platform_device *pdev)
 		goto err_sw_jack;
 
 	wake_lock_init(&acc->wake_lock, WAKE_LOCK_SUSPEND, "30pin_con");
-	INIT_DELAYED_WORK(&acc->acc_dwork, acc_delay_work);
+	INIT_DELAYED_WORK(&acc->acc_dwork, acc_dwork_int_init);
 	schedule_delayed_work(&acc->acc_dwork, msecs_to_jiffies(10000));
-#ifdef FEATURE_PM8058_ADC
-	INIT_DELAYED_WORK(&acc->acc_id_dwork, acc_id_delay_work);
-#endif
+	INIT_DELAYED_WORK(&acc->acc_id_dwork, acc_dwork_accessory_detect);
 
-#ifdef FEATURE_PM8058_ADC
 	g_acc = acc;
-#endif
 
 	if (device_create_file(acc->acc_dev, &dev_attr_MHD_file) < 0)		//hm0412 _build_error_debug
 		printk("Failed to create device file(%s)!\n", dev_attr_MHD_file.attr.name);
@@ -626,13 +630,10 @@ err_i2c_c:
 err_i2c_b:
 	i2c_del_driver(&SII9234A_i2c_driver);
 err_i2c_a:
-#if 0 /* defined(CONFIG_HAS_EARLYSUSPEND) */
-	cancel_delayed_work_sync(&acc->acc_con_work);
-#endif
+
 	kfree(acc);
 
 	return retval;
-
 }
 
 static int acc_con_remove(struct platform_device *pdev)
@@ -646,9 +647,9 @@ static int acc_con_remove(struct platform_device *pdev)
 	i2c_del_driver(&SII9234_i2c_driver);
 #endif
 	disable_irq_wake(acc->accessory_irq);
-	disable_irq_wake(acc->pdata->dock_irq);
+	disable_irq_wake(acc->dock_irq);
 	free_irq(acc->accessory_irq, acc);
-	free_irq(acc->pdata->dock_irq, acc);
+	free_irq(acc->dock_irq, acc);
 	switch_dev_unregister(&acc->dock_switch);
 	switch_dev_unregister(&acc->ear_jack_switch);
 	kfree(acc);
@@ -659,7 +660,7 @@ static int acc_con_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct acc_con_info *acc = platform_get_drvdata(pdev);
 	ACC_CONDEV_DBG("");
-#if 0 //def CONFIG_MHL_SII9234
+#ifdef CONFIG_MHL_SII9234
 	if ((acc->current_dock == DOCK_DESK) || (acc->current_dock == DOCK_KEYBOARD))
 		MHD_HW_Off();   /*call MHL deinit */
 #endif
@@ -670,7 +671,7 @@ static int acc_con_resume(struct platform_device *pdev)
 {
 	struct acc_con_info *acc = platform_get_drvdata(pdev);
 	ACC_CONDEV_DBG("");
-#if 0 //def CONFIG_MHL_SII9234
+#ifdef CONFIG_MHL_SII9234
 	if ((acc->current_dock == DOCK_DESK) || (acc->current_dock == DOCK_KEYBOARD))
 		sii9234_tpi_init();  /* call MHL init */
 #endif
@@ -691,6 +692,7 @@ static struct platform_driver acc_con_driver = {
 static int __init acc_con_init(void)
 {
 	ACC_CONDEV_DBG("");
+
 	return platform_driver_register(&acc_con_driver);
 }
 

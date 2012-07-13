@@ -29,6 +29,7 @@
 #define MAX_SDIO_TTY_DEVS		2
 #define MAX_SDIO_TTY_DEV_NAME_SIZE	25
 
+/* Configurations per channel device */
 /* CSVT */
 #define SDIO_TTY_CSVT_DEV		"sdio_tty_csvt_0"
 #define SDIO_TTY_CSVT_TEST_DEV		"sdio_tty_csvt_test_0"
@@ -663,6 +664,34 @@ static int sdio_tty_probe(struct platform_device *pdev)
 	int ret = 0;
 	enum sdio_tty_devices device_id = 0;
 	
+#if 0
+	const struct platform_device_id *id = platform_get_device_id(pdev);
+	enum sdio_tty_devices device_id = id->driver_data;
+	char *device_name = NULL;
+	char *channel_name = NULL;
+	int debug_msg_on = 0;
+	int ret = 0;
+
+	pr_debug(SDIO_TTY_MODULE_NAME ": %s for %s", __func__, pdev->name);
+
+	switch (device_id) {
+	case SDIO_CSVT:
+		device_name = SDIO_TTY_CSVT_DEV;
+		channel_name = SDIO_TTY_CH_CSVT;
+		debug_msg_on = csvt_debug_msg_on;
+		break;
+	case SDIO_CSVT_TEST_APP:
+		device_name = SDIO_TTY_CSVT_TEST_DEV;
+		channel_name = SDIO_TTY_CH_CSVT;
+		debug_msg_on = csvt_debug_msg_on;
+		break;
+	default:
+		pr_err(SDIO_TTY_MODULE_NAME ": %s Invalid device:%s, id:%d",
+			__func__, pdev->name, device_id);
+		ret = -ENODEV;
+		break;
+	}
+#endif
 	if (!strcmp(pdev->name, SDIO_TTY_CH_CSVT))
 	{
 		device_name = SDIO_TTY_CSVT_DEV;

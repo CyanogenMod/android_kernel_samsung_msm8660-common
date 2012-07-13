@@ -168,6 +168,7 @@ struct msm_otg {
 	struct work_struct notify_work;
 	unsigned notify_state;
 	u8      otg_control;
+	struct timer_list sm_work_timer;
 #endif
 #ifdef CONFIG_30PIN_CONN
 	int accessory_irq;

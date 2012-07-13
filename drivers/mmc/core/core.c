@@ -40,6 +40,10 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+#include "../host/msm_sdcc.h"
+#endif
+
 static struct workqueue_struct *workqueue;
 
 /*
@@ -132,17 +136,21 @@ void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 
 		if (mrq->data) {
 #ifdef CONFIG_MMC_PERF_PROFILING
-			diff = ktime_sub(ktime_get(), host->perf.start);
-			if (mrq->data->flags == MMC_DATA_READ) {
-				host->perf.rbytes_drv +=
+			if (host->perf_enable) {
+				diff = ktime_sub(ktime_get(), host->perf.start);
+				if (mrq->data->flags == MMC_DATA_READ) {
+					host->perf.rbytes_drv +=
+							mrq->data->bytes_xfered;
+					host->perf.rtime_drv =
+						ktime_add(host->perf.rtime_drv,
+							diff);
+				} else {
+					host->perf.wbytes_drv +=
 						mrq->data->bytes_xfered;
-				host->perf.rtime_drv =
-					ktime_add(host->perf.rtime_drv, diff);
-			} else {
-				host->perf.wbytes_drv +=
-						 mrq->data->bytes_xfered;
-				host->perf.wtime_drv =
-					ktime_add(host->perf.wtime_drv, diff);
+					host->perf.wtime_drv =
+						ktime_add(host->perf.wtime_drv,
+							diff);
+				}
 			}
 #endif
 			pr_debug("%s:     %d bytes transferred: %d\n",
@@ -220,7 +228,8 @@ mmc_start_request(struct mmc_host *host, struct mmc_request *mrq)
 			mrq->stop->mrq = mrq;
 		}
 #ifdef CONFIG_MMC_PERF_PROFILING
-		host->perf.start = ktime_get();
+		if (host->perf_enable)
+			host->perf.start = ktime_get();
 #endif
 	}
 	mmc_host_clk_hold(host);
@@ -655,7 +664,7 @@ EXPORT_SYMBOL(mmc_release_host);
  * Internal function that does the actual ios call to the host driver,
  * optionally printing some debug output.
  */
-static inline void mmc_set_ios(struct mmc_host *host)
+void mmc_set_ios(struct mmc_host *host)
 {
 	struct mmc_ios *ios = &host->ios;
 
@@ -669,6 +678,7 @@ static inline void mmc_set_ios(struct mmc_host *host)
 		mmc_set_ungated(host);
 	host->ops->set_ios(host, ios);
 }
+EXPORT_SYMBOL(mmc_set_ios);
 
 /*
  * Control chip select pin on a host.
@@ -711,6 +721,8 @@ void mmc_gate_clock(struct mmc_host *host)
 {
 	unsigned long flags;
 
+	WARN_ON(!host->ios.clock);
+
 	spin_lock_irqsave(&host->clk_lock, flags);
 	host->clk_old = host->ios.clock;
 	host->ios.clock = 0;
@@ -733,7 +745,7 @@ void mmc_ungate_clock(struct mmc_host *host)
 	 * we just ignore the call.
 	 */
 	if (host->clk_old) {
-		BUG_ON(host->ios.clock);
+		WARN_ON(host->ios.clock);
 		/* This call will also set host->clk_gated to false */
 		__mmc_set_clock(host, host->clk_old);
 	}
@@ -1056,7 +1068,7 @@ void mmc_set_driver_type(struct mmc_host *host, unsigned int drv_type)
  * If a host does all the power sequencing itself, ignore the
  * initial MMC_POWER_UP stage.
  */
-static void mmc_power_up(struct mmc_host *host)
+void mmc_power_up(struct mmc_host *host)
 {
 	int bit;
 
@@ -1101,7 +1113,7 @@ static void mmc_power_up(struct mmc_host *host)
 	mmc_host_clk_release(host);
 }
 
-static void mmc_power_off(struct mmc_host *host)
+void mmc_power_off(struct mmc_host *host)
 {
 	mmc_host_clk_hold(host);
 
@@ -1415,12 +1427,35 @@ static unsigned int mmc_erase_timeout(struct mmc_card *card,
 		return mmc_mmc_erase_timeout(card, arg, qty);
 }
 
+#define UNSTUFF_BITS(resp, start, size)					\
+	({								\
+		const int __size = size;				\
+		const u32 __mask = (__size < 32 ? 1 << __size : 0) - 1;	\
+		const int __off = 3 - ((start) / 32);			\
+		const int __shft = (start) & 31;			\
+		u32 __res;						\
+									\
+		__res = resp[__off] >> __shft;				\
+		if (__size + __shft > 32)				\
+			__res |= resp[__off-1] << ((32 - __shft) % 32);	\
+		__res & __mask;						\
+	})
+
 static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 			unsigned int to, unsigned int arg)
 {
 	struct mmc_command cmd = {0};
 	unsigned int qty = 0;
 	int err;
+
+	u32 *resp = card->raw_csd;
+
+	/* For WriteProtection */
+	if (UNSTUFF_BITS(resp, 12, 2)) {
+		printk(KERN_ERR "eMMC set Write Protection mode, Can't be written or erased.");
+		err = -EIO;
+		goto out;
+	}
 
 	/*
 	 * qty is used to calculate the erase timeout which depends on how many
@@ -1510,6 +1545,14 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 			err = -EIO;
 			goto out;
 		}
+
+		if (cmd.resp[0] & R1_WP_ERASE_SKIP) {
+			printk(KERN_ERR "error %d requesting status %#x (R1_WP_ERASE_SKIP)\n",
+				err, cmd.resp[0]);
+			err = -EIO;
+			goto out;
+		}
+
 	} while (!(cmd.resp[0] & R1_READY_FOR_DATA) ||
 		 R1_CURRENT_STATE(cmd.resp[0]) == 7);
 out:
@@ -1550,9 +1593,23 @@ int mmc_can_trim(struct mmc_card *card)
 {
 	if (card->ext_csd.sec_feature_support & EXT_CSD_SEC_GB_CL_EN)
 		return 1;
+	if (mmc_can_discard(card))
+		return 1;
 	return 0;
 }
 EXPORT_SYMBOL(mmc_can_trim);
+
+int mmc_can_discard(struct mmc_card *card)
+{
+	/*
+	 * As there's no way to detect the discard support bit at v4.5
+	 * use the s/w feature support filed.
+	 */
+	if (card->ext_csd.feature_support & MMC_DISCARD_FEATURE)
+		return 1;
+	return 0;
+}
+EXPORT_SYMBOL(mmc_can_discard);
 
 int mmc_can_secure_erase_trim(struct mmc_card *card)
 {
@@ -1866,11 +1923,6 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (mmc_bus_needs_resume(host))
 		return 0;
 
-	if (host->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME)
-	{
-		host->pm_flags |= MMC_PM_KEEP_POWER;
-	}
-
 	if (host->caps & MMC_CAP_DISABLE)
 		cancel_delayed_work(&host->disable);
 	if (cancel_delayed_work(&host->detect))
@@ -1920,10 +1972,13 @@ int mmc_suspend_host(struct mmc_host *host)
 	}
 	mmc_bus_put(host);
 
-	if (!err && !mmc_card_keep_power(host)) {
-		if (!(host->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME))
-			mmc_power_off(host);
-	}
+	if (!err && !mmc_card_keep_power(host))
+		mmc_power_off(host);
+    
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+    if (host->card && host->index == 2)// T-FLASH card
+        mdelay(50);
+#endif
 
 	return err;
 }
@@ -1947,10 +2002,7 @@ int mmc_resume_host(struct mmc_host *host)
 
 	if (host->bus_ops && !host->bus_dead) {
 		if (!mmc_card_keep_power(host)) {
-			/* for BCM WIFI */
-			if (!(host->pm_flags & MMC_PM_IGNORE_SUSPEND_RESUME))
-				mmc_power_up(host);
-
+			mmc_power_up(host);
 			mmc_select_voltage(host, host->ocr);
 			/*
 			 * Tell runtime PM core we just powered up the card,
@@ -1990,6 +2042,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 {
 	struct mmc_host *host = container_of(
 		notify_block, struct mmc_host, pm_notify);
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+	struct msmsdcc_host *msmhost = mmc_priv(host);
+#endif
 	unsigned long flags;
 
 
@@ -2032,8 +2087,14 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
 
-		if (host->index != 3)  // for the bcm wifi deepsleep mode, kyungjin.moon
-			mmc_detect_change(host, 0);
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+		if (host->card && msmhost && msmhost->pdev_id == 4)
+			printk(KERN_INFO"%s(): WLAN SKIP DETECT CHANGE\n",
+					__func__);
+		else
+#endif
+		mmc_detect_change(host, 0);
+
 	}
 
 	return 0;
