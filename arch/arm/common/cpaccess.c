@@ -318,24 +318,30 @@ static struct sys_device device_cpaccess = {
  */
 static int __init init_cpaccess_sysfs(void)
 {
-	int error = sysdev_class_register(&cpaccess_sysclass);
+	int error;
 
-	if (!error)
-		error = sysdev_register(&device_cpaccess);
-	else
-		pr_err("Error initializing cpaccess interface\n");
+	error = sysdev_class_register(&cpaccess_sysclass);
+	if (error)
+		goto err ;
 
-	if (!error)
-		error = sysdev_create_file(&device_cpaccess,
-		 &attr_cp_rw);
-	else {
-		pr_err("Error initializing cpaccess interface\n");
-		sysdev_unregister(&device_cpaccess);
-		sysdev_class_unregister(&cpaccess_sysclass);
-	}
+	error = sysdev_register(&device_cpaccess);
+	if (error)
+		goto err_class_unregister ;
+
+	error = sysdev_create_file(&device_cpaccess, &attr_cp_rw);
+	if (error)
+		goto err_unregister ;
 
 	sema_init(&cp_sem, 1);
 
+	return error;
+
+err_unregister:
+	sysdev_unregister(&device_cpaccess);
+err_class_unregister:
+	sysdev_class_unregister(&cpaccess_sysclass);
+err:
+	pr_err("Error initializing cpaccess interface\n");
 	return error;
 }
 

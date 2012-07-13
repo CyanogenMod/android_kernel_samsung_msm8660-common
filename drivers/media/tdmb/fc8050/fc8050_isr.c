@@ -25,13 +25,14 @@
 	2009/08/29	jason		initial
 *******************************************************************************/
 
+#include <linux/cache.h>
 #include "fci_types.h"
 #include "fci_hal.h"
 #include "fc8050_regs.h"
 #include "fc8050_isr.h"
 
-static u8 fic_buffer[512+4];
-static u8 msc_buffer[8192+4];
+static u8 fic_buffer[512+4] __cacheline_aligned;
+static u8 msc_buffer[4096+4] __cacheline_aligned;
 
 int (*fic_callback)(u32 userdata, u8 *data, int length) = NULL;
 int (*msc_callback)(u32 userdata, u8 subchid, u8 *data, int length) = NULL;
@@ -62,16 +63,16 @@ void fc8050_isr(HANDLE hDevice)
 			size += 1;
 			if (size-1) {
 				bbm_data(hDevice, BBM_COM_FIC_DATA
-					, &fic_buffer[4], size);
+					, &fic_buffer[0], size);
 
 #ifdef CONFIG_TDMB_SPI
 				if (fic_callback)
 					(*fic_callback)(fic_user_data
-					, &fic_buffer[6], size);
+					, &fic_buffer[2], size);
 #else
 				if (fic_callback)
 					(*fic_callback)(fic_user_data
-					, &fic_buffer[4], size);
+					, &fic_buffer[0], size);
 #endif
 			}
 		}
@@ -90,21 +91,21 @@ void fc8050_isr(HANDLE hDevice)
 					sub_ch_id = sub_ch_id & 0x3f;
 
 					bbm_data(hDevice, (BBM_COM_CH0_DATA+i)
-						, &msc_buffer[4], size);
+						, &msc_buffer[0], size);
 
 #ifdef CONFIG_TDMB_SPI
 					if (msc_callback)
 						(*msc_callback)(
 						msc_user_data
 						, sub_ch_id
-						, &msc_buffer[6]
+						, &msc_buffer[2]
 						, size);
 #else
 					if (msc_callback)
 						(*msc_callback)(
 						msc_user_data
 						, sub_ch_id
-						, &msc_buffer[4]
+						, &msc_buffer[0]
 						, size);
 #endif
 				}

@@ -111,7 +111,7 @@ error:
 static int32_t s5k5bafx_i2c_write_32bit(unsigned short saddr, unsigned long packet)
 		{
 	int32_t rc = -EFAULT;
-	int retry_count = 5;
+	int retry_count = 3;
 
 	unsigned char buf[4];
 
@@ -672,14 +672,13 @@ static long s5k5bafx_set_sensor_mode(int mode)
 		CAM_DEBUG("SENSOR_PREVIEW_MODE START");
 		
 		err = s5k5bafx_start();
-		if(err < 0) {
+		if (err < 0) {
 			printk("s5k5bafx_start failed!\n"); 
 			return err;
 		}
 		
 		if (s5k5bafx_ctrl->sensor_mode != SENSOR_MOVIE)
 			err= s5k5bafx_video_config(SENSOR_PREVIEW_MODE);
-
 		break;
 
 	case SENSOR_SNAPSHOT_MODE:
@@ -801,7 +800,7 @@ static int s5k5bafx_set_flip(uint32_t flip)
 	
 	CAM_DEBUG("%d",flip);
 	
-#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_TARGET_LOCALE_JPN)
 	if(s5k5bafx_ctrl->check_dataline)
 		return 0;
 

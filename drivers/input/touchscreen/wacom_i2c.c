@@ -36,7 +36,7 @@
 
 #if defined(CONFIG_USA_MODEL_SGH_I717)
 #define HWREV_PEN_PITCH4P4   0x02
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define HWREV_PEN_PITCH4P4   0x05
 #endif
 
@@ -71,6 +71,14 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 	long fsize, nread;
 	int ret;
 	struct wacom_i2c *wac_i2c = i2c_get_clientdata(client);
+	unsigned char *Binary_UMS = NULL;    
+
+	Binary_UMS = kmalloc(WACOM_FW_SIZE, GFP_KERNEL);
+	if (Binary_UMS == NULL) {
+		printk(KERN_DEBUG "[E-PEN] %s, kmalloc failed\n", __func__);
+		return -ENOENT;
+		}
+	Binary = Binary_UMS;
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -85,6 +93,12 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 	fsize = fp->f_path.dentry->d_inode->i_size;
 	printk(KERN_NOTICE "[E-PEN]: start, file path %s, size %ld Bytes\n", WACOM_FW_PATH, fsize);
 
+	if(fsize > WACOM_FW_SIZE) {
+	    kfree(Binary_UMS);
+		    printk(KERN_ERR "[E-PEN]: UMS file size (%ld) > WACOM_FW_SIZE (%ld)\n", fsize, WACOM_FW_SIZE);	  
+		    return -ENOENT;
+	}
+
 	nread = vfs_read(fp, (char __user *)Binary, fsize, &fp->f_pos);
 	printk(KERN_ERR "[E-PEN]: nread %ld Bytes\n", nread);
 	if (nread != fsize) {
@@ -98,21 +112,27 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 		goto fw_write_err;
 	}
 
+	Binary = Binary_44;
+	kfree(Binary_UMS);
+
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 
 	return 0;
 
 open_err :
+	kfree(Binary_UMS);
 	set_fs(old_fs);
 	return -ENOENT;
 
 read_err :
+	kfree(Binary_UMS);
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 	return -EIO;
 
 fw_write_err :
+	kfree(Binary_UMS);
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 	return -1;
@@ -125,6 +145,27 @@ static irqreturn_t wacom_interrupt(int irq, void *dev_id)
 	wacom_i2c_coord(wac_i2c);
 	return IRQ_HANDLED;
 }
+
+#if defined(WACOM_PDCT_WORK_AROUND)
+static irqreturn_t wacom_interrupt_pdct(int irq, void *dev_id)
+{
+	struct wacom_i2c *wac_i2c = dev_id;
+
+	wac_i2c->pen_pdct = gpio_get_value(wac_i2c->wac_pdata->gpio_pendct);
+
+	printk(KERN_DEBUG "[E-PEN] pdct %d(%d)\n",
+		wac_i2c->pen_pdct, wac_i2c->pen_prox);
+
+	if (wac_i2c->pen_pdct == PDCT_NOSIGNAL) {
+		/* If rdy is 1, pen is still working*/
+		if (wac_i2c->pen_prox == 0)
+			forced_release(wac_i2c);
+	} else if (wac_i2c->pen_prox == 0)
+		forced_hover(wac_i2c);
+
+	return IRQ_HANDLED;
+}
+#endif
 
 static void wacom_i2c_set_input_values(struct i2c_client *client,
 				struct wacom_i2c *wac_i2c,
@@ -190,7 +231,15 @@ static void wacom_i2c_early_suspend(struct early_suspend *h)
 
 #endif
 
+#ifdef WACOM_PDCT_WORK_AROUND
+	disable_irq(wac_i2c->irq_pdct);
+#endif
+
 	/* release pen, if it is pressed*/
+#ifdef WACOM_PDCT_WORK_AROUND
+	if (wac_i2c->pen_pdct == PDCT_DETECT_PEN)
+		forced_release(wac_i2c);
+#else
 	if(wac_i2c->pen_pressed || wac_i2c->side_pressed)
 	{
 		input_report_abs(wac_i2c->input_dev, ABS_PRESSURE, 0);
@@ -200,7 +249,7 @@ static void wacom_i2c_early_suspend(struct early_suspend *h)
 		input_sync(wac_i2c->input_dev);
 		pr_info("[E-PEN] is released\n");
 	}
-
+#endif
 	wac_i2c->wac_pdata->early_suspend_platform_hw();
 	printk(KERN_DEBUG "[E-PEN]:%s.\n", __func__);
 }
@@ -211,6 +260,9 @@ static void wacom_i2c_resume_work(struct work_struct *work)
 	    container_of(work, struct wacom_i2c, resume_work);
 
 	enable_irq(wac_i2c->client->irq);
+#ifdef WACOM_PDCT_WORK_AROUND
+	enable_irq(wac_i2c->irq_pdct);
+#endif
 	printk(KERN_DEBUG"[E-PEN] %s\n", __func__);
 }
 
@@ -285,13 +337,21 @@ static ssize_t epen_firmware_update_store(struct device *dev,
 	u8 buf_if;
 	int ret;
 
+#if defined(CONFIG_USA_MODEL_SGH_I717)	
+	disable_irq(wac_i2c->irq);
+#ifdef WACOM_PDCT_WORK_AROUND
+	disable_irq(wac_i2c->irq_pdct);
+#endif
+#endif
+
 	buf_if = COM_QUERY;
 	data = wac_i2c->wac_feature->data;
-
+	
 	printk(KERN_DEBUG "[E-PEN]:%s:\n", __func__);
 
+#if !defined(CONFIG_USA_MODEL_SGH_I717)
 	disable_irq(wac_i2c->irq);
-
+#endif
 	wac_i2c->wac_feature->firm_update_status = 1;
 
 	if (*buf == 'F') {
@@ -303,6 +363,7 @@ static ssize_t epen_firmware_update_store(struct device *dev,
 		}
 	} else if (*buf == 'B') {
 		printk(KERN_ERR "[E-PEN]: Start firmware flashing (kernel image).\n");
+		Binary = Binary_44;
 		ret = wacom_i2c_flash(wac_i2c);
 		if (ret < 0) {
 			printk(KERN_ERR "[E-PEN]: failed to flash firmware.\n");
@@ -321,7 +382,9 @@ static ssize_t epen_firmware_update_store(struct device *dev,
 	wac_i2c->wac_feature->firm_update_status = 2;
 
 	enable_irq(wac_i2c->irq);
-
+#ifdef WACOM_PDCT_WORK_AROUND
+	enable_irq(wac_i2c->irq_pdct);
+#endif
 
 	return count;
 
@@ -330,6 +393,10 @@ param_err:
 failure:
 	wac_i2c->wac_feature->firm_update_status = -1;
 	enable_irq(wac_i2c->irq);
+#ifdef WACOM_PDCT_WORK_AROUND
+	enable_irq(wac_i2c->irq_pdct);
+#endif
+
 	return -1;
 
 }
@@ -401,9 +468,11 @@ static ssize_t epen_reset_store(struct device *dev,
 
 	sscanf(buf, "%d", &val);
 
-	if( val == 1 )
-	{
+	if (val == 1) {
 		disable_irq(wac_i2c->client->irq);
+#ifdef WACOM_PDCT_WORK_AROUND
+		disable_irq(wac_i2c->irq_pdct);
+#endif
 		
 		/* reset IC */	
 		gpio_set_value(GPIO_PEN_RESET, 0);
@@ -415,6 +484,9 @@ static ssize_t epen_reset_store(struct device *dev,
 		ret = wacom_i2c_query(wac_i2c);
 
 		enable_irq(wac_i2c->client->irq);
+#ifdef WACOM_PDCT_WORK_AROUND
+		enable_irq(wac_i2c->irq_pdct);
+#endif
 
 		if( ret < 0 )
 			epen_reset_result = false;
@@ -500,6 +572,9 @@ static void epen_checksum_read_atBoot(struct wacom_i2c *wac_i2c)
 
 	{
 		disable_irq(wac_i2c->client->irq);
+	#ifdef WACOM_PDCT_WORK_AROUND
+		disable_irq(wac_i2c->irq_pdct);
+	#endif
 
 		data[0] = COM_CHECKSUM;
 
@@ -546,6 +621,9 @@ static void epen_checksum_read_atBoot(struct wacom_i2c *wac_i2c)
 			epen_checksum_result = false;
 
 		enable_irq(wac_i2c->client->irq);
+	#ifdef WACOM_PDCT_WORK_AROUND
+		enable_irq(wac_i2c->irq_pdct);
+	#endif
 
 		printk(KERN_DEBUG "[E-PEN] %s, result %d\n", __func__, epen_checksum_result);
 	}
@@ -738,6 +816,9 @@ static int wacom_i2c_probe(struct i2c_client *client,
 
 	wac_i2c->client = client;
 	wac_i2c->irq = client->irq;
+#ifdef WACOM_PDCT_WORK_AROUND
+	wac_i2c->irq_pdct = gpio_to_irq(pdata->gpio_pendct);
+#endif
 
 	/*Change below if irq is needed*/
 	wac_i2c->irq_flag = 1;
@@ -874,13 +955,27 @@ static int wacom_i2c_probe(struct i2c_client *client,
 		if (ret < 0)
 			goto err1;
 	}
+#if defined(WACOM_PDCT_WORK_AROUND)
+		ret =
+			request_threaded_irq(wac_i2c->irq_pdct, NULL,
+					wacom_interrupt_pdct,
+					IRQF_DISABLED | IRQF_TRIGGER_RISING |
+					IRQF_TRIGGER_FALLING | IRQF_ONESHOT,
+					wac_i2c->name, wac_i2c);
+		if (ret < 0) {
+			printk(KERN_ERR
+				"[E-PEN]: failed to request irq(%d) - %d\n",
+				wac_i2c->irq_pdct, ret);
+			goto err1;
+		}
+#endif
 
 	/* firmware update */
 	printk(KERN_NOTICE "[E-PEN] wacom fw ver : 0x%x, new fw ver : 0x%x\n",
 		wac_i2c->wac_feature->fw_version, Firmware_version_of_file);
 	if( wac_i2c->wac_feature->fw_version < Firmware_version_of_file ) 
 	{
-		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		printk("[E-PEN] %s\n", __func__);
 		
 		disable_irq(wac_i2c->irq);

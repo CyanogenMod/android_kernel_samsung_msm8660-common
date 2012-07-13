@@ -249,6 +249,7 @@ struct sdio_al_test_debug {
 	struct dentry *rpc_sender_rmnet_a2_perf_test;
 	struct dentry *all_channels_test;
 	struct dentry *host_sender_no_lp_diag_test;
+	struct dentry *host_sender_no_lp_diag_rpc_test;
 	struct dentry *rmnet_small_packets_test;
 	struct dentry *rmnet_rtt_test;
 	struct dentry *csvt_rtt_test;
@@ -369,7 +370,7 @@ static int sdio_al_test_extract_number(const char __user *buf,
 {
 	int ret = 0;
 	int number = -1;
-	char local_buf[MAX_STR_SIZE] = {0};
+	char local_buf[MAX_STR_SIZE+1] = {0};
 	char *start = NULL;
 
 	if (count > MAX_STR_SIZE) {
@@ -1280,6 +1281,74 @@ const struct file_operations host_sender_no_lp_diag_test_ops = {
 	.read = host_sender_no_lp_diag_test_read,
 };
 
+/* HOST SENDER NO LP DIAG, RPC TEST */
+static ssize_t host_sender_no_lp_diag_rpc_test_write(
+						 struct file *file,
+						 const char __user *buf,
+						 size_t count,
+						 loff_t *ppos)
+{
+	int ret = 0;
+	int i = 0;
+	int number = -1;
+
+	pr_info(TEST_MODULE_NAME "-- HOST SENDER NO LP FOR DIAG, RPC "
+		"TEST --");
+
+	number = sdio_al_test_extract_number(buf, count);
+
+	if (number < 0) {
+		pr_err(TEST_MODULE_NAME " : %s - sdio_al_test_extract_number() "
+		       "failed. number = %d\n", __func__, number);
+		return count;
+	}
+
+	for (i = 0 ; i < number ; ++i) {
+		pr_info(TEST_MODULE_NAME " - Cycle # %d / %d\n", i+1, number);
+		pr_info(TEST_MODULE_NAME " ===================");
+
+		sdio_al_test_initial_dev_and_chan(test_ctx);
+
+		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_DIAG]);
+		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_RPC]);
+
+		ret = test_start();
+
+		if (ret)
+			break;
+	}
+
+	return count;
+}
+
+static ssize_t host_sender_no_lp_diag_rpc_test_read(
+						 struct file *file,
+						 char __user *buffer,
+						 size_t count,
+						 loff_t *offset)
+{
+	memset((void *)buffer, 0, count);
+
+	snprintf(buffer, count,
+		 "\nHOST_SENDER_NO_LP_DIAG_RPC_TEST\n"
+		 "===================================\n"
+		 "Description:\n"
+		 "TBD\n");
+
+	if (message_repeat == 1) {
+		message_repeat = 0;
+		return strnlen(buffer, count);
+	} else {
+		return 0;
+	}
+}
+
+const struct file_operations host_sender_no_lp_diag_rpc_test_ops = {
+	.open = sdio_al_test_open,
+	.write = host_sender_no_lp_diag_rpc_test_write,
+	.read = host_sender_no_lp_diag_rpc_test_read,
+};
+
 /* RMNET SMALL PACKETS TEST */
 static ssize_t rmnet_small_packets_test_write(struct file *file,
 					       const char __user *buf,
@@ -1848,7 +1917,7 @@ static ssize_t open_close_test_write(struct file *file,
 			break;
 
 		pr_info(TEST_MODULE_NAME " -- correctness test for"
-				"DIAG");
+				"DIAG ");
 		set_params_loopback_9k(ch_arr[SDIO_DIAG]);
 
 		ret = test_start();
@@ -2465,6 +2534,13 @@ static int sdio_al_test_debugfs_init(void)
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &host_sender_no_lp_diag_test_ops);
+
+	test_ctx->debug.host_sender_no_lp_diag_rpc_test =
+		debugfs_create_file("170_host_sender_no_lp_diag_rpc_test",
+				     S_IRUGO | S_IWUSR |S_IWGRP,
+				     test_ctx->debug.debug_root,
+				     NULL,
+				     &host_sender_no_lp_diag_rpc_test_ops);
 
 	test_ctx->debug.rmnet_small_packets_test =
 		debugfs_create_file("180_rmnet_small_packets_test",
@@ -6333,6 +6409,10 @@ static int __init test_init(void)
 #endif
 
 	test_class = class_create(THIS_MODULE, TEST_MODULE_NAME);
+    if (IS_ERR(test_class)) {
+        pr_err(TEST_MODULE_NAME ":class_create err.\n") ;
+        return -ENODEV ;
+    }
 
 	ret = alloc_chrdev_region(&test_ctx->dev_num, 0, 1, TEST_MODULE_NAME);
 	if (ret) {

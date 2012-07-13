@@ -58,6 +58,7 @@ enum {
 	SWITCH_PORT_ALL_OPEN,	
 };
 
+extern void fsa9480_audiopath_control(int enable);
 extern void fsa9480_manual_switching(int path);
 extern void fsa9480_otg_detach(void);
 extern void fsa9480_check_device(void);  // Add for fsa9485 device check (Samsung)

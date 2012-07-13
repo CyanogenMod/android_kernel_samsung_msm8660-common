@@ -59,7 +59,7 @@
 
 struct spi_device *fc8050_spi;
 
-static u8 tx_data[10];
+static u8 tx_data[32] __cacheline_aligned;
 
 static DEFINE_MUTEX(lock);
 

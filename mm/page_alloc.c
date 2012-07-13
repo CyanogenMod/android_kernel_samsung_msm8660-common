@@ -78,6 +78,10 @@ DEFINE_PER_CPU(int, _numa_mem_);		/* Kernel "local memory" node */
 EXPORT_PER_CPU_SYMBOL(_numa_mem_);
 #endif
 
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+struct mutex page_alloc_slow_mutex;
+#endif
+
 /*
  * Array of node states.
  */
@@ -503,10 +507,10 @@ static inline int page_is_buddy(struct page *page, struct page *buddy,
  * free pages of length of (1 << order) and marked with _mapcount -2. Page's
  * order is recorded in page_private(page) field.
  * So when we are allocating or freeing one, we can derive the state of the
- * other.  That is, if we allocate a small block, and both were   
- * free, the remainder of the region must be split into blocks.   
+ * other.  That is, if we allocate a small block, and both were
+ * free, the remainder of the region must be split into blocks.
  * If a block is freed, and its buddy is also free, then this
- * triggers coalescing into a block of larger size.            
+ * triggers coalescing into a block of larger size.
  *
  * -- wli
  */
@@ -1035,17 +1039,17 @@ retry_reserve:
 	return page;
 }
 
-/* 
+/*
  * Obtain a specified number of elements from the buddy allocator, all under
  * a single hold of the lock, for efficiency.  Add them to the supplied list.
  * Returns the number of new pages which were placed at *list.
  */
-static int rmqueue_bulk(struct zone *zone, unsigned int order, 
+static int rmqueue_bulk(struct zone *zone, unsigned int order,
 			unsigned long count, struct list_head *list,
 			int migratetype, int cold)
 {
 	int i;
-	
+
 	spin_lock(&zone->lock);
 	for (i = 0; i < count; ++i) {
 		struct page *page = __rmqueue(zone, order, migratetype);
@@ -1945,6 +1949,9 @@ __alloc_pages_direct_compact(gfp_t gfp_mask, unsigned int order,
 			preferred_zone->compact_considered = 0;
 			preferred_zone->compact_defer_shift = 0;
 			count_vm_event(COMPACTSUCCESS);
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+            printk(KERN_WARNING "Memory compaction success\n") ;
+#endif
 			return page;
 		}
 
@@ -2129,6 +2136,11 @@ __alloc_pages_slowpath(gfp_t gfp_mask, unsigned int order,
 		return NULL;
 	}
 
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+	if (gfp_mask & __GFP_WAIT)
+		mutex_lock(&page_alloc_slow_mutex);
+#endif
+
 	/*
 	 * GFP_THISNODE (meaning __GFP_THISNODE, __GFP_NORETRY and
 	 * __GFP_NOWARN set) should not cause reclaim since the subsystem
@@ -2281,10 +2293,18 @@ rebalance:
 
 nopage:
 	warn_alloc_failed(gfp_mask, order, NULL);
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+	if (gfp_mask & __GFP_WAIT)
+		mutex_unlock(&page_alloc_slow_mutex);
+#endif
 	return page;
 got_pg:
 	if (kmemcheck_enabled)
 		kmemcheck_pagealloc_alloc(page, order, gfp_mask);
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+	if (gfp_mask & __GFP_WAIT)
+		mutex_unlock(&page_alloc_slow_mutex);
+#endif
 	return page;
 
 }
@@ -4327,7 +4347,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 	init_waitqueue_head(&pgdat->kswapd_wait);
 	pgdat->kswapd_max_order = 0;
 	pgdat_page_cgroup_init(pgdat);
-	
+
 	for (j = 0; j < MAX_NR_ZONES; j++) {
 		struct zone *zone = pgdat->node_zones + j;
 		unsigned long size, realsize, memmap_pages;
@@ -5037,6 +5057,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
 void __init page_alloc_init(void)
 {
 	hotcpu_notifier(page_alloc_cpu_notify, 0);
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+	mutex_init(&page_alloc_slow_mutex);
+#endif
 }
 
 /*
@@ -5259,11 +5282,11 @@ int __meminit init_per_zone_wmark_min(void)
 module_init(init_per_zone_wmark_min)
 
 /*
- * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so 
+ * min_free_kbytes_sysctl_handler - just a wrapper around proc_dointvec() so
  *	that we can call two helper functions whenever min_free_kbytes
  *	changes.
  */
-int min_free_kbytes_sysctl_handler(ctl_table *table, int write, 
+int min_free_kbytes_sysctl_handler(ctl_table *table, int write,
 	void __user *buffer, size_t *length, loff_t *ppos)
 {
 	proc_dointvec(table, write, buffer, length, ppos);

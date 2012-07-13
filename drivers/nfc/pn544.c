@@ -378,7 +378,7 @@ static int pn544_probe(struct i2c_client *client,
 		goto err_request_irq_failed;
 	}
 	pn544_disable_irq(pn544_dev);
-#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_EUR_MODEL_GT_I9210)
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_EUR_MODEL_GT_I9210) || defined(CONFIG_TARGET_LOCALE_JPN) 
 	enable_irq_wake(client->irq);	
 #endif	
 	i2c_set_clientdata(client, pn544_dev);

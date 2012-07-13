@@ -448,7 +448,7 @@ static ssize_t mdnie_bg_store(struct device *dev,
     return size;
 }
 
-static DEVICE_ATTR(mdnie_bg, 0664, mdnie_bg_show, mdnie_bg_store);
+static DEVICE_ATTR(mode, 0664, mdnie_bg_show, mdnie_bg_store);
 
 
 #if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
@@ -575,8 +575,8 @@ int cmc623_sysfs_init(void)
         ret = -1;
     }
 
-    if(device_create_file(tune_cmc623_dev, &dev_attr_mdnie_bg) < 0) {
-        printk("[CMC623:ERROR] device_crate_filed(%s) \n", dev_attr_mdnie_bg.attr.name);
+    if(device_create_file(tune_cmc623_dev, &dev_attr_mode) < 0) {
+        printk("[CMC623:ERROR] device_crate_filed(%s) \n", dev_attr_mode.attr.name);
         ret = -1;
     }
 #if defined(CONFIG_TARGET_LOCALE_KOR_SKT)

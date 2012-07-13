@@ -26,3 +26,7 @@ extern int wacom_i2c_coord(struct wacom_i2c *wac_i2c);
 extern int wacom_i2c_query(struct wacom_i2c *wac_i2c);
 extern void check_emr_device(bool bOn);
 //int wacom_i2c_frequency(struct wacom_i2c *wac_i2c, char buf);
+#ifdef WACOM_PDCT_WORK_AROUND
+extern void forced_hover(struct wacom_i2c *wac_i2c);
+extern void forced_release(struct wacom_i2c *wac_i2c);
+#endif

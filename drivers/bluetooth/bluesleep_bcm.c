@@ -85,7 +85,7 @@ DECLARE_DELAYED_WORK(sleep_workqueue, bluesleep_sleep_work);
 #define bluesleep_tx_idle()     schedule_delayed_work(&sleep_workqueue, 0)
 
 /* 1 second timeout */
-#define TX_TIMER_INTERVAL	2
+#define TX_TIMER_INTERVAL	3
 
 /* state variable names and bit positions */
 #define BT_ASLEEP	0x01
@@ -129,9 +129,8 @@ struct notifier_block hci_event_nblock = {
 
 static void hsuart_power(int on)
 {
-	if (bsi->uport == NULL )
-	{
-		printk(KERN_ERR "[BT] hsuart_power...but bsi->uport == NULL , so return");
+	if (bsi->uport == NULL ){
+			printk(KERN_ERR "[BT] hsuart_power...but bsi->uport == NULL , so return");
 		return ;
 	}
 
@@ -140,8 +139,13 @@ static void hsuart_power(int on)
 		msm_hs_request_clock_on(bsi->uport);
 		msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
 	} else {
-		msm_hs_set_mctrl(bsi->uport, 0);
-		msm_hs_request_clock_off(bsi->uport);
+/* SS_BLUETOOTH(john.lim) 2012.05.31 */ 
+/* P120531-0686 kernel panic */
+		if (bsi->uport != NULL )
+ 		{
+			msm_hs_set_mctrl(bsi->uport, 0);
+			msm_hs_request_clock_off(bsi->uport);
+		}
 	}
 }
 
@@ -165,7 +169,8 @@ void bluesleep_sleep_wakeup(void)
                 /*Activating UART */
                 hsuart_power(1);
 		wake_lock(&bsi->wake_lock);
-	}
+	} else
+		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 }
 
 /**
@@ -180,21 +185,10 @@ static void bluesleep_sleep_work(struct work_struct *work)
 			return;
 		}
 
-		if (msm_hs_tx_empty(bsi->uport)) {
-			printk(KERN_ERR "[BT] going to sleep...");
-			set_bit(BT_ASLEEP, &flags);
-			gpio_set_value(bsi->ext_wake, 0);
-			/*Deactivating UART */
-			hsuart_power(0);
-			wake_lock_timeout(&bsi->wake_lock, HZ);
-		} else {
             mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
-            return;
-		}
-	}else{
+	} else
 		bluesleep_sleep_wakeup();
 	}
-}
 
 /**
  * A tasklet function that runs in tasklet context and reads the value
@@ -257,6 +251,8 @@ static int bluesleep_hci_event(struct notifier_block *this,
 		break;
 	case HCI_DEV_UNREG:
 		printk(KERN_ERR "[BT] wake_peer is unregistered.\n");
+		gpio_set_value(bsi->ext_wake, 0);
+		wake_lock_timeout(&bsi->wake_lock, HZ);
 		bluesleep_hdev = NULL;
 		bsi->uport = NULL;
 		break;
@@ -275,8 +271,15 @@ static void bluesleep_tx_timer_expire(unsigned long data)
 
 	spin_lock_irqsave(&rw_lock, irq_flags);
 
-	printk(KERN_ERR "[BT] Tx timer expired");
-		bluesleep_tx_idle();
+	if (bluesleep_can_sleep()) {
+		printk(KERN_ERR "[BT] going to sleep...\n");
+		set_bit(BT_ASLEEP, &flags);
+		gpio_set_value(bsi->ext_wake, 0);
+		/*Deactivating UART */
+		hsuart_power(0);
+		wake_lock_timeout(&bsi->wake_lock, HZ);
+	} else
+		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
 
 	spin_unlock_irqrestore(&rw_lock, irq_flags);
 }
