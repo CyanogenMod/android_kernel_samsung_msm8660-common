@@ -494,7 +494,7 @@ module_param(debug_data_on, int, 0);
 static int debug_close_on = 1;
 module_param(debug_close_on, int, 0);
 
-#if defined(CONFIG_USA_OPERATOR_ATT) && defined(CONFIG_TARGET_SERIES_P5LTE)
+#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
 int mdm_bootloader_done = 0;
 EXPORT_SYMBOL(mdm_bootloader_done);
 #endif
@@ -1484,7 +1484,7 @@ static void boot_worker(struct work_struct *work)
 done:
 	pr_debug(MODULE_NAME ":Boot Worker for card %d Exit!\n",
 		sdio_al_dev->host->index);
-#if defined(CONFIG_USA_OPERATOR_ATT) && defined(CONFIG_TARGET_SERIES_P5LTE)
+#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
 	mdm_bootloader_done = 1;
 #endif
 }
@@ -4364,7 +4364,11 @@ static int __init sdio_al_init(void)
 		goto exit;
 	}
 
-	sdio_register_driver(&sdio_al_sdiofn_driver);
+	ret = sdio_register_driver(&sdio_al_sdiofn_driver);
+	if (ret) {
+		pr_err(MODULE_NAME ": sdio_register_driver failed: %d\n", ret);
+		goto exit;
+	}
 
 	spin_lock_init(&sdio_al->gen_log.log_lock);
 

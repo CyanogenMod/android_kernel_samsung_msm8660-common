@@ -68,12 +68,16 @@
 #include "timpani_profile_quincy_lgt.h"
 #elif defined(CONFIG_USA_MODEL_SGH_I957)  //P5LTE-ATT
 #include "timpani_profile_p5lte_att.h"
+#elif defined(CONFIG_EUR_MODEL_GT_P7320)  //P5LTE-EUR //SHOULD BE CHECKED
+#include "timpani_profile_p5lte_att.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140S)  //P5LTE-SKT
 #include "timpani_profile_p5lte_skt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140K)  //P5LTE-KT
 #include "timpani_profile_p5lte_kt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140L)  //P5LTE-LGU
 #include "timpani_profile_p5lte_lgt.h"
+#elif defined(CONFIG_KOR_MODEL_SHV_E150S)  //P8LTE-SKT
+#include "timpani_profile_p8lte_skt.h"
 #else
 #include "timpani_profile_celox_kor.h"
 #endif
@@ -152,6 +156,9 @@ struct platform_device msm_device_dspcrashd_8x60 = {
 #ifdef CONFIG_USA_MODEL_SGH_I717
 #define PMIC_GPIO_MAIN_MICBIAS_EN      PM8058_GPIO(25)
 #define PMIC_GPIO_SUB_MICBIAS_EN       PM8058_GPIO(26)
+#endif
+#if defined(CONFIG_USA_MODEL_SGH_I957)
+#define PMIC_GPIO_MAIN_MICBIAS_EN PM8058_GPIO(28)
 #endif
 
 #if defined (CONFIG_Q1_KOR_AUDIO)
@@ -501,6 +508,10 @@ static void config_mute_con_gpio(int enable)
 {
 	pr_err("system rev : %d\n",system_rev);
 #ifdef CONFIG_TARGET_SERIES_P5LTE
+	if(system_rev>=04)
+		enable = !enable;
+#endif
+#ifdef CONFIG_TARGET_SERIES_P8LTE
 	if(system_rev>=04)
 		enable = !enable;
 #endif
@@ -1539,8 +1550,14 @@ static int msm_snddev_enable_amic_power(void)
 		gpio_direction_output(SNDDEV_GPIO_MIC1_ANCL_SEL, 0);
 #endif
 	} else {
+#if defined(CONFIG_USA_MODEL_SGH_I957)
+	
+		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 1);
+#else	
 		ret = pm8058_micbias_enable(OTHC_MICBIAS_0,
 				OTHC_SIGNAL_ALWAYS_ON);
+#endif
+			
 		if (ret)
 			pr_err("%s: Enabling amic power failed\n", __func__);
 	}
@@ -1611,9 +1628,14 @@ static void msm_snddev_disable_amic_power(void)
 				pr_err("%s: Disabling amic power failed\n", __func__);
 		}
 #else
+#if defined(CONFIG_USA_MODEL_SGH_I957)
+
+		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 0);
+#else
 	ret = pm8058_micbias_enable(OTHC_MICBIAS_0, OTHC_SIGNAL_OFF);
 	if (ret)
 		pr_err("%s: Disabling amic power failed\n", __func__);
+#endif		
 #endif
 
 #endif
@@ -3672,8 +3694,8 @@ static struct snddev_icodec_data lineout_rx_data = {
 	.pamp_on = msm_snddev_poweramp_on_lineout,
 	.pamp_off = msm_snddev_poweramp_off_lineout,	
 #else
-	.pamp_on = msm_snddev_amp_on_headset,
-	.pamp_off = msm_snddev_amp_off_headset,
+	.pamp_on = msm_snddev_amp_on_cradle,
+	.pamp_off = msm_snddev_amp_off_cradle,
 #endif
 	.voltage_on = msm_snddev_voltage_on,
 	.voltage_off = msm_snddev_voltage_off,
@@ -3713,8 +3735,8 @@ static struct snddev_icodec_data speaker_headset_rx_data = {
 	.profile = &speaker_headset_rx_profile,
 	.channel_mode = 2,
 	.default_sample_rate = 48000,
-	.pamp_on = msm_snddev_amp_on_speaker,
-	.pamp_off = msm_snddev_amp_off_speaker,
+	.pamp_on = msm_snddev_amp_on_speaker_headset,
+	.pamp_off = msm_snddev_amp_off_speaker_headset,
 	.voltage_on = msm_snddev_voltage_on,
 	.voltage_off = msm_snddev_voltage_off,
 };
@@ -3726,8 +3748,8 @@ static struct snddev_icodec_data speaker_lineout_rx_data = {
 	.profile = &speaker_lineout_rx_profile,
 	.channel_mode = 2,
 	.default_sample_rate = 48000,
-	.pamp_on = msm_snddev_amp_on_speaker,
-	.pamp_off = msm_snddev_amp_off_speaker,
+	.pamp_on = msm_snddev_amp_on_cradle,
+	.pamp_off = msm_snddev_amp_off_cradle,
 	.voltage_on = msm_snddev_voltage_on,
 	.voltage_off = msm_snddev_voltage_off,
 };

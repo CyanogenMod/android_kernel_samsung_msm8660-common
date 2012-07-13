@@ -127,12 +127,18 @@ extern VibeStatus ImmVibeGetDeviceKernelParameter(VibeInt32 nDeviceIndex, VibeIn
 #define PWM_PERIOD_DEFAULT				0x80	//0x80	,0x74
 #define PWM_DUTY_DEFAULT				0x40	//0x40	,0x3a
 /* modify for P5/P7 */
-#elif defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_KOR_OPERATOR_SKT)
+#elif defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+#define PWM_PLLDIV_DEFAULT              0x02
+#define PWM_FREQ_DEFAULT               	0xa0	// 0x01	,0x00, (0x34)
+#define PWM_PERIOD_DEFAULT				0xae	// 0x80	,0x74, (0x36)
+#define PWM_DUTY_DEFAULT				0x57	//0x40	,0x3a, (0x35)
+/* modify for P8 LTE SKT */
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
 #define PWM_PLLDIV_DEFAULT              0x02
 #define PWM_FREQ_DEFAULT               	0x01	//0x01	,0x00
-#define PWM_PERIOD_DEFAULT				0x80	//0x80	,0x74
-#define PWM_DUTY_DEFAULT				0x40	//0x40	,0x3a
-/* modify for P8 LTE SKT */
+#define PWM_PERIOD_DEFAULT				0x82	//0x80	,0x74
+#define PWM_DUTY_DEFAULT				0x37	//0x40	,0x3a
+/* modify for P5 LTE SKT/LGT */
 #else
 #define PWM_PLLDIV_DEFAULT              0x02
 #define PWM_FREQ_DEFAULT               	0x01	//0x00

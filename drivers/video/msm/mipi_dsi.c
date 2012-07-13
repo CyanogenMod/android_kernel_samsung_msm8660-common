@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,8 +42,8 @@ static boolean tlmm_settings = FALSE;
 static int mipi_dsi_probe(struct platform_device *pdev);
 static int mipi_dsi_remove(struct platform_device *pdev);
 
-static int mipi_dsi_off(struct platform_device *pdev);
-static int mipi_dsi_on(struct platform_device *pdev);
+ int mipi_dsi_off(struct platform_device *pdev);
+ int mipi_dsi_on(struct platform_device *pdev);
 
 #if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 static int mipi_dsi_shutdown(struct platform_device *pdev);
@@ -71,7 +71,7 @@ static struct platform_driver mipi_dsi_driver = {
 
 struct device dsi_dev;
 
-static int mipi_dsi_off(struct platform_device *pdev)
+int mipi_dsi_off(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
@@ -100,6 +100,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		} else {
 			mdp3_dsi_cmd_dma_busy_wait(mfd);
 		}
+	} else {
+		/* video mode, wait until fifo cleaned */
+		mipi_dsi_controller_cfg(0);
 	}
 
 	/*
@@ -156,8 +159,8 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	return ret;
 }
-
-static int mipi_dsi_on(struct platform_device *pdev)
+struct platform_device *pdev_temp = NULL;
+int mipi_dsi_on(struct platform_device *pdev)
 {
 	int ret = 0;
 	u32 clk_rate;
@@ -171,6 +174,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	u32 dummy_xres, dummy_yres;
 	int target_type = 0;
 
+	pdev_temp = pdev;
 	mfd = platform_get_drvdata(pdev);
 	fbi = mfd->fbi;
 	var = &fbi->var;
@@ -179,6 +183,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
 
+	cont_splash_clk_ctrl();
 	local_bh_disable();
 	mipi_dsi_ahb_ctrl(1);
 	local_bh_enable();
@@ -457,7 +462,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 		return 0;
 	}
 
-	mipi_dsi_clk_init(&pdev->dev);
+	mipi_dsi_clk_init(pdev);
 
 	if (!mipi_dsi_resource_initialized)
 		return -EPERM;
@@ -666,4 +671,6 @@ static int __init mipi_dsi_driver_init(void)
 	return ret;
 }
 
+EXPORT_SYMBOL(mipi_dsi_on);
+EXPORT_SYMBOL(mipi_dsi_off);
 module_init(mipi_dsi_driver_init);

@@ -1716,8 +1716,10 @@ static int __init rmt_storage_init(void)
 
 	rmc->workq = create_singlethread_workqueue("rmt_storage");
 	if (!rmc->workq)
-		return -ENOMEM;
-
+	{   
+		ret = -ENOMEM;
+		goto unreg_mdm_rpc; 
+	}
 #ifdef CONFIG_MSM_RMT_STORAGE_CLIENT_STATS
 	stats_dentry = debugfs_create_file("rmt_storage_stats", 0444, 0,
 					NULL, &debug_ops);

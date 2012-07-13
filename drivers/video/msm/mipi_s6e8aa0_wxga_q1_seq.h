@@ -631,6 +631,7 @@ static struct dsi_cmd_desc DSI_CMD_ACL_43= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof
 static struct dsi_cmd_desc DSI_CMD_ACL_33= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_33), ACL_COND_SET_33};
 static struct dsi_cmd_desc DSI_CMD_ACL_20= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_20), ACL_COND_SET_20};
 #else  // Operating Manual Q
+static char ACL_COND_SET_55[]={	0xC1,	0x47,0x53,0x13,0x53,0x00,0x00,0x03,0x1F,0x00,0x00,0x04,0xFF,0x00,0x00,0x00,0x00,0x00,0x01,0x09,0x12,0x1A,0x23,0x2B,0x33,0x3C,0x44,0x4D,0x55,	};
 static char ACL_COND_SET_50[]={	0xC1,	0x47,0x53,0x13,0x53,0x00,0x00,0x03,0x1F,0x00,0x00,0x04,0xFF,0x00,0x00,0x00,0x00,0x00,0x01,0x08,0x0F,0x16,0x1D,0x24,0x2B,0x32,0x39,0x40,0x47,	};
 static char ACL_COND_SET_49[]={	0xC1,	0x47,0x53,0x13,0x53,0x00,0x00,0x03,0x1F,0x00,0x00,0x04,0xFF,0x00,0x00,0x00,0x00,0x00,0x01,0x08,0x0F,0x16,0x1D,0x24,0x2A,0x31,0x38,0x3F,0x46,	};
 static char ACL_COND_SET_48[]={	0xC1,	0x47,0x53,0x13,0x53,0x00,0x00,0x03,0x1F,0x00,0x00,0x04,0xFF,0x00,0x00,0x00,0x00,0x00,0x01,0x08,0x0F,0x15,0x1C,0x23,0x2A,0x31,0x37,0x3E,0x45,	};
@@ -644,6 +645,7 @@ static char ACL_COND_SET_20[]={	0xC1,	0x47,0x53,0x13,0x53,0x00,0x00,0x03,0x1F,0x
 static char ACL_COND_SET_40[]={	0xC1,	0x47,	0x53,	0x13,	0x53,	0x00,	0x00,	0x3,	0x1F,	0x00,	0x00,	0x04,	0xFF,	0x00,	0x00,	0x00,	0x00,	0x00,	0x01,	0x06,	0x0C,	0x11,	0x16,	0x1C,	0x21,	0x26,	0x2B,	0x31,	0x36,	};
 static struct dsi_cmd_desc DSI_CMD_ACL_40= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_40), ACL_COND_SET_40};
 
+static struct dsi_cmd_desc DSI_CMD_ACL_55= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_55), ACL_COND_SET_55};
 static struct dsi_cmd_desc DSI_CMD_ACL_50= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_50), ACL_COND_SET_50};
 static struct dsi_cmd_desc DSI_CMD_ACL_49= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_49), ACL_COND_SET_49};
 static struct dsi_cmd_desc DSI_CMD_ACL_48= {DTYPE_DCS_LWRITE, 1, 0, 0, 0, sizeof(ACL_COND_SET_48), ACL_COND_SET_48};
@@ -756,25 +758,25 @@ static struct dsi_cmd_desc_LCD lcd_acl_table[MAX_GAMMA_VALUE+1] = {
 { 20, "50", &DSI_CMD_ACL_20},
 { 33, "60", &DSI_CMD_ACL_33},
 { 43, "70", &DSI_CMD_ACL_43},   // 8 =
-{ 45, "80", &DSI_CMD_ACL_45},   // 8 =
-{ 45, "90", &DSI_CMD_ACL_45},   //  10 = 90,
-{ 45, "100", &DSI_CMD_ACL_45},   // 11 = 100,
-{ 45, "110", &DSI_CMD_ACL_45},   // 12 = 110,
-{ 45, "120", &DSI_CMD_ACL_45},   // 13 = 120,
-{ 45, "130", &DSI_CMD_ACL_45},   // 14 = 130,
-{ 45, "140", &DSI_CMD_ACL_45},   // 15 = 140,
-{ 45, "150", &DSI_CMD_ACL_45},   // 16 = 150,
-{ 46, "160", &DSI_CMD_ACL_46},   // 17= 160,
-{ 46, "170", &DSI_CMD_ACL_46},   // 18= 170,
-{ 46, "180", &DSI_CMD_ACL_46},   // 19= 180,
-{ 46, "190", &DSI_CMD_ACL_46},   // 20= 190,
-{ 46, "200", &DSI_CMD_ACL_46},   // 21= 200,
-{ 46, "210", &DSI_CMD_ACL_46},   // 22= 210,
-{ 46, "220", &DSI_CMD_ACL_46},   // 23= 220,
-{ 46, "230", &DSI_CMD_ACL_46},   // 24= 230,
-{ 46, "240", &DSI_CMD_ACL_46},   // 25= 240,
-{ 46, "250", &DSI_CMD_ACL_46},   // 26= 250,
-{ 50, "290", &DSI_CMD_ACL_50},	 // 30= 290,
+{ 43, "80", &DSI_CMD_ACL_43},   // 8 =
+{ 43, "90", &DSI_CMD_ACL_43},   //  10 = 90,
+{ 43, "100", &DSI_CMD_ACL_43},   // 11 = 100,
+{ 43, "110", &DSI_CMD_ACL_43},   // 12 = 110,
+{ 43, "120", &DSI_CMD_ACL_43},   // 13 = 120,
+{ 43, "130", &DSI_CMD_ACL_43},   // 14 = 130,
+{ 43, "140", &DSI_CMD_ACL_43},   // 15 = 140,
+{ 43, "150", &DSI_CMD_ACL_43},   // 16 = 150,
+{ 43, "160", &DSI_CMD_ACL_43},   // 17= 160,
+{ 43, "170", &DSI_CMD_ACL_43},   // 18= 170,
+{ 43, "180", &DSI_CMD_ACL_43},   // 19= 180,
+{ 43, "190", &DSI_CMD_ACL_43},   // 20= 190,
+{ 55, "200", &DSI_CMD_ACL_55},   // 21= 200,
+{ 55, "210", &DSI_CMD_ACL_55},   // 22= 210,
+{ 55, "220", &DSI_CMD_ACL_55},   // 23= 220,
+{ 55, "230", &DSI_CMD_ACL_55},   // 24= 230,
+{ 55, "240", &DSI_CMD_ACL_55},   // 25= 240,
+{ 55, "250", &DSI_CMD_ACL_55},   // 26= 250,
+{ 55, "290", &DSI_CMD_ACL_55},	 // 30= 290,
 };
 #else
 #ifdef S6E8AA0_WXGA_Q1_57p2HZ_480MBPS // ±¹ÆÇ ¿Ü

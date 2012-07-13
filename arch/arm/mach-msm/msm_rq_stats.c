@@ -271,7 +271,7 @@ static int init_rq_attribs(void)
 	rq_info.attr_group = kzalloc(sizeof(struct attribute_group),
 						GFP_KERNEL);
 	if (!rq_info.attr_group)
-		goto rel3;
+		goto rel2;
 	rq_info.attr_group->attrs = attribs;
 
 	/* Create /sys/devices/system/cpu/cpu0/rq-stats/... */

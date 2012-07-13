@@ -37,7 +37,9 @@
 #if defined(CONFIG_KOR_MODEL_SHV_E120L)|| defined(CONFIG_KOR_MODEL_SHV_E160L)
 #define CONFIG_VPCM_INTERFACE_ON_SVLTE2
 #endif
-#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I727)\
+ || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D)\
+ || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define CONFIG_VPCM_INTERFACE_ON_CSFB
 #endif
 
@@ -549,14 +551,21 @@ void apr_reset(void *handle)
 		return;
 	pr_debug("%s: handle[%p]\n", __func__, handle);
 
+	if (apr_reset_workqueue == NULL) {
+		pr_err("%s: apr_reset_workqueue is NULL\n", __func__);
+		return;
+	}
+
 	apr_reset_worker = kzalloc(sizeof(struct apr_reset_work),
-					GFP_ATOMIC);
-	if (apr_reset_worker == NULL || apr_reset_workqueue == NULL) {
+							GFP_ATOMIC);
+
+	if (apr_reset_worker == NULL) {
 		pr_err("%s: mem failure\n", __func__);
 		if(apr_reset_worker)
 			kfree (apr_reset_worker);		
 		return;
 	}
+
 	apr_reset_worker->handle = handle;
 	INIT_WORK(&apr_reset_worker->work, apr_reset_deregister);
 	queue_work(apr_reset_workqueue, &apr_reset_worker->work);

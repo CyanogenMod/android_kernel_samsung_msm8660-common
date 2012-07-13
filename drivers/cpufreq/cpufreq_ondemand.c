@@ -619,6 +619,18 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	/* Check for frequency increase */
 	if (max_load_freq > dbs_tuners_ins.up_threshold * policy->cur) {
+#if defined (CONFIG_TARGET_LOCALE_USA)
+		/* If switching to max speed, apply sampling_down_factor */
+		if (policy->cur < policy->max) {
+			if (policy->cur < 540000) dbs_freq_increase(policy, 810000);
+			else if (policy->cur < 864000) dbs_freq_increase(policy, 1026000);
+			else {
+				this_dbs_info->rate_mult = dbs_tuners_ins.sampling_down_factor;
+				dbs_freq_increase(policy, policy->max);
+			}
+		}
+		return;
+#else
 #if defined(CONFIG_SEC_LIMIT_LCD_OFF_CPU_MAX_FREQ) && defined(CONFIG_HAS_EARLYSUSPEND) && \
 	!defined(CONFIG_SEC_DVFS_UNI)
 		if(!cpufreq_gov_lcd_status) {
@@ -639,6 +651,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 				dbs_tuners_ins.sampling_down_factor;
 		dbs_freq_increase(policy, policy->max);
 		return;
+#endif
 	}
 
 	/* Check for frequency decrease */

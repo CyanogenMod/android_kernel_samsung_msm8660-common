@@ -44,7 +44,7 @@
 #define WRITE_MACADDR
 #endif
 
-#if defined(CONFIG_TARGET_SERIES_P5LTE)\
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))\
 	&& defined(CONFIG_USA_OPERATOR_ATT)
 #define OOB_INTR_ONLY
 #define RDWR_MACADDR
@@ -52,15 +52,22 @@
 
 #if defined(CONFIG_TARGET_SERIES_CELOX)\
 	&& defined(CONFIG_TARGET_LOCALE_USA)
+#if defined(CONFIG_USA_MODEL_SGH_I577)
+#define RDWR_MACADDR
+#else
 #define WRITE_MACADDR
+#endif
+#endif
+
+#if defined(CONFIG_USA_OPERATOR_TMO)\
+        && defined(CONFIG_USA_MODEL_SGH_T769)
+#define RDWR_MACADDR
 #endif
 
 #if defined(CONFIG_TARGET_SERIES_Q1)\
 	&& defined(CONFIG_TARGET_LOCALE_USA)
-#define WRITE_MACADDR
-#endif
-
-#ifdef CONFIG_TARGET_SERIES_Q1
+#undef RSSI_OFFSET
+#define RSSI_OFFSET 7
 #define WRITE_MACADDR
 #define HW_OOB
 #endif

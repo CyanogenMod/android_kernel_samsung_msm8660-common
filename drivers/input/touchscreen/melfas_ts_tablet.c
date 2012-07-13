@@ -711,6 +711,13 @@ static int firmware_update(struct melfas_ts_data *ts)
 	bool empty_chip = true;
 	INT8 dl_enable_bit = 0x00;
 	u8 version_info = 0;
+	
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && defined(CONFIG_TARGET_LOCALE_KOR)
+	if(system_rev < 0x07){
+		pr_err("[TSP] P5LTE_KOR : This revision cannot TSP firmware update");
+		return 0;
+	}
+#endif
 
 #if !MELFAS_ISP_DOWNLOAD
 	ret = check_firmware_master(ts, &val);

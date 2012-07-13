@@ -40,8 +40,8 @@
 
 #if defined(CONFIG_TARGET_SERIES_P5LTE)
 #include "s5k5ccaf_regs_p5.h"
-#elif defined(CONFIG_MACH_P8_LTE) && defined(CONFIG_TARGET_LOCALE_KOR_SKT)
-#include "s5k5ccgx_regs_p8_skt.h"
+#elif defined(CONFIG_TARGET_SERIES_P8LTE)
+#include "s5k5ccaf_regs_p8_skt.h"
 #else
 #include "s5k5ccgx_regs.h"
 #endif
@@ -661,6 +661,11 @@ int s5k5ccaf_set_fps(unsigned int mode, unsigned int fps)
 
 	if(mode){
 		switch(fps) {
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+		case S5K5CCGX_8_FPS:
+			S5K5CCAF_WRITE_LIST(s5k5ccaf_fps_8fix);
+			break;
+#endif			
 		case S5K5CCGX_15_FPS:
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_fps_15fix);
 			break;
@@ -780,6 +785,14 @@ int s5k5ccaf_set_af_mode(int mode)
 {
 	int rc = 0;
 
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+	if( s5k5ccaf_ctrl->cam_mode == S5K5CCGX_CAMERA_MODE &&
+		s5k5ccaf_ctrl->op_mode != S5K5CCGX_MODE_PREVIEW ){ 
+		CAM_DEBUG("ignore af [%d] : s5k5ccaf_ctrl->op_mode = 0x%X",mode, s5k5ccaf_ctrl->op_mode);
+		s5k5ccaf_ctrl->settings.focus_mode = mode;
+		return rc;
+	}
+#endif
 	switch(mode) {
 		case S5K5CCGX_AF_MODE_AUTO:
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_normal_on); 
@@ -1119,29 +1132,29 @@ int s5k5ccaf_get_af_status(int is_search_status)
 	unsigned short af_status =0;
 
 	switch(is_search_status) {
-	case 0:
-		s5k5ccaf_sensor_write(0x002C, 0x7000);
-		s5k5ccaf_sensor_write(0x002E, 0x2D12);
-		s5k5ccaf_sensor_read(0x0F12, &af_status);
-		CAM_DEBUG("1st AF status : %x", af_status);			
-		break;
-		
-	case 1:
-		if(s5k5ccaf_ctrl->hd_enabled)
-			return 0;	// do not excute 2nd Search in HD mode
-		s5k5ccaf_sensor_write(0x002C, 0x7000);
-		s5k5ccaf_sensor_write(0x002E, 0x1F2F);
-		s5k5ccaf_sensor_read(0x0F12, &af_status);
-		CAM_DEBUG("2nd AF status : %x", af_status);
-		if((!s5k5ccaf_ctrl->hd_enabled) && (af_status == 0) && (s5k5ccaf_ctrl->settings.flash_state == 1)) {
-			S5K5CCAF_WRITE_LIST(s5k5ccaf_preflash_end);
-			s5k5ccaf_set_flash(MOVIE_FLASH,0);
-			s5k5ccaf_ctrl->settings.flash_state = 0;
-		}			
-		break;
-	default:
-		CAM_DEBUG("unexpected mode is comming from hal\n");
-		break;
+		case 0:
+			s5k5ccaf_sensor_write(0x002C, 0x7000);
+			s5k5ccaf_sensor_write(0x002E, 0x2D12);
+			s5k5ccaf_sensor_read(0x0F12, &af_status);
+			CAM_DEBUG("1st AF status : %x", af_status);			
+			break;
+			
+		case 1:
+			if(s5k5ccaf_ctrl->hd_enabled)
+				return 0;	// do not excute 2nd Search in HD mode
+			s5k5ccaf_sensor_write(0x002C, 0x7000);
+			s5k5ccaf_sensor_write(0x002E, 0x1F2F);
+			s5k5ccaf_sensor_read(0x0F12, &af_status);
+			CAM_DEBUG("2nd AF status : %x", af_status);
+			if((!s5k5ccaf_ctrl->hd_enabled) && (af_status == 0) && (s5k5ccaf_ctrl->settings.flash_state == 1)) {
+				S5K5CCAF_WRITE_LIST(s5k5ccaf_preflash_end);
+				s5k5ccaf_set_flash(MOVIE_FLASH,0);
+				s5k5ccaf_ctrl->settings.flash_state = 0;
+			}			
+			break;
+		default:
+			CAM_DEBUG("unexpected mode is comming from hal\n");
+			break;
 	}
 
 	return  af_status;
@@ -1413,6 +1426,12 @@ void s5k5ccaf_set_preview(void)
 				if(s5k5ccaf_ctrl->hd_enabled == 0) {
 					s5k5ccaf_set_fps(s5k5ccaf_ctrl->cam_mode, s5k5ccaf_ctrl->settings.fps); //fixed fps
 				}
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+				else { // start first af
+					s5k5ccaf_ctrl->first_af_running = 1;
+					S5K5CCAF_WRITE_LIST(s5k5ccaf_1st_720P_af_do); 
+				}
+#endif				
 				CAM_DELAY(200);
 			} else {
 				if(s5k5ccaf_ctrl->settings.scene == SCENE_MODE_NONE) {					
@@ -1489,7 +1508,7 @@ void s5k5ccaf_set_capture(void)
 			//remove duplicated delay	msleep(250);	
 		}
 	} else {
-		cam_info("Normal Snapshot !\n");
+		cam_info("Normal Snapshot !");
 		S5K5CCAF_WRITE_LIST(s5k5ccaf_snapshot);
 		if(af_low_lux) {
 			cam_info("additional delay for Low Lux AF");
@@ -1564,7 +1583,7 @@ int s5k5ccaf_set_dtp(int* onoff)
 
 int s5k5ccaf_esd_reset(void)
 {
-	cam_info("reset for recovery from ESD\n");
+	cam_info("reset for recovery from ESD");
 	
 	cam_ldo_power_off();
 	mdelay(5);
@@ -1668,6 +1687,20 @@ int s5k5ccaf_sensor_ext_config(void __user *arg)
 			break;
 			
 		case EXT_CFG_SET_TOUCHAF_POS:	
+#if defined(CONFIG_TARGET_SERIES_P8LTE)
+			if( s5k5ccaf_ctrl->first_af_running ) {
+				int first_af_status;
+				int wait_count=0;
+				first_af_status = s5k5ccaf_get_af_status(0);
+				msleep(50);
+				while((first_af_status == 1) && (wait_count < 100)) {
+					first_af_status = s5k5ccaf_get_af_status(0);
+					wait_count++;
+					msleep(50);
+				}
+				s5k5ccaf_ctrl->first_af_running = 0;
+			}
+#endif		
 			rc = s5k5ccaf_set_touchaf_pos(cfg_data.value_1,cfg_data.value_2);
 			break;
 			

@@ -41,7 +41,7 @@ void cam_ldo_power_on(const char *sensor_name)
 	int ret;
 	
 	printk("#### cam_ldo_power_on ####\n");
-printk("%s: system_rev %d\n", __func__, system_rev);
+	printk("%s: system_rev %d\n", __func__, system_rev);
 
 // CAM_A_2.8V 
 #if defined(CONFIG_MACH_P8_LTE) && !defined(CONFIG_TARGET_LOCALE_KOR_SKT)
@@ -76,7 +76,7 @@ printk("%s: system_rev %d\n", __func__, system_rev);
 
 	
 //VT_CORE_1.5V(sub)
-#if defined(CONFIG_TARGET_LOCALE_USA_ATT) || defined(CONFIG_TARGET_LOCALE_EUR_OPEN) || defined(CONFIG_TARGET_LOCALE_KOR)
+#if defined(CONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN) 
 
 #if defined(CONFIG_MACH_P8_LTE) && defined(CONFIG_TARGET_LOCALE_KOR_SKT)
 	if(system_rev>0x00)
@@ -180,7 +180,7 @@ void cam_ldo_power_off(void)
 
 	//VT_CORE_1.5V(sub)
 //HC-original   #if defined(CONFIG_TARGET_LOCALE_USA_ATT) || defined(CONFIG_TARGET_LOCALE_EUR_OPEN)	|| defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
-#if defined(ONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR)
+#if defined(ONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 #if defined(CONFIG_MACH_P8_LTE) && defined(CONFIG_TARGET_LOCALE_KOR_SKT)
 	if(system_rev>0x00)
 #else

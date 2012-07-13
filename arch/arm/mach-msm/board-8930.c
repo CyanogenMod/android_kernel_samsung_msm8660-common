@@ -41,6 +41,7 @@
 #include <linux/ks8851.h>
 #include <linux/i2c/isa1200.h>
 #include <linux/gpio_keys.h>
+#include <linux/memory.h>
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -132,7 +133,7 @@ struct sx150x_platform_data msm8930_sx150x_data[] = {
 #define MSM_ION_SF_SIZE		MSM_PMEM_SIZE
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
 #define MSM_ION_MM_SIZE		MSM_PMEM_ADSP_SIZE
-#define MSM_ION_QSECOM_SIZE	0x100000 /* (1MB) */
+#define MSM_ION_QSECOM_SIZE	0x300000 /* (3MB) */
 #define MSM_ION_MFC_SIZE	SZ_8K
 #define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
 #define MSM_ION_HEAP_NUM	8
@@ -477,26 +478,30 @@ static void __init locate_unstable_memory(void)
 
 	if (high - low <= bank_size)
 		return;
-	msm8930_reserve_info.low_unstable_address = low + bank_size;
-	/* To avoid overflow of u32 compute max_unstable_size
-	 * by first subtracting low from mb->start)
-	 * */
-	msm8930_reserve_info.max_unstable_size = (mb->start - low) +
-						mb->size - bank_size;
 
 	msm8930_reserve_info.bank_size = bank_size;
+#ifdef CONFIG_ENABLE_DMM
+	msm8930_reserve_info.low_unstable_address = mb->start -
+					MIN_MEMORY_BLOCK_SIZE + mb->size;
+	msm8930_reserve_info.max_unstable_size = MIN_MEMORY_BLOCK_SIZE;
 	pr_info("low unstable address %lx max size %lx bank size %lx\n",
 		msm8930_reserve_info.low_unstable_address,
 		msm8930_reserve_info.max_unstable_size,
 		msm8930_reserve_info.bank_size);
+#else
+	msm8930_reserve_info.low_unstable_address = 0;
+	msm8930_reserve_info.max_unstable_size = 0;
+#endif
 }
 
 static void __init place_movable_zone(void)
 {
+#ifdef CONFIG_ENABLE_DMM
 	movable_reserved_start = msm8930_reserve_info.low_unstable_address;
 	movable_reserved_size = msm8930_reserve_info.max_unstable_size;
 	pr_info("movable zone start %lx size %lx\n",
 		movable_reserved_start, movable_reserved_size);
+#endif
 }
 
 static void __init msm8930_early_memory(void)
@@ -1002,15 +1007,13 @@ static struct msm_spm_seq_entry msm_spm_seq_list[] __initdata = {
 static struct msm_spm_platform_data msm_spm_data[] __initdata = {
 	[0] = {
 		.reg_base_addr = MSM_SAW0_BASE,
-		.reg_init_values[MSM_SPM_REG_SAW2_SECURE] = 0x00,
 		.reg_init_values[MSM_SPM_REG_SAW2_CFG] = 0x1F,
-		.reg_init_values[MSM_SPM_REG_SAW2_VCTL] = 0x9C,
 #if defined(CONFIG_MSM_AVS_HW)
 		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x00,
 		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00,
 #endif
 		.reg_init_values[MSM_SPM_REG_SAW2_SPM_CTL] = 0x01,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020202,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020204,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0060009C,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x0000001C,
 		.vctl_timeout_us = 50,
@@ -1019,15 +1022,13 @@ static struct msm_spm_platform_data msm_spm_data[] __initdata = {
 	},
 	[1] = {
 		.reg_base_addr = MSM_SAW1_BASE,
-		.reg_init_values[MSM_SPM_REG_SAW2_SECURE] = 0x00,
 		.reg_init_values[MSM_SPM_REG_SAW2_CFG] = 0x1F,
-		.reg_init_values[MSM_SPM_REG_SAW2_VCTL] = 0x9C,
 #if defined(CONFIG_MSM_AVS_HW)
 		.reg_init_values[MSM_SPM_REG_SAW2_AVS_CTL] = 0x00,
 		.reg_init_values[MSM_SPM_REG_SAW2_AVS_HYSTERESIS] = 0x00,
 #endif
 		.reg_init_values[MSM_SPM_REG_SAW2_SPM_CTL] = 0x01,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020202,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020204,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x0060009C,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x0000001C,
 		.vctl_timeout_us = 50,
@@ -1075,9 +1076,8 @@ static struct msm_spm_seq_entry msm_spm_l2_seq_list[] __initdata = {
 static struct msm_spm_platform_data msm_spm_l2_data[] __initdata = {
 	[0] = {
 		.reg_base_addr = MSM_SAW_L2_BASE,
-		.reg_init_values[MSM_SPM_REG_SAW2_SECURE] = 0x00,
 		.reg_init_values[MSM_SPM_REG_SAW2_SPM_CTL] = 0x00,
-		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020202,
+		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DLY] = 0x02020204,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_0] = 0x00A000AE,
 		.reg_init_values[MSM_SPM_REG_SAW2_PMIC_DATA_1] = 0x00A00020,
 		.modes = msm_spm_l2_seq_list,
@@ -1823,6 +1823,7 @@ static struct platform_device *common_devices[] __initdata = {
 #ifdef CONFIG_MSM_RTB
 	&msm_rtb_device,
 #endif
+	&msm8960_device_cache_erp,
 };
 
 static struct platform_device *cdp_devices[] __initdata = {

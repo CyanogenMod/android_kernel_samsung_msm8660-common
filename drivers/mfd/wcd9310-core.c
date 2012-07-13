@@ -241,6 +241,12 @@ static struct mfd_cell tabla_devs[] = {
 	},
 };
 
+static struct mfd_cell tabla1x_devs[] = {
+	{
+		.name = "tabla1x_codec",
+	},
+};
+
 static void tabla_bring_up(struct tabla *tabla)
 {
 	tabla_reg_write(tabla, TABLA_A_LEAKAGE_CTL, 0x4);
@@ -367,6 +373,8 @@ static struct tabla_regulator tabla_regulators[] = {
 static int tabla_device_init(struct tabla *tabla, int irq)
 {
 	int ret;
+	struct mfd_cell *tabla_dev;
+	int tabla_dev_size;
 
 	mutex_init(&tabla->io_lock);
 	mutex_init(&tabla->xfer_lock);
@@ -386,9 +394,19 @@ static int tabla_device_init(struct tabla *tabla, int irq)
 		pr_err("IRQ initialization failed\n");
 		goto err;
 	}
+	tabla->version = tabla_reg_read(tabla, TABLA_A_CHIP_VERSION) & 0x1F;
+	pr_info("%s : Tabla version %u initialized\n",
+		__func__, tabla->version);
 
+	if (TABLA_IS_1_X(tabla->version)) {
+		tabla_dev = tabla1x_devs;
+		tabla_dev_size = ARRAY_SIZE(tabla1x_devs);
+	} else {
+		tabla_dev = tabla_devs;
+		tabla_dev_size = ARRAY_SIZE(tabla_devs);
+	}
 	ret = mfd_add_devices(tabla->dev, -1,
-			      tabla_devs, ARRAY_SIZE(tabla_devs),
+			      tabla_dev, tabla_dev_size,
 			      NULL, 0);
 	if (ret != 0) {
 		dev_err(tabla->dev, "Failed to add children: %d\n", ret);
@@ -647,7 +665,7 @@ int tabla_i2c_write_device(u16 reg, u8 *value,
 	struct tabla_i2c *tabla;
 
 	tabla = get_i2c_tabla_device_info(reg);
-	if (tabla->client == NULL) {
+	if (tabla == NULL || tabla->client == NULL) {
 		pr_err("failed to get device info\n");
 		return -ENODEV;
 	}
@@ -684,7 +702,7 @@ int tabla_i2c_read_device(unsigned short reg,
 	u8 i = 0;
 
 	tabla = get_i2c_tabla_device_info(reg);
-	if (tabla->client == NULL) {
+	if (tabla == NULL || tabla->client == NULL) {
 		pr_err("failed to get device info\n");
 		return -ENODEV;
 	}
@@ -753,13 +771,14 @@ static int __devinit tabla_i2c_probe(struct i2c_client *client,
 	if (!pdata) {
 		dev_dbg(&client->dev, "no platform data?\n");
 		ret = -EINVAL;
-		goto fail;
+		goto err_tabla;
 	}
 	if (i2c_check_functionality(client->adapter, I2C_FUNC_I2C) == 0) {
 		dev_dbg(&client->dev, "can't talk I2C?\n");
 		ret = -EIO;
-		goto fail;
+		goto err_tabla;
 	}
+	dev_set_drvdata(&client->dev, tabla);
 	tabla->dev = &client->dev;
 	tabla->reset_gpio = pdata->reset_gpio;
 
@@ -966,8 +985,7 @@ static int tabla_slim_remove(struct slim_device *pdev)
 	tabla_device_exit(tabla);
 	tabla_disable_supplies(tabla);
 	slim_remove_device(tabla->slim_slave);
-	kfree(tabla);
-
+	tabla_device_exit(tabla);
 	return 0;
 }
 
@@ -1000,7 +1018,10 @@ static int tabla_slim_resume(struct slim_device *sldev)
 static int tabla_i2c_resume(struct i2c_client *i2cdev)
 {
 	struct tabla *tabla = dev_get_drvdata(&i2cdev->dev);
-	return tabla_resume(tabla);
+	if (tabla)
+		return tabla_resume(tabla);
+	else
+		return 0;
 }
 
 static int tabla_suspend(struct tabla *tabla, pm_message_t pmesg)
@@ -1054,7 +1075,10 @@ static int tabla_slim_suspend(struct slim_device *sldev, pm_message_t pmesg)
 static int tabla_i2c_suspend(struct i2c_client *i2cdev, pm_message_t pmesg)
 {
 	struct tabla *tabla = dev_get_drvdata(&i2cdev->dev);
-	return tabla_suspend(tabla, pmesg);
+	if (tabla)
+		return tabla_suspend(tabla, pmesg);
+	else
+		return 0;
 }
 
 static const struct slim_device_id slimtest_id[] = {
