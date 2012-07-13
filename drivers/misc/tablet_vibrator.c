@@ -467,6 +467,16 @@ static int __devinit isa1200_vibrator_i2c_probe(struct i2c_client *client,	const
 
 	ddata->client = client;
 	ddata->gpio_en = pdata->gpio_en;
+#if defined(CONFIG_TARGET_SERIES_P8LTE)	  
+	android_vib_clk = clk_get_sys("vibrator","core_clk");
+	if(IS_ERR(android_vib_clk)) {
+		printk("android vib clk failed!!!\n");
+		ddata->vib_clk = NULL;
+	} else {
+		clk_set_rate(android_vib_clk, 27000000);
+		ddata->vib_clk = android_vib_clk;
+	}
+#else
 	android_vib_clk = clk_get_sys("msm_sys_fpb","bus_clk");
 	if(IS_ERR(android_vib_clk)) {
 		printk("android vib clk failed!!!\n");
@@ -474,6 +484,7 @@ static int __devinit isa1200_vibrator_i2c_probe(struct i2c_client *client,	const
 	} else {
 		ddata->vib_clk = android_vib_clk;
 	}
+#endif
 	ddata->max_timeout = pdata->max_timeout;
 	ddata->ctrl0 = pdata->ctrl0;
 	ddata->ctrl1 = pdata->ctrl1;

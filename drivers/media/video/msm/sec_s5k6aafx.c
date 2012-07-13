@@ -821,7 +821,7 @@ static int s5k6aafx_set_flip(uint32_t flip)
 
 	CAM_DEBUG("%d",flip);
 
-#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D) || defined (CONFIG_TARGET_LOCALE_JPN)
 	if(s5k6aafx_ctrl->check_dataline)
 		return 0;
 

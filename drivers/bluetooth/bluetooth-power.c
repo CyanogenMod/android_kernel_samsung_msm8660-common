@@ -44,6 +44,11 @@ static const struct rfkill_ops bluetooth_power_rfkill_ops = {
 extern void bluesleep_rfkill_alloc(void);
 #endif
 
+#ifdef CONFIG_KOR_MODEL_SHV_E150S
+extern void init_bluetooth_Uart_gpio(void);
+static int first_enter_bt_power_probe = 1;
+#endif
+
 static int bluetooth_power_rfkill_probe(struct platform_device *pdev)
 {
 	struct rfkill *rfkill;
@@ -74,7 +79,12 @@ static int bluetooth_power_rfkill_probe(struct platform_device *pdev)
 #ifdef BTLD_CONTROL_WAKE_GPIO
 	bluesleep_rfkill_alloc();
 #endif
-
+    #ifdef CONFIG_KOR_MODEL_SHV_E150S 
+    if(first_enter_bt_power_probe == 1) {
+           init_bluetooth_Uart_gpio();
+       }
+        first_enter_bt_power_probe = 0;
+    #endif
 	return 0;
 }
 

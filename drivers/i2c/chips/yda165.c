@@ -35,7 +35,7 @@ static ssize_t mode_store(struct device *dev,struct device_attribute *attr,
 	{
 		set_mode = reg;	
 		
-#if defined (CONFIG_TARGET_LOCALE_KOR)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 		temp.in1_gain = g_ampgain[set_mode].in1_gain;
 		temp.in2_gain = g_ampgain[set_mode].in2_gain;
 		temp.hp_att = g_ampgain[set_mode].hp_att;
@@ -394,7 +394,7 @@ static int load_ampgain(void)
 #endif
 
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_EUR_MODEL_GT_I9210)
 	g_ampgain[3].bSpNg_DetectionLv = 0;
 #else
 	g_ampgain[3].bSpNg_DetectionLv = 4;
@@ -422,10 +422,10 @@ static int load_ampgain(void)
 		g_ampgain[2].bSpNcpl_AttackTime = 1;	/* SP Non-Clip power limiter : attack Time */
 		g_ampgain[2].bSpNcpl_ReleaseTime = 1;	/* SP Non-Clip power limiter : release Time */
 
-		g_ampgain[3].bSpNg_AttackTime = 0;		/* SP Noise Gate : attack time */
+		g_ampgain[3].bSpNg_AttackTime = 1;		/* SP Noise Gate : attack time */
 		g_ampgain[3].bSpNcpl_NonClipRatio = 1;	/* SP Non-Clip power limiter : Non-Clip distortion ratio */
-		g_ampgain[3].bSpNcpl_PowerLimit = 1;	/* SP Non-Clip power limiter : Power Limit */
-		g_ampgain[3].bSpNcpl_AttackTime = 0;	/* SP Non-Clip power limiter : attack Time */
+		g_ampgain[3].bSpNcpl_PowerLimit = 0;	/* SP Non-Clip power limiter : Power Limit */
+		g_ampgain[3].bSpNcpl_AttackTime = 1;	/* SP Non-Clip power limiter : attack Time */
 		g_ampgain[3].bSpNcpl_ReleaseTime = 1;	/* SP Non-Clip power limiter : release Time */
 
 		g_ampgain[4].bSpNg_DetectionLv = 0; /* SP Noise Gate : detection level */

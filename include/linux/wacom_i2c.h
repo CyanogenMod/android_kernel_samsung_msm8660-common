@@ -16,6 +16,7 @@
 #define NAMEBUF 12
 #define WACNAME "WAC_I2C_EMR"
 #define WACFLASH "WAC_I2C_FLASH"
+#define WACOM_FW_SIZE 32768
 #define LATEST_VERSION 0x15
 
 /*Wacom Command*/
@@ -53,6 +54,12 @@
 #define WACOM_SLEEP_WITH_PEN_SLP
 #if !defined(WACOM_SLEEP_WITH_PEN_SLP)
 #define WACOM_SLEEP_WITH_PEN_LDO_EN
+#endif
+/*PDCT Signal*/
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+#define PDCT_NOSIGNAL 1
+#define PDCT_DETECT_PEN 0
+#define WACOM_PDCT_WORK_AROUND
 #endif
 
 //#define BOARD_P4ADOBE
@@ -141,7 +148,9 @@ struct wacom_g5_platform_data {
 	int max_y;
 	int max_pressure;
 	int min_pressure;
-
+	#ifdef WACOM_PDCT_WORK_AROUND
+	int gpio_pendct;
+	#endif
 	int (*init_platform_hw)(void);
 	int (*exit_platform_hw)(void);
 	int (*suspend_platform_hw)(void);
@@ -159,6 +168,9 @@ struct wacom_i2c {
   struct early_suspend early_suspend;
    struct mutex lock;
   int irq;
+  #ifdef WACOM_PDCT_WORK_AROUND
+  int irq_pdct;
+  #endif
   int pen_pdct;
   int gpio;
   int irq_flag;

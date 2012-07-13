@@ -90,6 +90,15 @@
 #define AUDIO_GET_ACDB_BLK _IOW(AUDIO_IOCTL_MAGIC, 96,  \
 					struct msm_acdb_cmd_device)
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+#define AUDIO_SET_AMR_WB	_IOW(AUDIO_IOCTL_MAGIC, 99, int)
+
+enum A2220_BandType{
+	VPCM_PATH_NARROWBAND = 0x0,
+	VPCM_PATH_WIDEBAND
+};
+#endif
+
 #define	AUDIO_MAX_COMMON_IOCTL_NUM	100
 
 

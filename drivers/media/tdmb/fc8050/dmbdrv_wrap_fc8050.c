@@ -121,8 +121,8 @@ void dmb_drv_isr()
 
 unsigned char dmb_drv_init(void)
 {
-	int i;
 #ifdef FEATURE_INTERFACE_TEST_MODE
+	int i;
 	u8 data;
 	u16 wdata;
 	u32 ldata;
