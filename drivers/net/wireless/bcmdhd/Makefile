@@ -107,6 +107,12 @@ ifeq ($(CONFIG_TARGET_LOCALE_KOR),y)
 REGION_CODE=200
 endif
 
+#TODO ---- Check this later. We may need different area code for JPN
+ifeq ($(CONFIG_TARGET_LOCALE_JPN),y)
+REGION_CODE=200
+endif
+
+
 ifeq ($(CONFIG_KOR_OPERATOR_KT), y)
 REGION_CODE=202
 endif

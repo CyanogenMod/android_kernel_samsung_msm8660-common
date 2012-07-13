@@ -11,3 +11,9 @@ config VIDEO_MHL_V2
 	default n
 	---help---
 	  This is a MHL v2 driver customized for Qualcomm MSM8960 based chipsets.
+
+config MHL_D3_SUPPORT
+        bool "Samsung Mobile HD Link Interface"
+        default n
+        ---help---
+          This is a D3 mode in MHL v2 driver.

@@ -22,7 +22,7 @@
 #ifndef _LINUX_MAX_17042_BATTERY_H
 #define _LINUX_MAX_17042_BATTERY_H
 #define INTENSIVE_LOW_COMPENSATION
-#if defined(CONFIG_TARGET_SERIES_P5LTE)
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
 #define KEEP_SOC_LEVEL1
 #define POWER_OFF_SOC_HIGH_MARGIN	0x181	//1.5%
 #define POWER_OFF_VOLTAGE_HIGH_MARGIN	3500
@@ -51,7 +51,7 @@
 #define CONFIG_REG				0x1D
 #define REMCAP_AV_REG			0x1F
 #define FULLCAP_NOM_REG			0x23
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_KT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 #define FILTERCFG_REG			0x29
 #define CGAIN_REG				0x2E
 #endif
@@ -72,7 +72,7 @@
 #define FG_BATTERY_TYPE 5
 #define FG_CHECK_STATUS 6
 #define FG_VF_SOC 7
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_KT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)  || defined(CONFIG_JPN_OPERATOR_NTT)
 #define FG_FULLCAP 8
 #define FG_FULLCAP_NOM 9
 #define FG_REMCAP_REP 10
@@ -80,6 +80,9 @@
 #define FG_REMCAP_AV 12
 #define FG_VFOCV 13
 #define FG_FILTERCFG 14
+#endif
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#define FG_AVSOC 15
 #endif
 
 #define LOW_BATT_COMP_RANGE_NUM	5
@@ -125,6 +128,9 @@ struct fuelgauge_info {
 	int low_batt_comp_cnt[LOW_BATT_COMP_RANGE_NUM][LOW_BATT_COMP_LEVEL_NUM];
 	int check_start_vol;
 	int low_batt_comp_flag;
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)  || defined(CONFIG_JPN_OPERATOR_NTT)
+	int psoc;
+#endif
 };
 
 struct max17042_chip {
@@ -188,7 +194,7 @@ struct max17042_chip {
 #define SDI_Range1_3_Slope		0
 #endif
 
-#elif defined(CONFIG_TARGET_SERIES_P5LTE)
+#elif (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
 /* SDI type low battery compensation offset */
 //Range4 : current consumption is more than 1.5A
 //Range3 : current consumption is between 0.6A ~ 1.5A
@@ -362,8 +368,10 @@ extern void fg_check_vf_fullcap_range(void);
 extern int fg_check_cap_corruption(void);
 extern void fg_set_full_charged(void);
 extern int get_fuelgauge_value(int data);
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_KT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)  || defined(CONFIG_JPN_OPERATOR_NTT)
 extern int set_fuelgauge_value(int data, u16 value);
 #endif
-
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+extern void fg_recovery_adjust_repsoc(u32 level);
+#endif
 #endif

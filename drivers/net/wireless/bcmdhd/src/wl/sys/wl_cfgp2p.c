@@ -477,7 +477,7 @@ wl_cfgp2p_ifidx(struct wl_priv *wl, struct ether_addr *mac, s32 *index)
 		sizeof(getbuf), wl_to_p2p_bss_bssidx(wl, P2PAPI_BSSCFG_PRIMARY), NULL);
 
 	if (ret == 0) {
-		memcpy(index, getbuf, sizeof(index));
+		memcpy(index, getbuf, sizeof(s32));
 		CFGP2P_INFO(("---wl p2p_if   ==> %d\n", *index));
 	}
 
@@ -1014,7 +1014,7 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 		ret = -ENOMEM;
 	} else {
 		if (mgmt_ie_buf != NULL) {
-			if (vndr_ie_len && (vndr_ie_len == *mgmt_ie_len) &&
+			if (vndr_ie && vndr_ie_len && (vndr_ie_len == *mgmt_ie_len) &&
 			     (memcmp(mgmt_ie_buf, vndr_ie, vndr_ie_len) == 0)) {
 				CFGP2P_INFO(("Previous mgmt IE is equals to current IE"));
 				goto exit;
@@ -1043,7 +1043,7 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 		}
 		*mgmt_ie_len = 0;
 		/* Add if there is any extra IE */
-		if (vndr_ie && vndr_ie_len) {
+		if (mgmt_ie_buf && vndr_ie && vndr_ie_len) {
 			/* save the current IE in wl struct */
 			memcpy(mgmt_ie_buf, vndr_ie, vndr_ie_len);
 			*mgmt_ie_len = vndr_ie_len;
@@ -1067,9 +1067,6 @@ wl_cfgp2p_set_management_ie(struct wl_priv *wl, struct net_device *ndev, s32 bss
 				}
 				pos += ie_len;
 			}
-		} else {
-			CFGP2P_ERR(("<<<< VNDR_IE_LEN : %d, VNDR_IE_FLAG : %d, BSSIDX  : %d >>>>",
-				vndr_ie_len, pktflag, bssidx));
 		}
 
 	}
@@ -1299,6 +1296,9 @@ wl_cfgp2p_listen_complete(struct wl_priv *wl, struct net_device *ndev,
 	CFGP2P_DBG((" Enter\n"));
 	if (wl_get_p2p_status(wl, LISTEN_EXPIRED) == 0) {
 		wl_set_p2p_status(wl, LISTEN_EXPIRED);
+
+        if (wl->p2p == NULL)
+            return 0;
 		if (timer_pending(&wl->p2p->listen_timer)) {
 			spin_lock_bh(&wl->p2p->timer_lock);
 			del_timer_sync(&wl->p2p->listen_timer);
@@ -1477,7 +1477,7 @@ wl_cfgp2p_action_tx_complete(struct wl_priv *wl, struct net_device *ndev,
 					"status : %d\n", status));
 
 		if (wl_get_drv_status_all(wl, SENDING_ACT_FRM))
-			wake_up_interruptible(&wl->send_af_done_event);
+			complete(&wl->send_af_done);
 	}
 	return ret;
 }
@@ -1521,9 +1521,7 @@ wl_cfgp2p_tx_action_frame(struct wl_priv *wl, struct net_device *dev,
 		goto exit;
 	}
 
-	timeout = wait_event_interruptible_timeout(wl->send_af_done_event,
-	(wl_get_p2p_status(wl, ACTION_TX_COMPLETED) || wl_get_p2p_status(wl, ACTION_TX_NOACK)),
-	msecs_to_jiffies(MAX_WAIT_TIME));
+	timeout = wait_for_completion_timeout(&wl->send_af_done, msecs_to_jiffies(MAX_WAIT_TIME));
 
 	if (timeout > 0 && wl_get_p2p_status(wl, ACTION_TX_COMPLETED)) {
 		CFGP2P_INFO(("tx action frame operation is completed\n"));
@@ -1698,6 +1696,8 @@ wl_cfgp2p_supported(struct wl_priv *wl, struct net_device *ndev)
 s32
 wl_cfgp2p_down(struct wl_priv *wl)
 {
+	if (wl->p2p == NULL)
+		return 0;
 	if (timer_pending(&wl->p2p->listen_timer))
 		del_timer_sync(&wl->p2p->listen_timer);
 	wl_cfgp2p_deinit_priv(wl);

@@ -1858,9 +1858,12 @@ int input_register_device(struct input_dev *dev)
 		return error;
 
 	path = kobject_get_path(&dev->dev.kobj, GFP_KERNEL);
+
+#if !defined(CONFIG_USA_MODEL_SGH_I727R)
 	pr_info("%s as %s\n",
 		dev->name ? dev->name : "Unspecified device",
 		path ? path : "N/A");
+#endif
 	kfree(path);
 
 	error = mutex_lock_interruptible(&input_mutex);

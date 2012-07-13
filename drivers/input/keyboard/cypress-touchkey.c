@@ -38,6 +38,7 @@
 
 #include "cypress-touchkey.h"
 #include <linux/regulator/consumer.h>
+#include <linux/mfd/pmic8058.h>
 
 /*
 Melfas touchkey register
@@ -100,6 +101,8 @@ static int touchkey_keycode[5] = {0,KEY_MENU , KEY_HOME, KEY_BACK, KEY_SEARCH};
 	|| defined (CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)\
 	|| defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I757M)
 static int touchkey_keycode[5] = {0,KEY_MENU , KEY_HOMEPAGE, KEY_BACK, KEY_SEARCH};
+#elif defined (CONFIG_JPN_MODEL_SC_05D)
+static int touchkey_keycode[5] = {0,KEY_MENU , KEY_HOME, KEY_BACK, 0};
 #else
 static int touchkey_keycode[3] = { 0, KEY_BACK, KEY_MENU };
 #endif
@@ -833,7 +836,7 @@ static void melfas_touchkey_early_resume(struct early_suspend *h)
 
 if(touchled_cmd_reversed) {
 			touchled_cmd_reversed = 0;
-#if defined (CONFIG_USA_MODEL_SGH_I717)	|| defined (CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)		
+#if defined (CONFIG_USA_MODEL_SGH_I717)	|| defined (CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)		
 			msleep(100);
 #endif
 	//		msleep(300);		
@@ -884,7 +887,7 @@ if(touchled_cmd_reversed) {
 			if (get_hw_rev() >=0x0a){		
 				tkey_led_vdd_enable(1); 	
 			}
-#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
+#elif defined (CONFIG_USA_MODEL_SGH_I717)
 			if (false){		
 				tkey_led_vdd_enable(1); 	
 			}
@@ -892,7 +895,7 @@ if(touchled_cmd_reversed) {
 #elif defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I757M)			
 				tkey_led_vdd_enable(1);
 
-#elif defined (CONFIG_USA_MODEL_SGH_T989)
+#elif defined (CONFIG_USA_MODEL_SGH_T989)|| defined (CONFIG_USA_MODEL_SGH_T769)
 			if (get_hw_rev() >=0x0d){		
 				tkey_led_vdd_enable(1); 	
 			}
@@ -1202,6 +1205,10 @@ static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device
 		touchkey_keycode[1] = KEY_MENU;
 		touchkey_keycode[2] = KEY_BACK; 	
 	}
+#elif defined (CONFIG_JPN_MODEL_SC_05D)
+//TODO Check HW REV for JPN
+		touchkey_keycode[1] = KEY_MENU;
+		touchkey_keycode[2] = KEY_BACK; 	
 #endif
 
 	set_bit(EV_SYN, input_dev->evbit);
@@ -1320,9 +1327,10 @@ static void init_hw(void)
 		struct pm_gpio cfg;
 	};
 
+#if	defined (CONFIG_USA_MODEL_SGH_I727)
 	struct pm8058_gpio_cfg touchkey_int_cfg = 
 	{
-		13,
+	  PM8058_GPIO_PM_TO_SYS(12), // id-1		
 		{
 			.direction      = PM_GPIO_DIR_IN,
 			.pull           = PM_GPIO_PULL_NO,//PM_GPIO_PULL_NO,
@@ -1331,6 +1339,19 @@ static void init_hw(void)
 			.inv_int_pol    = 0,
 		},
 	};
+#else
+	struct pm8058_gpio_cfg touchkey_int_cfg = 
+	{
+		13,
+		{
+			.direction		= PM_GPIO_DIR_IN,
+			.pull			= PM_GPIO_PULL_NO,//PM_GPIO_PULL_NO,
+			.vin_sel		= 2,
+			.function		= PM_GPIO_FUNC_NORMAL,
+			.inv_int_pol	= 0,
+		},
+	};
+#endif
 
 	#if defined(CONFIG_KOR_MODEL_SHV_E160L)
     msleep(200);
@@ -1382,6 +1403,10 @@ static void init_hw(void)
 	}
 #elif defined(CONFIG_KOR_MODEL_SHV_E160L)
 	irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
+
+#elif defined (CONFIG_JPN_MODEL_SC_05D) 
+	irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
+
 #else
 	irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_LEVEL_LOW);
 #endif
@@ -1475,7 +1500,7 @@ static ssize_t touch_recommend_read(struct device *dev, struct device_attribute 
 		data[1] = 0x00;
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
         if (get_hw_rev() >=0x0a)
-                data[1] = 0x09;
+                data[1] = 0x12;
 		else
                 data[1] = 0x07;
 #elif defined(CONFIG_USA_MODEL_SGH_I757)  || defined(CONFIG_CAN_MODEL_SGH_I757M)    
@@ -2338,7 +2363,12 @@ static int __init touchkey_init(void)
 	} else { 
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
 	}
+	
+#elif defined (CONFIG_JPN_MODEL_SC_05D) 
+	irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
+
 #else
+
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_LEVEL_LOW);
 #endif
 
@@ -2354,7 +2384,7 @@ static int __init touchkey_init(void)
         return 0;
 #endif
 	
-	printk("[TKEY] %s F/W version: 0x%x, Module version:0x%x, HW_REV: 0x%x\n", __FUNCTION__, data[1], data[2], get_hw_rev());
+//	printk("[TKEY] %s F/W version: 0x%x, Module version:0x%x, HW_REV: 0x%x\n", __FUNCTION__, data[1], data[2], get_hw_rev());
 	touch_version = data[1];
 	retry = 3;
 	
@@ -2507,7 +2537,7 @@ static int __init touchkey_init(void)
 	}
 	
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
-	if (((data[1] < 0x07) && (data[2] == 0x15))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))&& ((get_hw_rev() >=0x05 )&& (get_hw_rev()<0x0a))))
+	 if (((data[1] < 0x07) && (data[2] == 0x15))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))&& ((get_hw_rev() >=0x05 )&& (get_hw_rev()<0x0a))))
 {
 		printk("%s : update 727 tkey...\n",__func__);	
 		extern int ISSP_main(int touchkey_pba_rev);
@@ -2525,7 +2555,7 @@ static int __init touchkey_init(void)
 		get_touchkey_firmware(data);
 		printk("%s change to F/W version: 0x%x, Module version:0x%x\n", __FUNCTION__, data[1], data[2]);
 	}
-		else if (((data[1] < 0x09) && (data[2] == 0x18))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))&& (get_hw_rev() >=0x0a )))
+		else if (((data[1] == 0x09) && (data[2] == 0x18))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))&& (get_hw_rev() >=0x0a )))
 {
 		printk("%s : update 727 tkey...\n",__func__);	
 		extern int ISSP_main(int touchkey_pba_rev);
@@ -2543,8 +2573,9 @@ static int __init touchkey_init(void)
 		get_touchkey_firmware(data);
 		printk("%s change to F/W version: 0x%x, Module version:0x%x\n", __FUNCTION__, data[1], data[2]);
 	}
+
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
-	if (((data[1] != 0x04) && (data[2] <= 0x2))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))))
+	if (data[1] != 0x04)//(((data[1] != 0x04) && (data[2] <= 0x2))|| ((((data[1] == 0x0) && (data[2] == 0x0) )||((data[1] == 0xff) && (data[2] == 0xff) ))))
     {
             printk("%s : update 727 tkey...\n",__func__);   
             extern int ISSP_main(int touchkey_pba_rev);

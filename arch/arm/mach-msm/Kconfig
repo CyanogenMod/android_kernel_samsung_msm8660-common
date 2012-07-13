@@ -154,19 +154,20 @@ config ARCH_MSM8960
 	select ARCH_POPULATES_NODE_MAP
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
-	select MEMORY_HOTPLUG
-	select MEMORY_HOTREMOVE
-	select ARCH_ENABLE_MEMORY_HOTPLUG
-	select ARCH_ENABLE_MEMORY_HOTREMOVE
-	select MIGRATION
-	select ARCH_MEMORY_PROBE
-	select ARCH_MEMORY_REMOVE
-	select FIX_MOVABLE_ZONE
+	select MEMORY_HOTPLUG if ENABLE_DMM
+	select MEMORY_HOTREMOVE if ENABLE_DMM
+	select ARCH_ENABLE_MEMORY_HOTPLUG if ENABLE_DMM
+	select ARCH_ENABLE_MEMORY_HOTREMOVE if ENABLE_DMM
+	select MIGRATION if ENABLE_DMM
+	select ARCH_MEMORY_PROBE if ENABLE_DMM
+	select ARCH_MEMORY_REMOVE if ENABLE_DMM
+	select FIX_MOVABLE_ZONE if ENABLE_DMM
 	select CLEANCACHE
 	select QCACHE
 	select MSM_MULTIMEDIA_USE_ION
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -192,17 +193,18 @@ config ARCH_MSM8930
 	select ARCH_POPULATES_NODE_MAP
 	select ARCH_SPARSEMEM_ENABLE
 	select ARCH_HAS_HOLES_MEMORYMODEL
-	select MEMORY_HOTPLUG
-	select MEMORY_HOTREMOVE
-	select ARCH_ENABLE_MEMORY_HOTPLUG
-	select ARCH_ENABLE_MEMORY_HOTREMOVE
-	select MIGRATION
-	select ARCH_MEMORY_PROBE
-	select ARCH_MEMORY_REMOVE
-	select FIX_MOVABLE_ZONE
+	select MEMORY_HOTPLUG if ENABLE_DMM
+	select MEMORY_HOTREMOVE if ENABLE_DMM
+	select ARCH_ENABLE_MEMORY_HOTPLUG if ENABLE_DMM
+	select ARCH_ENABLE_MEMORY_HOTREMOVE if ENABLE_DMM
+	select MIGRATION if ENABLE_DMM
+	select ARCH_MEMORY_PROBE if ENABLE_DMM
+	select ARCH_MEMORY_REMOVE if ENABLE_DMM
+	select FIX_MOVABLE_ZONE if ENABLE_DMM
 	select MSM_ULTRASOUND
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -219,6 +221,7 @@ config ARCH_APQ8064
 	select MSM_AUDIO_QDSP6 if SND_SOC
 	select MULTI_IRQ_HANDLER
 	select MSM_PM8X60 if PM
+	select HOLES_IN_ZONE if SPARSEMEM
 
 config ARCH_MSMCOPPER
 	bool "MSM Copper"
@@ -1645,6 +1648,12 @@ choice
 		bool "Locale EUR "
 		help
 		  Support EUR Board
+		  
+	config TARGET_LOCALE_HKTW
+		bool "Locale HKTW "
+		help
+		  Support HKTW Board
+		  
 endchoice
 
 choice
@@ -1720,6 +1729,8 @@ choice
 			bool "SHV-E140K"
 		config KOR_MODEL_SHV_E140L
 			bool "SHV-E140L"
+		config KOR_MODEL_SHV_E150S
+			bool "SHV-E150S"
 			
 endchoice
 
@@ -1735,8 +1746,6 @@ choice
                         default y
 			bool "USA ATT SGH-I727"
 			
-		config USA_MODEL_SGH_I727R 
-		    bool "USA ATT SGH-I727R"
 			
 		config USA_MODEL_SGH_I757 
 		    bool "USA ATT SGH-I757"
@@ -1755,6 +1764,20 @@ choice
 
 endchoice
 
+choice
+		prompt "Europe Model Name"
+		default EUR_MODEL_GT_P7320
+		depends on TARGET_LOCALE_EUR
+
+		config EUR_MODEL_GT_P7320
+			bool "GT-P7320"
+endchoice
+
+config USA_MODEL_SGH_I727R 
+		depends on (USA_MODEL_SGH_I727)
+                default n 
+		bool "USA ATT SGH-I727R"
+
 config USA_MODEL_SGH_T989D
                 depends on (USA_MODEL_SGH_T989)
                 default n             
@@ -1772,6 +1795,12 @@ choice
 
 		config JPN_MODEL_SC_01D
 			bool "JPN NTT SC-01D"
+
+		config JPN_MODEL_SC_05D
+			bool "JPN NTT SC-05D"
+			
+		config JPN_MODEL_SC_07D
+			bool "JPN NTT SC-07D"
 endchoice
 
 config SAMSUNG_8X60_TABLET
@@ -1786,6 +1815,11 @@ config USA_MODEL_SGH_T879
     bool "USA TMO SGH-T879"	
 	depends on TARGET_LOCALE_USA && USA_MODEL_SGH_I717
     default n		
+
+config HKTW_MODEL_GT_N7005
+			bool "HKTW OPEN GT-N7005"
+			depends on TARGET_LOCALE_HKTW
+	    default n		
 			
 config EUR_MODEL_GT_I9210
 	default n
@@ -2086,6 +2120,14 @@ config MSM_QDSS_ETM_DEFAULT_ENABLE
 	  Turns on QDSS ETM tracing by default. Otherwise, tracing is
 	  disabled by default but can be enabled by other means.
 
+config CLOCK_MAP
+	bool "Log clk_enable()/clk_disable() calls"
+	help
+	  Turn on extra debugging for clk_enable()/clk_disable() calls.
+	  A bitmap is maintained in non-cached memory and each registered
+	  clock gets a unique id. If the bitmap has that bit set the clock
+	  is enabled, otherwise the clock is disabled.
+
 config MSM_SLEEP_STATS
 	bool "Enable exporting of MSM sleep stats to userspace"
 	depends on CPU_IDLE
@@ -2245,6 +2287,78 @@ config MSM_RTB_SEPARATE_CPUS
 	  separately. This will guarantee that the last acesses for each cpu
 	  will be logged but there will be fewer entries per cpu
 
+config MSM_CACHE_ERP
+	bool "Cache / CPU error reporting"
+	depends on ARCH_MSM_KRAIT
+	help
+	  Say 'Y' here to enable reporting of cache and TLB errors to the kernel
+	  log. Enabling this feature can be used as a system debugging technique
+	  if cache corruption is suspected. Cache error statistics will also be
+	  reported in /proc/cpu/msm_cache_erp.
+
+	  For production builds, you should probably say 'N' here.
+
+config MSM_L1_ERR_PANIC
+	bool "Panic on L1 cache / TLB errors"
+	depends on MSM_CACHE_ERP
+	help
+	  To cause the kernel to panic whenever an L1 cache or TLB error is
+	  detected, say 'Y' here. This may be useful as a debugging technique if
+	  general system instability is suspected.
+
+	  For production builds, you should probably say 'N' here.
+
+
+config MSM_L2_ERP_PORT_PANIC
+	bool "Panic on L2 master port errors"
+	depends on MSM_CACHE_ERP
+	help
+	  Master port errors can occur when a memory request is not properly
+	  handled by the destination slave. Enable this option to catch drivers
+	  which attempt to access bad areas of the address space, or access
+	  hardware registers in an improper state (such as certain clocks not
+	  being on). This option may help with debugging, though production
+	  builds should probably say 'N' here.
+
+config MSM_L2_ERP_1BIT_PANIC
+	bool "Panic on recoverable L2 soft errors"
+	depends on MSM_CACHE_ERP
+	help
+	  Enable this option to cause a kernel panic whenever the L2 cache
+	  encounters a single-bit (correctable) soft error. This option should
+	  only be enabled when doing low-level debugging where cache corruption
+	  is suspected.
+
+	  For production builds, you should definitely say 'N' here.
+
+config MSM_L2_ERP_2BIT_PANIC
+	bool "Panic on unrecoverable L2 soft errors"
+	depends on MSM_CACHE_ERP
+	help
+	  Enable this option to cause a kernel panic whenever the L2 cache
+	  encounters a double-bit (non-correctable) soft error. Debug builds
+	  will likely benefit from having this option enabled to catch cache
+	  problems as soon as possible.
+
+	  For production builds, it may be acceptable to say 'N' here, since
+	  an uncorrectable error might not necessarily cause further problems.
+
+config MSM_CACHE_DUMP
+	bool "Cache dumping support"
+	help
+	  Add infrastructure to dump the L1 and L2 caches to an allocated buffer.
+	  This allows for analysis of the caches in case cache corruption is
+	  suspected.
+
+config MSM_DCVS
+	bool "Use MSM DCVS for CPU/GPU Frequency control"
+	depends on MSM_SCM
+	help
+	  Enable support for MSM DCVS to control all CPU and GPU core frequencies.
+	  The DCVS manager allows idle driver to feed the idle information to the
+	  algorithm and the algorithm returns a frequency for the core which is
+	  passed to the frequency change driver.
+
 config PMIC8058_XOADC_CAL
 	bool "PMIC8058 adc calibration"
 	help
@@ -2256,7 +2370,6 @@ config SEC_AUDIO_I2S_DRIVING_CURRENT
 	help
 	  Support I2S driving current up
 
-endif
 
 config Q1_KOR_AUDIO
 	bool "Q1 KOR AUDIO"
@@ -2264,3 +2377,19 @@ config Q1_KOR_AUDIO
 	help
 	  Support Q1 KOR AUDIO
 
+config MSM_DCVS
+	bool "Use MSM DCVS for CPU/GPU Frequency control"
+	depends on MSM_SCM
+	help
+	  Enable support for MSM DCVS to control all CPU and GPU core frequencies.
+	  The DCVS manager allows idle driver to feed the idle information to the
+	  algorithm and the algorithm returns a frequency for the core which is
+	  passed to the frequency change driver.
+
+config ATHEROS_WIFI
+	bool "ATHEROS WIFI"
+
+config NL80211_TESTMODE
+	bool "NL80211 TESTMODE" 
+
+endif

@@ -445,6 +445,15 @@ static void acm_function_cleanup(struct android_usb_function *f)
 {
 	gserial_cleanup();
 }
+
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+static int acm_function_ctrlrequest(struct android_usb_function *f,
+						struct usb_composite_dev *cdev,
+						const struct usb_ctrlrequest *c)
+{
+	return acm_avd_request(cdev, c);
+}
+#endif
 				
 static int acm_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
@@ -493,6 +502,9 @@ static struct android_usb_function acm_function = {
 	.cleanup	= acm_function_cleanup,
 	.bind_config	= acm_function_bind_config,
 	.attributes	= acm_function_attributes,
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	.ctrlrequest	= acm_function_ctrlrequest,
+#endif
 };
 
 #else
@@ -619,6 +631,7 @@ static struct android_usb_function ccid_function = {
 	.bind_config	= ccid_function_bind_config,
 };
 
+
 static int mtp_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
 {
 	return mtp_setup();
@@ -706,11 +719,15 @@ static int rndis_function_bind_config(struct android_usb_function *f,
 		return -1;
 	}
 
-	pr_info("%s MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", __func__,
-		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
-		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
-
+	printk(KERN_DEBUG "usb: %s before MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__, rndis->ethaddr[0], rndis->ethaddr[1],
+			rndis->ethaddr[2], rndis->ethaddr[3], rndis->ethaddr[4],
+			rndis->ethaddr[5]);
 	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
+	printk(KERN_DEBUG "usb: %s after MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__, rndis->ethaddr[0], rndis->ethaddr[1],
+			rndis->ethaddr[2], rndis->ethaddr[3], rndis->ethaddr[4],
+			rndis->ethaddr[5]);
 	if (ret) {
 		pr_err("%s: gether_setup failed\n", __func__);
 		return ret;
@@ -792,6 +809,11 @@ static ssize_t rndis_ethaddr_show(struct device *dev,
 {
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct rndis_function_config *rndis = f->config;
+	printk(KERN_DEBUG "usb: %s MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__,
+		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
+		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
+
 	return snprintf(buf, PAGE_SIZE, "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
 		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
@@ -803,12 +825,44 @@ static ssize_t rndis_ethaddr_store(struct device *dev,
 	struct android_usb_function *f = dev_get_drvdata(dev);
 	struct rndis_function_config *rndis = f->config;
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	int i;
+	char *src;
+	for (i = 0; i < ETH_ALEN; i++)
+		rndis->ethaddr[i] = 0;
+	/* create a fake MAC address from our serial number.
+	 * first byte is 0x02 to signify locally administered.
+	 */
+	rndis->ethaddr[0] = 0x02;
+	src = serial_string;
+	for (i = 0; (i < 256) && *src; i++) {
+		/* XOR the USB serial across the remaining bytes */
+		rndis->ethaddr[i % (ETH_ALEN - 1) + 1] ^= *src++;
+	}
+	printk(KERN_DEBUG "usb: %s MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__, rndis->ethaddr[0], rndis->ethaddr[1],
+			rndis->ethaddr[2], rndis->ethaddr[3], rndis->ethaddr[4],
+			rndis->ethaddr[5]);
+	return size;
+#else
 	if (sscanf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		    (int *)&rndis->ethaddr[0], (int *)&rndis->ethaddr[1],
 		    (int *)&rndis->ethaddr[2], (int *)&rndis->ethaddr[3],
-		    (int *)&rndis->ethaddr[4], (int *)&rndis->ethaddr[5]) == 6)
+		    (int *)&rndis->ethaddr[4],
+		    (int *)&rndis->ethaddr[5]) == 6) {
+		printk(KERN_DEBUG "usb: %s MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__, rndis->ethaddr[0], rndis->ethaddr[1],
+			rndis->ethaddr[2], rndis->ethaddr[3], rndis->ethaddr[4],
+			rndis->ethaddr[5]);
 		return size;
+
+	}
+	printk(KERN_DEBUG "usb: %s MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+			__func__,
+		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
+		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
 	return -EINVAL;
+#endif
 }
 
 static DEVICE_ATTR(ethaddr, S_IRUGO | S_IWUSR, rndis_ethaddr_show,
@@ -1587,6 +1641,9 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 #endif
 	if (!dev->connected) {
 		dev->connected = 1;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+		dev->cdev->host_state_info = 1;
+#endif
 		schedule_work(&dev->work);
 	}
 	else if (c->bRequest == USB_REQ_SET_CONFIGURATION && cdev->config) {
@@ -1623,6 +1680,7 @@ static void android_disconnect(struct usb_gadget *gadget)
 		printk(KERN_DEBUG "usb: %s schedule_work\n", __func__);
 		schedule_work(&dev->work);
 	}
+	dev->cdev->mac_connected = 0;
 #else
 	schedule_work(&dev->work);
 #endif
@@ -1678,6 +1736,35 @@ static struct platform_driver android_platform_driver = {
 	.driver = { .name = "android_usb"},
 };
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+/*   Path (/sys/class/android_usb/android0/host_state */
+static ssize_t host_state_switch_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct android_dev *a_dev = _android_dev;
+	int value = -1;
+
+	/* Not support Mac */
+	if (a_dev->cdev->mac_connected)
+		value = 0;
+	else
+		value = a_dev->cdev->host_state_info;
+
+	printk(KERN_DEBUG "usb: host driver show [%d] \r\n", value);
+	return sprintf(buf, "%d\n", value);
+}
+static ssize_t host_state_switch_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	int value;
+	sscanf(buf, "%d", &value);
+	return size;
+}
+static DEVICE_ATTR(host_state,
+		S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR | S_IROTH,
+		host_state_switch_show, host_state_switch_store);
+#endif
+
 static int __init init(void)
 {
 	struct android_dev *dev;
@@ -1709,7 +1796,14 @@ static int __init init(void)
 	/* Override composite driver functions */
 	composite_driver.setup = android_setup;
 	composite_driver.disconnect = android_disconnect;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 
+	/* Create sysfs for notification host os state */
+	if (device_create_file(dev->dev, &dev_attr_host_state) < 0)
+		printk(KERN_DEBUG "Failed to create device file(%s)!\n",
+					dev_attr_host_state.attr.name);
+
+#endif
 	ret = platform_driver_probe(&android_platform_driver, android_probe);
 	if (ret) {
 		pr_err("%s(): Failed to register android"

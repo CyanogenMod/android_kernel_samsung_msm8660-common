@@ -120,7 +120,7 @@ struct lcd_setting {
 	unsigned int 			enabled_acl; // lcd has this value
 	unsigned int 			stored_acl; // driver has this value
 	unsigned int 			lcd_acl; // lcd has this value
-	unsigned int 			goal_brightness;
+/*	unsigned int 			goal_brightness; */	
 	struct mutex	lock;
 	struct lcd_device		*ld;
 	struct backlight_device		*bd;
@@ -876,8 +876,8 @@ static int lcd_on(struct platform_device *pdev)
 
 	lcd_on_seq( mfd );
 
-	if (s6e8aa0_lcd.goal_brightness != s6e8aa0_lcd.stored_gamma)
-		lcd_set_brightness(mfd, s6e8aa0_lcd.goal_brightness);
+/*	if (s6e8aa0_lcd.goal_brightness != s6e8aa0_lcd.stored_gamma)
+		lcd_set_brightness(mfd, s6e8aa0_lcd.goal_brightness); */
 	
 //	readCmd(mfd, DTYPE_GEN_READ, 0x05, 0x00, 8, 1 );
 //	readCmd(mfd, DTYPE_GEN_READ, 0x0A, 0x00, 8, 1 );
@@ -1023,6 +1023,7 @@ static void lcd_gamma_ctl(struct msm_fb_data_type *mfd, struct lcd_setting *lcd)
 	int gamma_level;
 
 	gamma_level = s6e8aa0_lcd.stored_gamma;
+
 	if( s6e8aa0_lcd.lcd_brightness_table[gamma_level].lux != s6e8aa0_lcd.lcd_brightness_table[s6e8aa0_lcd.lcd_gamma].lux )
 	{
 
@@ -1177,7 +1178,7 @@ static void set_backlight(struct msm_fb_data_type *mfd)
 	       s6e8aa0_lcd.stored_gamma = gamma_level;
 	       s6e8aa0_lcd.stored_elvss = gamma_level;
 	       s6e8aa0_lcd.stored_acl = gamma_level;
-	       s6e8aa0_lcd.goal_brightness  = gamma_level;
+/*	       s6e8aa0_lcd.goal_brightness  = gamma_level; */
        	DPRINT("brightness(Ignore_OFF) %d(bl)->gamma=%d stored=%d\n",bl_level,gamma_level,s6e8aa0_lcd.stored_gamma);
 	}
 
@@ -1773,7 +1774,7 @@ if(Is_There_cmc624())
 		if( lcd_Gamma22_Meterial13_table[default_gamma_value].lux >= DEFAULT_CANDELA_VALUE ) break;
 
 #ifdef MAPPING_TBL_AUTO_BRIGHTNESS
-    for( default_gamma_value = 0; default_gamma_value <= MAX_GAMMA_VALUE; default_gamma_value++)
+    for( default_gamma_value = 0; default_gamma_value < MAX_GAMMA_VALUE; default_gamma_value++)
     	if( candela_table[default_gamma_value]>= DEFAULT_CANDELA_VALUE ) break;
 #endif
 
@@ -1783,7 +1784,7 @@ if(Is_There_cmc624())
 	s6e8aa0_lcd.lcd_gamma = -1;
 	s6e8aa0_lcd.enabled_acl= 1;
 	s6e8aa0_lcd.stored_acl= default_gamma_value;
-	s6e8aa0_lcd.goal_brightness = default_gamma_value;
+/*	s6e8aa0_lcd.goal_brightness = default_gamma_value; */
 	s6e8aa0_lcd.lcd_acl = -1;
 	s6e8aa0_lcd.lcd_state.display_on = false;
 	s6e8aa0_lcd.lcd_state.initialized= false;

@@ -24,6 +24,10 @@ ifdef CONFIG_TARGET_SERIES_P4LTE
 BOARD_OBJ_NAME:=board-msm8x60_p4lte.o
 GPIOMUX_OBJ_NAME:=gpiomux-8x60_p4lte.o
 endif
+ifdef CONFIG_TARGET_SERIES_P8LTE
+BOARD_OBJ_NAME:=board-msm8x60_p8lte.o
+GPIOMUX_OBJ_NAME:=gpiomux-8x60_p8lte.o
+endif
 
 obj-y += io.o dma.o memory.o
 ifndef CONFIG_ARM_ARCH_TIMER
@@ -219,6 +223,9 @@ ifdef CONFIG_CPU_IDLE
 	obj-$(CONFIG_ARCH_MSM9615) += cpuidle.o
 endif
 
+ifdef CONFIG_MSM_CAMERA_V4L2
+	obj-$(CONFIG_ARCH_MSM8X60) += board-msm8x60-camera.o
+endif
 obj-$(CONFIG_ARCH_FSM9XXX) += devices-fsm9xxx.o
 obj-$(CONFIG_ARCH_FSM9XXX) += clock-fsm9xxx.o clock-local.o acpuclock-fsm9xxx.o
 obj-$(CONFIG_ARCH_FSM9XXX) += dfe-fsm9xxx.o rfic-fsm9xxx.o
@@ -326,6 +333,7 @@ endif
 
 obj-$(CONFIG_MSM_SLEEP_STATS) += msm_rq_stats.o idle_stats.o
 obj-$(CONFIG_MSM_SLEEP_STATS_DEVICE) += idle_stats_device.o
+obj-$(CONFIG_MSM_DCVS) += msm_dcvs_scm.o msm_dcvs.o msm_dcvs_idle.o
 obj-$(CONFIG_MSM_SHOW_RESUME_IRQ) += msm_show_resume_irq.o
 obj-$(CONFIG_BT_MSM_PINTEST)  += btpintest.o
 obj-$(CONFIG_MSM_FAKE_BATTERY) += fish_battery.o
@@ -346,6 +354,8 @@ endif
 
 obj-$(CONFIG_ARCH_MSM8960) += mdm2.o mdm_common.o
 obj-$(CONFIG_MSM_RTB) += msm_rtb.o
+obj-$(CONFIG_MSM_CACHE_ERP) += cache_erp.o
+obj-$(CONFIG_MSM_CACHE_DUMP) += msm_cache_dump.o
 
 ifdef CONFIG_BT_BCM4330
 obj-$(CONFIG_BT_BCM4330) += board-bluetooth-bcm4330.o

@@ -189,6 +189,9 @@ struct hci_dev {
 
 	unsigned int	auto_accept_delay;
 
+	/* wbs flag */
+	__s8		is_wbs;
+
 	unsigned long	quirks;
 
 	atomic_t	cmd_cnt;
@@ -1062,6 +1065,7 @@ int mgmt_remote_features(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 features[8])
 /* monitoring of the RSSI of the link between two Bluetooth devices */
 int mgmt_read_rssi_complete(struct hci_dev *hdev, bdaddr_t *bdaddr, s8 rssi, u8 status);
 int mgmt_read_rssi_failed(struct hci_dev *hdev);
+int mgmt_le_test_end_complete(struct hci_dev *hdev, u8 status, __u16 num_pkts);
 
 /* HCI info for socket */
 #define hci_pi(sk) ((struct hci_pinfo *) sk)

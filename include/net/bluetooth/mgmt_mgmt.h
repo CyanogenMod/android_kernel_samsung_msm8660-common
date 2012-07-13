@@ -328,6 +328,12 @@ struct mgmt_cp_unblock_device {
 	struct mgmt_addr_info addr;
 } __packed;
 
+#define MGMT_OP_LE_TEST_END		0x0028
+struct mgmt_rp_le_test_end {
+	__u8 status;
+	__u16 num_pkts;
+} __packed;
+
 #define MGMT_EV_CMD_COMPLETE		0x0001
 struct mgmt_ev_cmd_complete {
 	__le16 opcode;
