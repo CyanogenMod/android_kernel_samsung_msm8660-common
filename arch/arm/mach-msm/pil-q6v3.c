@@ -243,7 +243,7 @@ static int __devinit pil_q6v3_driver_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	desc = devm_kzalloc(&pdev->dev, sizeof(*desc), GFP_KERNEL);
-	if (!drv)
+	if (!desc)
 		return -ENOMEM;
 
 	drv->pll = clk_get(&pdev->dev, "pll4");

@@ -615,6 +615,14 @@ static struct gpiomux_setting tdmb_suspend_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 	.dir = 0,
 };
+
+static struct gpiomux_setting tdmb_spi_config = {
+	.func = GPIOMUX_FUNC_GPIO,
+	.drv = GPIOMUX_DRV_8MA,
+	.pull = GPIOMUX_PULL_DOWN,
+	.dir = 0,
+};
+
 #endif
 
 static struct gpiomux_setting motor_active_cfg = {
@@ -639,6 +647,32 @@ static struct gpiomux_setting boot_config_cfg = {
 };
 
 static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
+#if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
+	{
+		.gpio	   = 33,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tdmb_spi_config,
+		},
+	},
+	{
+		.gpio	   = 34,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tdmb_spi_config,
+		},
+	},
+	{
+		.gpio	   = 35,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tdmb_spi_config,
+		},
+	},
+	{
+		.gpio	   = 36,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &tdmb_spi_config,
+		},
+	},
+#else
 	{
 		.gpio      = 33,
 		.settings = {
@@ -667,6 +701,7 @@ static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
 			[GPIOMUX_ACTIVE]    = &spi_active,
 		},
 	},
+#endif
 	{
 		.gpio      = 43,
 		.settings = {

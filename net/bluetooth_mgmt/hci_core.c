@@ -45,6 +45,7 @@
 #include <linux/timer.h>
 #include <linux/crypto.h>
 #include <net/sock.h>
+#include <linux/gpio.h>
 
 #include <asm/system.h>
 #include <linux/uaccess.h>
@@ -644,6 +645,11 @@ int hci_dev_open(__u16 dev)
 	BT_DBG("%s %p", hdev->name, hdev);
 
 	hci_req_lock(hdev);
+
+	if (test_bit(HCI_UNREGISTER, &hdev->flags)) {
+		ret = -ENODEV;
+		goto done;
+	}
 
 	if (hdev->rfkill && rfkill_blocked(hdev->rfkill)) {
 		ret = -ERFKILL;
@@ -1411,7 +1417,18 @@ int hci_remove_ltk(struct hci_dev *hdev, bdaddr_t *bdaddr)
 static void hci_cmd_timer(unsigned long arg)
 {
 	struct hci_dev *hdev = (void *) arg;
+#if defined(CONFIG_MACH_M0) || defined(CONFIG_MACH_GRANDE)
+	int rx_pin = gpio_get_value(GPIO_BT_RXD);
+	int tx_pin = gpio_get_value(GPIO_BT_TXD);
+	int cts_pin = gpio_get_value(GPIO_BT_CTS);
+	int rts_pin = gpio_get_value(GPIO_BT_RTS);
 
+	int bt_host_wake_pin = gpio_get_value(GPIO_BT_HOST_WAKE);
+	int bt_wake_pin = gpio_get_value(GPIO_BT_WAKE);
+	int bt_en = gpio_get_value(GPIO_BT_EN);
+	BT_ERR("rx: %d, tx: %d, cts: %d, rts: %d", rx_pin, tx_pin, cts_pin, rts_pin);
+	BT_ERR("host_wake: %d, bt_wake: %d, en: %d", bt_host_wake_pin, bt_wake_pin, bt_en);
+#endif
 	BT_ERR("%s command tx timeout", hdev->name);
 	atomic_set(&hdev->cmd_cnt, 1);
 	tasklet_schedule(&hdev->cmd_task);
@@ -1862,9 +1879,10 @@ int hci_register_dev(struct hci_dev *hdev)
 	}
 	set_bit(HCI_AUTO_OFF, &hdev->dev_flags);
 	set_bit(HCI_SETUP, &hdev->dev_flags);
-	schedule_work(&hdev->power_on);
 
 	hci_notify(hdev, HCI_DEV_REG);
+	schedule_work(&hdev->power_on);
+
 	hci_dev_hold(hdev);
 
 	return id;
@@ -1884,6 +1902,8 @@ int hci_unregister_dev(struct hci_dev *hdev)
 	int i;
 
 	BT_DBG("%p name %s bus %d", hdev, hdev->name, hdev->bus);
+
+	set_bit(HCI_UNREGISTER, &hdev->flags);
 
 	write_lock_bh(&hci_dev_list_lock);
 	list_del(&hdev->list);
@@ -2237,7 +2257,11 @@ static int hci_send_frame(struct sk_buff *skb)
 
 	/* Get rid of skb owner, prior to sending to the driver. */
 	skb_orphan(skb);
-
+	
+      #ifdef CONFIG_KOR_MODEL_SHV_E150S
+      hci_notify(hdev, HCI_DEV_WRITE);  
+      #endif
+	  
 	return hdev->send(skb);
 }
 

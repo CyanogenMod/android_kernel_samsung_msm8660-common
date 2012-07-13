@@ -13,6 +13,7 @@
 #include <mach/msm_memtypes.h>
 #include "vcd_ddl.h"
 #include "vcd_ddl_shared_mem.h"
+#include "vcd_res_tracker_api.h"
 
 struct ddl_context *ddl_get_context(void)
 {
@@ -246,7 +247,8 @@ u32 ddl_decoder_dpb_init(struct ddl_client_context *ddl)
 	if (dpb > DDL_MAX_BUFFER_COUNT)
 		dpb = DDL_MAX_BUFFER_COUNT;
 	for (i = 0; i < dpb; i++) {
-		if (frame[i].vcd_frm.virtual) {
+		if (!res_trk_check_for_sec_session() &&
+			frame[i].vcd_frm.virtual) {
 			if (luma_size <= frame[i].vcd_frm.alloc_len) {
 				memset(frame[i].vcd_frm.virtual,
 					 0x10101010, luma_size);
@@ -715,9 +717,11 @@ u32 ddl_allocate_dec_hw_buffers(struct ddl_client_context *ddl)
 			DDL_KILO_BYTE(2));
 		if (!ptr)
 			status = VCD_ERR_ALLOC_FAIL;
-		else
-			memset(dec_bufs->desc.align_virtual_addr,
-				   0, buf_size.sz_desc);
+		else {
+			if (!res_trk_check_for_sec_session())
+				memset(dec_bufs->desc.align_virtual_addr,
+					0, buf_size.sz_desc);
+		}
 	}
 	if (status)
 		ddl_free_dec_hw_buffers(ddl);
@@ -756,7 +760,7 @@ u32 ddl_calc_enc_hw_buffers_size(enum vcd_codec codec, u32 width,
 		sz_strm = DDL_ALIGN(ddl_get_yuv_buf_size(width, height,
 			DDL_YUV_BUF_TYPE_LINEAR) + ddl_get_yuv_buf_size(width,
 			height/2, DDL_YUV_BUF_TYPE_LINEAR), DDL_KILO_BYTE(4));
-		sz_mv = DDL_ALIGN(2 * mb_x * 8, DDL_KILO_BYTE(2));
+		sz_mv = DDL_ALIGN(2 * mb_x * mb_y * 8, DDL_KILO_BYTE(2));
 		if ((codec == VCD_CODEC_MPEG4) ||
 			(codec == VCD_CODEC_H264)) {
 			sz_col_zero = DDL_ALIGN(((mb_x * mb_y + 7) / 8) *

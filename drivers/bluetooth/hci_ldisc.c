@@ -129,7 +129,7 @@ int hci_uart_tx_wakeup(struct hci_uart *hu)
 		return 0;
 	}
 
-	printk(KERN_ERR "[BT] hci_uart_tx_wakeup \n");
+	//printk(KERN_ERR "[BT] hci_uart_tx_wakeup \n");
 
 restart:
 	clear_bit(HCI_UART_TX_WAKEUP, &hu->tx_state);

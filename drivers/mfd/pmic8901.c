@@ -174,7 +174,7 @@ static struct mfd_cell mpp_cell = {
 };
 
 
-int pm8901_preload_dVdd(void)
+int pm8901_preload_dVdd_old(void)
 {
 	int rc;
 	u8 reg;
@@ -204,7 +204,7 @@ int pm8901_preload_dVdd(void)
 
 	return rc;
 }
-EXPORT_SYMBOL(pm8901_preload_dVdd);
+EXPORT_SYMBOL(pm8901_preload_dVdd_old);
 
 
 int pm8901_is_old_PCB_with_PM8901(void)
@@ -235,7 +235,7 @@ int pm8901_is_old_PCB_with_PM8901(void)
                 retval = 1;
         else if( rev >=7 )
                 retval = 0;                
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
         if( rev <= 10 )
                 retval = 1;
         else if( rev >=11 )
@@ -258,6 +258,11 @@ int pm8901_is_old_PCB_with_PM8901(void)
         else if( rev >=11 )
                 retval = 0;
 #elif defined(CONFIG_USA_MODEL_SGH_I957)
+	if( rev <= 7 )
+		retval = 1;
+	else if( rev >= 8)
+		retval = 0;
+#elif defined(CONFIG_EUR_MODEL_GT_P7320)
 	if( rev <= 7 )
 		retval = 1;
 	else if( rev >= 8)
@@ -413,11 +418,23 @@ bail:
 	return rc;
 }
 
-static int pm8901_probe(struct platform_device *pdev)
+static const char * const pm8901_rev_names[] = {
+	[PM8XXX_REVISION_8901_TEST]	= "test",
+	[PM8XXX_REVISION_8901_1p0]	= "1.0",
+	[PM8XXX_REVISION_8901_1p1]	= "1.1",
+	[PM8XXX_REVISION_8901_2p0]	= "2.0",
+	[PM8XXX_REVISION_8901_2p1]	= "2.1",
+	[PM8XXX_REVISION_8901_2p2]	= "2.2",
+	[PM8XXX_REVISION_8901_2p3]	= "2.3",
+};
+
+static int __devinit pm8901_probe(struct platform_device *pdev)
 {
 	int rc;
 	struct pm8901_platform_data *pdata = pdev->dev.platform_data;
+	const char *revision_name = "unknown";
 	struct pm8901_chip *pmic;
+	int revision;
 
 	if (pdata == NULL) {
 		pr_err("%s: No platform_data or IRQ.\n", __func__);
@@ -441,7 +458,11 @@ static int pm8901_probe(struct platform_device *pdev)
 		pr_err("%s: Failed reading version register rc=%d.\n",
 			__func__, rc);
 
-	pr_info("%s: PMIC REVISION = %X\n", __func__, pmic->revision);
+	pr_info("%s: PMIC revision reg: %02X\n", __func__, pmic->revision);
+	revision =  pm8xxx_get_revision(pmic->dev);
+	if (revision >= 0 && revision < ARRAY_SIZE(pm8901_rev_names))
+		revision_name = pm8901_rev_names[revision];
+	pr_info("%s: PMIC version: PM8901 rev %s\n", __func__, revision_name);
 
         // This api is s/w workaround for PM8901's abnormal spike which could
         // cause DDR problem on PCB. Because of the spike SS made new PCB for
@@ -452,7 +473,7 @@ static int pm8901_probe(struct platform_device *pdev)
         // here you just need to check if SBL3 bootloader includes the api.
         // In other words this api has dependency with SBL3 change
         if( pm8901_is_old_PCB_with_PM8901()==1 )
-                pm8901_preload_dVdd();
+                pm8901_preload_dVdd_old();
                 
 	(void) memcpy((void *)&pmic->pdata, (const void *)pdata,
 		      sizeof(pmic->pdata));

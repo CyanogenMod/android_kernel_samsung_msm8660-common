@@ -61,7 +61,7 @@
 // a high-to-low transition. This is used in the polling loop of
 // fDetectHiLoTransition(). Each pass through the loop takes approximately 15
 // usec. 100 msec is about 6740 loops. 13480
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define TRANSITION_TIMEOUT     500
 #else
 #define TRANSITION_TIMEOUT     0x100000 //6740

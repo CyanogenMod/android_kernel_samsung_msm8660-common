@@ -16,6 +16,7 @@
 #define NAMEBUF 12
 #define WACNAME "WAC_I2C_EMR"
 #define WACFLASH "WAC_I2C_FLASH"
+#define WACOM_FW_SIZE 32768
 #define LATEST_VERSION 0x15
 
 /*Wacom Command*/

@@ -118,7 +118,7 @@ static void set_send_key_state(struct sec_jack_info *hi, int state)
 #if 0
 	/*check this adc value from H/W team*/
 	if (state != 0) {
-#if defined(CONFIG_KOR_MODEL_SHV_E160S)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
 		if (((get_hw_rev() > 8)
 			&& (adc == KEY_MEDIA_ADC_MIN))
 				|| ((get_hw_rev() <= 8)

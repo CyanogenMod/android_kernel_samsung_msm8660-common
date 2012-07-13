@@ -32,6 +32,7 @@
 #ifdef CONFIG_SENSORS_YDA165
 #include <linux/i2c/yda165_integ.h>
 #endif
+#include <linux/i2c/fsa9480.h>
 
 #include <mach/qdsp6v2/audio_dev_ctl.h>
 #include <sound/apr_audio.h>
@@ -53,6 +54,8 @@
 #include "timpani_profile_quincy_kt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E160L)/*QUINCY-LGT */
 #include "timpani_profile_quincy_lgt.h"
+#elif defined(CONFIG_JPN_MODEL_SC_05D)/*QUINCY-JPN equal to SKT*/
+#include "timpani_profile_quincy_skt.h"
 #elif defined(CONFIG_USA_MODEL_SGH_I717) /*QUINCY-ATT */
 #include "timpani_profile_quincy_att.h"
 #endif
@@ -509,6 +512,28 @@ void msm_snddev_poweramp_off_call_headset(void)
 	yda165_headset_call_onoff(0);
 #endif
 	pr_info("%s: power on headset\n", __func__);
+}
+
+int msm_snddev_vpsamp_on_headset(void)
+{
+#ifdef CONFIG_SENSORS_YDA165
+	yda165_headset_onoff(1);
+	pr_info("%s: power on amp headset\n", __func__);
+#endif
+	fsa9480_audiopath_control(1);
+
+	return 0;
+}
+
+void msm_snddev_vpsamp_off_headset(void)
+{
+#ifdef CONFIG_SENSORS_YDA165
+	yda165_headset_onoff(0);
+	pr_info("%s: power off amp headset\n", __func__);
+#endif
+	fsa9480_audiopath_control(0);
+
+	return 0;
 }
 
 int msm_snddev_poweramp_on_together(void)
@@ -2460,8 +2485,8 @@ static struct snddev_icodec_data lineout_rx_data = {
 	.profile = &lineout_rx_profile,
 	.channel_mode = 2,
 	.default_sample_rate = 48000,
-	.pamp_on = msm_snddev_poweramp_on_headset,
-	.pamp_off = msm_snddev_poweramp_off_headset,
+	.pamp_on = msm_snddev_vpsamp_on_headset,
+	.pamp_off = msm_snddev_vpsamp_off_headset,	
 	.voltage_on = msm_snddev_voltage_on,
 	.voltage_off = msm_snddev_voltage_off,
 };

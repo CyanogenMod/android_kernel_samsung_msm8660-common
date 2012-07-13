@@ -118,6 +118,8 @@ static DECLARE_WAIT_QUEUE_HEAD(hdmi_msm_state_work_completedEvent);
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
 
+static void hdmi_msm_cec_line_latch_detect(void);
+
 #ifdef TOGGLE_CEC_HARDWARE_FSM
 static boolean msg_send_complete = TRUE;
 static boolean msg_recv_complete = TRUE;
@@ -150,7 +152,7 @@ static boolean msg_recv_complete = TRUE;
 #define HDMI_MSM_CEC_INT_FRAME_WR_DONE_ACK		BIT(0)
 #define HDMI_MSM_CEC_INT_FRAME_WR_DONE_INT		BIT(0)
 
-#define HDMI_MSM_CEC_FRAME_WR_SUCCESS(___st)         (((___st)&0xF) ==\
+#define HDMI_MSM_CEC_FRAME_WR_SUCCESS(___st)         (((___st)&0xB) ==\
 		(HDMI_MSM_CEC_INT_FRAME_WR_DONE_INT |\
 			HDMI_MSM_CEC_INT_FRAME_WR_DONE_MASK |\
 			HDMI_MSM_CEC_INT_FRAME_ERROR_MASK))
@@ -181,8 +183,8 @@ void hdmi_msm_cec_init(void)
 	 */
 	HDMI_OUTP(0x02A0, HDMI_MSM_CEC_ADDR_LOGICAL_ADDR(4));
 
-	/* 0x028C CEC_CTRL */
-	HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
+	hdmi_msm_state->first_monitor = 0;
+	hdmi_msm_state->fsm_reset_done = false;
 
 	/* 0x029C CEC_INT */
 	/* Enable CEC interrupts */
@@ -200,7 +202,11 @@ void hdmi_msm_cec_init(void)
 	 * BIT_1_ERR_RANGE_HI = 8 => 750us, the test used 775us,
 	 * so increased this to 9 which => 800us.
 	 */
-	HDMI_OUTP(0x02E0, 0x889788);
+	/*
+	 * CEC latch up issue - To fire monitor interrupt
+	 * for every start of message
+	 */
+	HDMI_OUTP(0x02E0, 0x880000);
 
 	/*
 	 * Slight adjustment to logic 0 low period on write
@@ -212,6 +218,8 @@ void hdmi_msm_cec_init(void)
 	 */
 	HDMI_OUTP(0x02A4, 0x1 | (7 * 0x30) << 7);
 
+	/* 0x028C CEC_CTRL */
+	HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
 }
 
 void hdmi_msm_cec_write_logical_addr(int addr)
@@ -246,6 +254,9 @@ void hdmi_msm_cec_msg_send(struct hdmi_msm_cec_msg *msg)
 
 	boolean frameType = (msg->recvr_id == 15 ? BIT(0) : 0);
 
+	mutex_lock(&hdmi_msm_state_mutex);
+	hdmi_msm_state->fsm_reset_done = false;
+	mutex_unlock(&hdmi_msm_state_mutex);
 #ifdef TOGGLE_CEC_HARDWARE_FSM
 	msg_send_complete = FALSE;
 #endif
@@ -317,7 +328,32 @@ void hdmi_msm_cec_msg_send(struct hdmi_msm_cec_msg *msg)
 		msg_recv_complete = TRUE;
 	}
 	msg_send_complete = TRUE;
+#else
+	HDMI_OUTP(0x028C, 0x0);
+	HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
 #endif
+}
+
+void hdmi_msm_cec_line_latch_detect(void)
+{
+	/*
+	 * CECT 9-5-1
+	 * The timer period needs to be changed to appropriate value
+	 */
+	/*
+	 * Timedout without RD_DONE, WR_DONE or ERR_INT
+	 * Toggle CEC hardware FSM
+	 */
+	mutex_lock(&hdmi_msm_state_mutex);
+	if (hdmi_msm_state->first_monitor == 1) {
+		DEV_WARN("CEC line is probably latched up - CECT 9-5-1");
+		if (!msg_recv_complete)
+			hdmi_msm_state->fsm_reset_done = true;
+		HDMI_OUTP(0x028C, 0x0);
+		HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
+		hdmi_msm_state->first_monitor = 0;
+	}
+	mutex_unlock(&hdmi_msm_state_mutex);
 }
 
 void hdmi_msm_cec_msg_recv(void)
@@ -514,6 +550,14 @@ void hdmi_msm_cec_msg_recv(void)
 		temp_msg.opcode = 0x04;
 		temp_msg.frame_size = i + 2;
 		hdmi_msm_cec_msg_send(&temp_msg);
+		break;
+	case 0x44:
+		/* User Control Pressed */
+		DEV_INFO("User Control Pressed\n");
+		break;
+	case 0x45:
+		/* User Control Released */
+		DEV_INFO("User Control Released\n");
 		break;
 	default:
 		DEV_INFO("Recvd an unknown cmd = [%u]\n",
@@ -764,8 +808,18 @@ static bool state_work_completed = true;
 void mhl_hpd_handler(bool state)
 {
 	DEV_INFO("mhl_hpd_handler with state as %d\n", state);
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+	if(mhl_hpd_state == false && state == false) {
+		printk("mhl hpd_handler - already off, do nothing..\n");
+		return;
+	}
+	if (state == false) {
+		hdmi_msm_dump_regs("MHL_OFF: ");
+	}
+#else
 	if(mhl_hpd_state == state)
 		return;
+#endif
 	wait_event_interruptible_timeout(hdmi_msm_state_work_completedEvent, state_work_completed, msecs_to_jiffies(4000));
 	state_work_completed = false;
 	hdmi_msm_state->hpd_cable_chg_detected = TRUE;
@@ -963,6 +1017,13 @@ static void hdmi_msm_hpd_state_work(struct work_struct *work)
 	HDMI_OUTP(0x0254, 4 | (hpd_state ? 0 : 2));
 }
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
+static void hdmi_msm_cec_latch_work(struct work_struct *work)
+{
+	hdmi_msm_cec_line_latch_detect();
+}
+#endif
+
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT
 static void hdcp_deauthenticate(void);
 static void hdmi_msm_hdcp_reauth_work(struct work_struct *work)
@@ -1156,8 +1217,15 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 		/* Clear and Disable */
 		HDMI_OUTP(0x0118, (hdcp_int_val | (1 << 5))
 			& ~((1 << 6) | (1 << 4)));
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+		int link0_status_val = 0;
+		link0_status_val = HDMI_INP_ND(0x011C);
+		DEV_INFO("HDCP: AUTH_FAIL_INT received, LINK0_STATUS=0x%08x\n",
+			link0_status_val);
+#else
 		DEV_INFO("HDCP: AUTH_FAIL_INT received, LINK0_STATUS=0x%08x\n",
 			HDMI_INP_ND(0x011C));
+#endif
 #if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2)
 		if (hdmi_msm_state->full_auth_done) {
 #else
@@ -1181,6 +1249,13 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			mutex_lock(&hdcp_auth_state_mutex);
 			hdmi_msm_state->full_auth_done = FALSE;
 			mutex_unlock(&hdcp_auth_state_mutex);
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+			if ((link0_status_val & (1<<4)) && (link0_status_val & (1<<5)) &&
+					(link0_status_val) & (1<<6)) {
+				DEV_INFO("HDCP : mhl connected.. do full hpd state by mhl_hpd_handler and not here!!\n");
+			} else {
+				hdmi_msm_dump_regs("HDCP_AUTH_FAILD: ");
+#endif
 			/* Calling reauth only when authentication
 			 * is sucessful or else we always go into
 			 * the reauth loop
@@ -1188,6 +1263,9 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			queue_work(hdmi_work_queue,
 			    &hdmi_msm_state->hdcp_reauth_work);
 		}
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+		}
+#endif
 		mutex_lock(&hdcp_auth_state_mutex);
 		/* This flag prevents other threads from re-authenticating
 		 * after we've just authenticated (i.e., finished part3)
@@ -1241,6 +1319,8 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			HDMI_MSM_CEC_INT_FRAME_WR_DONE_ACK);
 		mutex_lock(&hdmi_msm_state_mutex);
 		hdmi_msm_state->cec_frame_wr_status |= CEC_STATUS_WR_DONE;
+		hdmi_msm_state->first_monitor = 0;
+		del_timer(&hdmi_msm_state->cec_read_timer);
 		mutex_unlock(&hdmi_msm_state_mutex);
 		complete(&hdmi_msm_state->cec_frame_wr_done);
 		return IRQ_HANDLED;
@@ -1254,17 +1334,50 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 #endif
 		HDMI_OUTP(0x029C, cec_intr_status);
 		mutex_lock(&hdmi_msm_state_mutex);
+		hdmi_msm_state->first_monitor = 0;
+		del_timer(&hdmi_msm_state->cec_read_timer);
 		hdmi_msm_state->cec_frame_wr_status |= CEC_STATUS_WR_ERROR;
 		mutex_unlock(&hdmi_msm_state_mutex);
 		complete(&hdmi_msm_state->cec_frame_wr_done);
 		return IRQ_HANDLED;
 	}
 
-	if ((cec_intr_status & (1 << 4)) && (cec_intr_status & (1 << 5)))
+	if ((cec_intr_status & (1 << 4)) && (cec_intr_status & (1 << 5))) {
 		DEV_DBG("CEC_IRQ_MONITOR\n");
+		HDMI_OUTP(0x029C, cec_intr_status |
+			  HDMI_MSM_CEC_INT_MONITOR_ACK);
+
+		/*
+		 * CECT 9-5-1
+		 * On the first occassion start a timer
+		 * for few hundred ms, if it expires then
+		 * reset the CEC block else go on with
+		 * frame transactions as usual.
+		 * Below adds hdmi_msm_cec_msg_recv() as an
+		 * item into the work queue instead of running in
+		 * interrupt context
+		 */
+		mutex_lock(&hdmi_msm_state_mutex);
+		if (hdmi_msm_state->first_monitor == 0) {
+			/* This timer might have to be changed
+			 * worst case theoritical =
+			 * 16 bytes * 8 * 2.7msec = 346 msec
+			 */
+			mod_timer(&hdmi_msm_state->cec_read_timer,
+					jiffies + HZ/2);
+			hdmi_msm_state->first_monitor = 1;
+		}
+		mutex_unlock(&hdmi_msm_state_mutex);
+		return IRQ_HANDLED;
+	}
 
 	if ((cec_intr_status & (1 << 6)) && (cec_intr_status & (1 << 7))) {
 		DEV_DBG("CEC_IRQ_FRAME_RD_DONE\n");
+
+		mutex_lock(&hdmi_msm_state_mutex);
+		hdmi_msm_state->first_monitor = 0;
+		del_timer(&hdmi_msm_state->cec_read_timer);
+		mutex_unlock(&hdmi_msm_state_mutex);
 		HDMI_OUTP(0x029C, cec_intr_status |
 			HDMI_MSM_CEC_INT_FRAME_RD_DONE_ACK);
 		hdmi_msm_cec_msg_recv();
@@ -1277,6 +1390,9 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			HDMI_OUTP(0x028C, 0x0);
 			HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
 		}
+#else
+		HDMI_OUTP(0x028C, 0x0);
+		HDMI_OUTP(0x028C, HDMI_MSM_CEC_CTRL_ENABLE);
 #endif
 
 		return IRQ_HANDLED;
@@ -1392,11 +1508,7 @@ static void msm_hdmi_init_ddc(void)
 	 * Setting 31:24 bits : Time units to wait before timeout
 	 * when clock is being stalled by external sink device
 	 */
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-	HDMI_OUTP_ND(0x0224, 0);				// from Celox GB, jgk.20111215
-#elif defined(CONFIG_VIDEO_MHL_TABLET_V1)
 	HDMI_OUTP_ND(0x0224, 0xff000000);		// QC org
-#endif
 
 	/* 0x027C HDMI_DDC_REF
 	   [6] REFTIMER_ENABLE	Enable the timer
@@ -2275,6 +2387,9 @@ static void hdcp_deauthenticate(void)
 {
 	int hdcp_link_status = HDMI_INP(0x011C);
 
+	/* Disable HDCP interrupts */
+	HDMI_OUTP(0x0118, 0x0);
+
 	external_common_state->hdcp_active = FALSE;
 	/* 0x0130 HDCP_RESET
 	  [0] LINK0_DEAUTHENTICATE */
@@ -2288,9 +2403,6 @@ static void hdcp_deauthenticate(void)
 
 	if (hdcp_link_status & 0x00000004)
 		hdcp_auth_info((hdcp_link_status & 0x000000F0) >> 4);
-
-	/* Disable HDCP interrupts */
-	HDMI_OUTP(0x0118, 0x0);
 }
 
 static void check_and_clear_HDCP_DDC_Failure(void)
@@ -2554,15 +2666,14 @@ static int hdcp_authentication_part1(void)
 				__func__, __LINE__,
 			(HDMI_INP_ND(0x011C) & BIT(8)) >> 8,
 			(HDMI_INP_ND(0x011C) & BIT(9)) >> 9);
+			mutex_unlock(&hdcp_auth_state_mutex);
 			goto error;
 		}
-#ifndef CONFIG_VIDEO_MHL_TABLET_V1
 		/*
 		 * A small delay is needed here to avoid device crash observed
 		 * during reauthentication in MSM8960
 		 */
-		msleep(20);
-#endif
+		msleep(25);
 		/* 0x0168 HDCP_RCVPORT_DATA12
 		   [23:8] BSTATUS
 		   [7:0] BCAPS */
@@ -4123,6 +4234,13 @@ static void hdmi_msm_hdcp_timer(unsigned long data)
 }
 #endif
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
+static void hdmi_msm_cec_read_timer_func(unsigned long data)
+{
+	queue_work(hdmi_work_queue, &hdmi_msm_state->cec_latch_detect_work);
+}
+#endif
+
 static void hdmi_msm_hpd_read_work(struct work_struct *work)
 {
 	uint32 hpd_ctrl;
@@ -4158,6 +4276,11 @@ static void hdmi_msm_hpd_read_work(struct work_struct *work)
 
 static void hdmi_msm_hpd_off(void)
 {
+	if (!hdmi_msm_state->hpd_initialized) {
+		DEV_DBG("%s: HPD is already OFF, returning\n", __func__);
+		return;
+	}
+
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
 	if (!hdmi_msm_state || !HDMI_BASE) {  //Praveen: probe failed hence no use in disabling/enabling clks as they are released.(  if probe failed, SS has seen kernel panic at this point as clks are released and set to NULL, enable/disable call caused panic).
 		return;
@@ -4222,6 +4345,12 @@ static int hdmi_msm_set_txphy_init(void)
 static int hdmi_msm_hpd_on(bool trigger_handler)
 {
 	static int phy_reset_done;
+	uint32 hpd_ctrl;
+
+	if (hdmi_msm_state->hpd_initialized) {
+		DEV_DBG("%s: HPD is already ON, returning\n", __func__);
+		return 0;
+	}
 
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2) || defined(CONFIG_VIDEO_MHL_TABLET_V1)
 	if (!hdmi_msm_state || !HDMI_BASE) {  //Praveen: probe failed hence no use in disabling/enabling clks as they are released.(  if probe failed, SS has seen kernel panic at this point as clks are released and set to NULL, enable/disable call caused panic).
@@ -4247,40 +4376,54 @@ static int hdmi_msm_hpd_on(bool trigger_handler)
 	HDMI_OUTP(0x0208, 0x0001001B);
 
 	/* Check HPD State */
-	if (!hdmi_msm_state->hpd_initialized) {
-		uint32 hpd_ctrl;
-		enable_irq(hdmi_msm_state->irq);
+	enable_irq(hdmi_msm_state->irq);
 
-		/* set timeout to 4.1ms (max) for hardware debounce */
-		hpd_ctrl = (HDMI_INP(0x0258) & ~0xFFF) | 0xFFF;
+	/* set timeout to 4.1ms (max) for hardware debounce */
+	hpd_ctrl = (HDMI_INP(0x0258) & ~0xFFF) | 0xFFF;
 
-		/* Toggle HPD circuit to trigger HPD sense */
-		HDMI_OUTP(0x0258, ~(1 << 28) & hpd_ctrl);
-		HDMI_OUTP(0x0258, (1 << 28) | hpd_ctrl);
+	/* Toggle HPD circuit to trigger HPD sense */
+	HDMI_OUTP(0x0258, ~(1 << 28) & hpd_ctrl);
+	HDMI_OUTP(0x0258, (1 << 28) | hpd_ctrl);
 
-		DEV_DBG("%s: (clk, 5V, core, IRQ on) <trigger:%s>\n", __func__,
-			trigger_handler ? "true" : "false");
+	DEV_DBG("%s: (clk, 5V, core, IRQ on) <trigger:%s>\n", __func__,
+		trigger_handler ? "true" : "false");
 
-		if (trigger_handler) {
-			/* Set HPD state machine: ensure at least 2 readouts */
-			mutex_lock(&hdmi_msm_state_mutex);
-			hdmi_msm_state->hpd_stable = 0;
-			hdmi_msm_state->hpd_prev_state = TRUE;
-			mutex_lock(&external_common_state_hpd_mutex);
-			external_common_state->hpd_state = FALSE;
-			mutex_unlock(&external_common_state_hpd_mutex);
-			hdmi_msm_state->hpd_cable_chg_detected = TRUE;
-			mutex_unlock(&hdmi_msm_state_mutex);
-			mod_timer(&hdmi_msm_state->hpd_state_timer,
-				jiffies + HZ/2);
-		}
-
-		hdmi_msm_state->hpd_initialized = TRUE;
+	if (trigger_handler) {
+		/* Set HPD state machine: ensure at least 2 readouts */
+		mutex_lock(&hdmi_msm_state_mutex);
+		hdmi_msm_state->hpd_stable = 0;
+		hdmi_msm_state->hpd_prev_state = TRUE;
+		mutex_lock(&external_common_state_hpd_mutex);
+		external_common_state->hpd_state = FALSE;
+		mutex_unlock(&external_common_state_hpd_mutex);
+		hdmi_msm_state->hpd_cable_chg_detected = TRUE;
+		mutex_unlock(&hdmi_msm_state_mutex);
+		mod_timer(&hdmi_msm_state->hpd_state_timer,
+			jiffies + HZ/2);
 	}
+
+	hdmi_msm_state->hpd_initialized = TRUE;
+
 	hdmi_msm_set_mode(TRUE);
 
 	return 0;
 }
+
+#ifndef CONFIG_VIDEO_MHL_TABLET_V1
+static int hdmi_msm_power_ctrl(boolean enable)
+{
+	if (!external_common_state->hpd_feature_on ||
+		!external_common_state->hpd_state)
+		return 0;
+
+	if (enable)
+		hdmi_msm_hpd_on(true);
+	else
+		hdmi_msm_hpd_off();
+
+	return 0;
+}
+#endif
 
 #ifdef CONFIG_VIDEO_MHL_TABLET_V1
 int hdmi_msm_hpd_switch(bool detect_flag)
@@ -4343,7 +4486,7 @@ static int hdmi_msm_power_on(struct platform_device *pdev)
 
 #if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2)
 	// Hpd is not turned on or off baseed on the user option. Mhl triggers the on and dtv_off puts the hdmi in off state..
-	if (!external_common_state->hpd_feature_on) {
+	if (!external_common_state->hpd_feature_on || mfd->ref_cnt) {
 		int rc = hdmi_msm_hpd_on(true);
 		DEV_INFO("HPD: panel power without 'hpd' feature on\n");
 		if (rc) {
@@ -4393,6 +4536,8 @@ static int hdmi_msm_power_on(struct platform_device *pdev)
  */
 static int hdmi_msm_power_off(struct platform_device *pdev)
 {
+	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
+
 	if (!hdmi_msm_state->hdmi_app_clk)
 		return -ENODEV;
 
@@ -4436,7 +4581,7 @@ static int hdmi_msm_power_off(struct platform_device *pdev)
 #if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2)
 	// Hpd is not turned on or off baseed on the user option. Mhl triggers the on and dtv_off puts the hdmi in off state..
 	mutex_lock(&external_common_state_hpd_mutex);
-	if (!external_common_state->hpd_feature_on)
+	if (!external_common_state->hpd_feature_on || mfd->ref_cnt)
 		hdmi_msm_hpd_off();
 	mutex_unlock(&external_common_state_hpd_mutex);
 #endif
@@ -4578,6 +4723,15 @@ static int __devinit hdmi_msm_probe(struct platform_device *pdev)
 	add_timer(&hdmi_msm_state->hdcp_timer);
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT */
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
+	init_timer(&hdmi_msm_state->cec_read_timer);
+	hdmi_msm_state->cec_read_timer.function =
+		hdmi_msm_cec_read_timer_func;
+	hdmi_msm_state->cec_read_timer.data = (uint32)NULL;
+
+	hdmi_msm_state->cec_read_timer.expires = 0xffffffffL;
+ #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT */
+
 	fb_dev = msm_fb_add_device(pdev);
 	if (fb_dev) {
 		rc = external_common_state_create(fb_dev);
@@ -4621,7 +4775,11 @@ static int __devinit hdmi_msm_probe(struct platform_device *pdev)
 
 #ifdef QCT_SWITCH_STATE_CMD
 	/* Initialize hdmi node and register with switch driver */
+#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
+	external_common_state->sdev.name = "hdmi_as_primary";
+#else
 	external_common_state->sdev.name = "hdmi";
+#endif
 	if (switch_dev_register(&external_common_state->sdev) < 0)
 		DEV_ERR("Hdmi switch registration failed\n");
 #else
@@ -4746,6 +4904,9 @@ static struct platform_driver this_driver = {
 static struct msm_fb_panel_data hdmi_msm_panel_data = {
 	.on = hdmi_msm_power_on,
 	.off = hdmi_msm_power_off,
+#ifndef CONFIG_VIDEO_MHL_TABLET_V1
+	.power_ctrl = hdmi_msm_power_ctrl,
+#endif
 };
 
 static struct platform_device this_device = {
@@ -4764,6 +4925,10 @@ static int __init hdmi_msm_init(void)
 #if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2) && !defined(CONFIG_VIDEO_MHL_TABLET_V1)
 	if (msm_fb_detect_client("hdmi_msm"))
 		return 0;
+#endif
+
+#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
+	hdmi_prim_display = 1;
 #endif
 
 	hdmi_msm_setup_video_mode_lut();
@@ -4824,7 +4989,10 @@ static int __init hdmi_msm_init(void)
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT */
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
+	INIT_WORK(&hdmi_msm_state->cec_latch_detect_work,
+		  hdmi_msm_cec_latch_work);
 	init_completion(&hdmi_msm_state->cec_frame_wr_done);
+	init_completion(&hdmi_msm_state->cec_line_latch_wait);
 #endif
 
 	rc = platform_device_register(&this_device);

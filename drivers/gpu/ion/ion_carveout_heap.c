@@ -110,17 +110,15 @@ struct scatterlist *ion_carveout_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
 {
 	struct scatterlist *sglist;
-	struct page *page = phys_to_page(buffer->priv_phys);
-
-	if (page == NULL)
-		return NULL;
 
 	sglist = vmalloc(sizeof(struct scatterlist));
 	if (!sglist)
 		return ERR_PTR(-ENOMEM);
 
 	sg_init_table(sglist, 1);
-	sg_set_page(sglist, page, buffer->size, 0);
+	sglist->length = buffer->size;
+	sglist->offset = 0;
+	sglist->dma_address = buffer->priv_phys;
 
 	return sglist;
 }
@@ -206,16 +204,13 @@ int ion_carveout_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 	if (ion_carveout_request_region(carveout_heap))
 		return -EINVAL;
 
-	if (ION_IS_CACHED(flags))
-		ret_value = remap_pfn_range(vma, vma->vm_start,
-			       __phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
-			       vma->vm_end - vma->vm_start,
-			       vma->vm_page_prot);
-	else
-		ret_value = remap_pfn_range(vma, vma->vm_start,
-			       __phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
-					vma->vm_end - vma->vm_start,
-					pgprot_noncached(vma->vm_page_prot));
+	if (!ION_IS_CACHED(flags))
+		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
+
+	ret_value =  remap_pfn_range(vma, vma->vm_start,
+			__phys_to_pfn(buffer->priv_phys) + vma->vm_pgoff,
+			vma->vm_end - vma->vm_start,
+			vma->vm_page_prot);
 
 	if (ret_value)
 		ion_carveout_release_region(carveout_heap);

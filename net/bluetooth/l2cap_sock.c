@@ -791,7 +791,7 @@ static int l2cap_sock_shutdown(struct socket *sock, int how)
 
 	if (!sk)
 		return 0;
-
+	
 	chan = l2cap_pi(sk)->chan;
 
 	lock_sock(sk);

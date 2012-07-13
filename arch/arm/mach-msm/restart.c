@@ -151,6 +151,9 @@ static void __msm_power_off(int lower_pshold)
 #endif
 	pm8xxx_reset_pwr_off(0);
 
+	/* total 8ms delay before PS_HOLD is pulled low */
+	mdelay(8);
+
 	if (lower_pshold) {
 		__raw_writel(0, PSHOLD_CTL_SU);
 		mdelay(10000);

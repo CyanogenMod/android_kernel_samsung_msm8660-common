@@ -117,7 +117,7 @@ extern unsigned char firmware_data_3key[];
 extern unsigned char firmware_data_3key_rev02[];
 extern unsigned char firmware_data_3key_rev03[];
 extern unsigned char firmware_data_3key_rev04[];
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 extern unsigned char data_mdule_rev;
 extern unsigned int  get_hw_rev(void);
 extern unsigned char firmware_data_rev02[];
@@ -333,7 +333,7 @@ else if ((get_hw_rev() == 0x09))
     }
 }
 else
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 //printk(KERN_ERR "[TKEY] 160S %s get_hw_rev(): %d data_module_rev = %x\n",__func__,get_hw_rev(),data_mdule_rev);
 if (get_hw_rev() >= 0x02) 
 {
@@ -480,7 +480,7 @@ unsigned char fSDATACheck(void)
 void SCLKHigh(void)
 {
   gpio_direction_output(GPIO_TOUCHKEY_SCL, 1);
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
   udelay(2);
 #endif
 }
@@ -665,7 +665,7 @@ void ApplyTargetVDD(void)
 {
     gpio_direction_input(GPIO_TOUCHKEY_SDA);
     gpio_direction_input(GPIO_TOUCHKEY_SCL);
-#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined(CONFIG_KOR_MODEL_SHV_E160K) && !defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined(CONFIG_KOR_MODEL_SHV_E160K) && !defined (CONFIG_KOR_MODEL_SHV_E160L) && !defined (CONFIG_JPN_MODEL_SC_05D)
     printk("[TKEY] %s: tkey_vdd_enable(ON) \n", __func__);
 #endif
     tkey_vdd_enable(1);
@@ -704,7 +704,7 @@ void RemoveTargetVDD(void)
     gpio_out(EXT_TSP_SDA, GPIO_LOW_VALUE);
     gpio_out(EXT_TSP_RST, GPIO_LOW_VALUE);
     #else
-#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined(CONFIG_KOR_MODEL_SHV_E160K) && !defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined(CONFIG_KOR_MODEL_SHV_E160K) && !defined (CONFIG_KOR_MODEL_SHV_E160L) && !defined (CONFIG_JPN_MODEL_SC_05D)
 	printk("[TKEY] %s: tkey_vdd_enable(OFF)\n", __func__);
 #endif
 	tkey_vdd_enable(0);

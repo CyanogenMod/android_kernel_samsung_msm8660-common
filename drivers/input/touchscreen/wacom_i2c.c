@@ -36,7 +36,7 @@
 
 #if defined(CONFIG_USA_MODEL_SGH_I717)
 #define HWREV_PEN_PITCH4P4   0x02
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define HWREV_PEN_PITCH4P4   0x05
 #endif
 
@@ -71,6 +71,14 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 	long fsize, nread;
 	int ret;
 	struct wacom_i2c *wac_i2c = i2c_get_clientdata(client);
+	unsigned char *Binary_UMS = NULL;    
+
+	Binary_UMS = kmalloc(WACOM_FW_SIZE, GFP_KERNEL);
+	if (Binary_UMS == NULL) {
+		printk(KERN_DEBUG "[E-PEN] %s, kmalloc failed\n", __func__);
+		return -ENOENT;
+		}
+	Binary = Binary_UMS;
 
 	old_fs = get_fs();
 	set_fs(KERNEL_DS);
@@ -85,6 +93,12 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 	fsize = fp->f_path.dentry->d_inode->i_size;
 	printk(KERN_NOTICE "[E-PEN]: start, file path %s, size %ld Bytes\n", WACOM_FW_PATH, fsize);
 
+	if(fsize > WACOM_FW_SIZE) {
+	    kfree(Binary_UMS);
+		    printk(KERN_ERR "[E-PEN]: UMS file size (%ld) > WACOM_FW_SIZE (%ld)\n", fsize, WACOM_FW_SIZE);	  
+		    return -ENOENT;
+	}
+
 	nread = vfs_read(fp, (char __user *)Binary, fsize, &fp->f_pos);
 	printk(KERN_ERR "[E-PEN]: nread %ld Bytes\n", nread);
 	if (nread != fsize) {
@@ -98,21 +112,27 @@ int wacom_i2c_load_fw(struct i2c_client *client)
 		goto fw_write_err;
 	}
 
+	Binary = Binary_44;
+	kfree(Binary_UMS);
+
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 
 	return 0;
 
 open_err :
+	kfree(Binary_UMS);
 	set_fs(old_fs);
 	return -ENOENT;
 
 read_err :
+	kfree(Binary_UMS);
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 	return -EIO;
 
 fw_write_err :
+	kfree(Binary_UMS);
 	filp_close(fp, current->files);
 	set_fs(old_fs);
 	return -1;
@@ -303,6 +323,7 @@ static ssize_t epen_firmware_update_store(struct device *dev,
 		}
 	} else if (*buf == 'B') {
 		printk(KERN_ERR "[E-PEN]: Start firmware flashing (kernel image).\n");
+		Binary = Binary_44;
 		ret = wacom_i2c_flash(wac_i2c);
 		if (ret < 0) {
 			printk(KERN_ERR "[E-PEN]: failed to flash firmware.\n");
@@ -880,7 +901,7 @@ static int wacom_i2c_probe(struct i2c_client *client,
 		wac_i2c->wac_feature->fw_version, Firmware_version_of_file);
 	if( wac_i2c->wac_feature->fw_version < Firmware_version_of_file ) 
 	{
-		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		printk("[E-PEN] %s\n", __func__);
 		
 		disable_irq(wac_i2c->irq);

@@ -363,7 +363,7 @@ static irqreturn_t m5mo_isp_isr(int irq, void *dev_id)
 
 static u32 m5mo_wait_interrupt(unsigned int timeout)
 {
-	cam_info("m5mo_wait_interrupt :E");
+	cam_info(" m5mo_wait_interrupt :E");
 
 	if (wait_event_interruptible_timeout(m5mo_ctrl->isp.wait, m5mo_ctrl->isp.issued == 1,
 		msecs_to_jiffies(timeout)) == 0) {
@@ -375,7 +375,7 @@ static u32 m5mo_wait_interrupt(unsigned int timeout)
 
 	m5mo_readb(M5MO_CATEGORY_SYS, M5MO_SYS_INT_FACTOR, &m5mo_ctrl->isp.int_factor);
 
-	cam_info("m5mo_wait_interrupt:	X: 0x%x", m5mo_ctrl->isp.int_factor);
+	cam_info(" m5mo_wait_interrupt:	X: 0x%x", m5mo_ctrl->isp.int_factor);
 	return m5mo_ctrl->isp.int_factor;
 }
 
@@ -628,7 +628,9 @@ static int m5mo_set_preview_size(int width, int height)
 	if (m5mo_ctrl->settings.zoom) {
 		m5mo_set_zoom(m5mo_ctrl->settings.zoom);
 	}
-	
+
+// param_mode -> preview size -> [LP11 state] ( mipi mode )-> monitor_mode
+#if 0 // for LP11 state
 	/* change to monitor mode */
 	m5mo_set_mode(M5MO_MONITOR_MODE);
 
@@ -637,6 +639,7 @@ static int m5mo_set_preview_size(int width, int height)
 		cam_err("M5MO_INT_MODE isn't issued, %#x",int_factor);
 		return -ETIMEDOUT;
 	}
+#endif
 	return 0;
 }
 
@@ -1765,6 +1768,7 @@ static void m5mo_init_param(void)
 	m5mo_ctrl->settings.preview_size.height = 480;
 	m5mo_ctrl->settings.check_dataline = 0;
 	m5mo_ctrl->settings.fps = 30;
+	m5mo_ctrl->settings.started = 0;
 
 	m5mo_ctrl->isp.bad_fw = 0;
 	m5mo_ctrl->isp.issued = 0;
@@ -1885,6 +1889,10 @@ static long m5mo_preview_mode(void)
 	}
 	/* AE/AWB Unlock */
 	m5mo_set_lock(0);
+	if (!m5mo_ctrl->settings.started) { //ae/awb delay
+		m5mo_ctrl->settings.started = 1;
+		msleep(80); 	
+	}
 	
 	if (m5mo_ctrl->settings.check_dataline) {
 		m5mo_check_dataline(m5mo_ctrl->settings.check_dataline);

@@ -445,6 +445,15 @@ static void acm_function_cleanup(struct android_usb_function *f)
 {
 	gserial_cleanup();
 }
+
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+static int acm_function_ctrlrequest(struct android_usb_function *f,
+						struct usb_composite_dev *cdev,
+						const struct usb_ctrlrequest *c)
+{
+	return acm_avd_request(cdev, c);
+}
+#endif
 				
 static int acm_function_bind_config(struct android_usb_function *f,
 					struct usb_configuration *c)
@@ -493,6 +502,9 @@ static struct android_usb_function acm_function = {
 	.cleanup	= acm_function_cleanup,
 	.bind_config	= acm_function_bind_config,
 	.attributes	= acm_function_attributes,
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	.ctrlrequest	= acm_function_ctrlrequest,
+#endif
 };
 
 #else
@@ -618,6 +630,7 @@ static struct android_usb_function ccid_function = {
 	.cleanup	= ccid_function_cleanup,
 	.bind_config	= ccid_function_bind_config,
 };
+
 
 static int mtp_function_init(struct android_usb_function *f, struct usb_composite_dev *cdev)
 {
@@ -1587,6 +1600,9 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 #endif
 	if (!dev->connected) {
 		dev->connected = 1;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+		dev->cdev->host_state_info = 1;
+#endif
 		schedule_work(&dev->work);
 	}
 	else if (c->bRequest == USB_REQ_SET_CONFIGURATION && cdev->config) {
@@ -1623,6 +1639,7 @@ static void android_disconnect(struct usb_gadget *gadget)
 		printk(KERN_DEBUG "usb: %s schedule_work\n", __func__);
 		schedule_work(&dev->work);
 	}
+	dev->cdev->mac_connected = 0;
 #else
 	schedule_work(&dev->work);
 #endif
@@ -1678,6 +1695,35 @@ static struct platform_driver android_platform_driver = {
 	.driver = { .name = "android_usb"},
 };
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+/*   Path (/sys/class/android_usb/android0/host_state */
+static ssize_t host_state_switch_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct android_dev *a_dev = _android_dev;
+	int value = -1;
+
+	/* Not support Mac */
+	if (a_dev->cdev->mac_connected)
+		value = 0;
+	else
+		value = a_dev->cdev->host_state_info;
+
+	printk(KERN_DEBUG "usb: host driver show [%d] \r\n", value);
+	return sprintf(buf, "%d\n", value);
+}
+static ssize_t host_state_switch_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t size)
+{
+	int value;
+	sscanf(buf, "%d", &value);
+	return size;
+}
+static DEVICE_ATTR(host_state,
+		S_IRGRP | S_IWGRP | S_IRUSR | S_IWUSR | S_IROTH,
+		host_state_switch_show, host_state_switch_store);
+#endif
+
 static int __init init(void)
 {
 	struct android_dev *dev;
@@ -1709,7 +1755,14 @@ static int __init init(void)
 	/* Override composite driver functions */
 	composite_driver.setup = android_setup;
 	composite_driver.disconnect = android_disconnect;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 
+	/* Create sysfs for notification host os state */
+	if (device_create_file(dev->dev, &dev_attr_host_state) < 0)
+		printk(KERN_DEBUG "Failed to create device file(%s)!\n",
+					dev_attr_host_state.attr.name);
+
+#endif
 	ret = platform_driver_probe(&android_platform_driver, android_probe);
 	if (ret) {
 		pr_err("%s(): Failed to register android"

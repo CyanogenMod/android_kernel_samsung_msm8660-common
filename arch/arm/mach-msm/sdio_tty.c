@@ -29,6 +29,7 @@
 #define MAX_SDIO_TTY_DEVS		2
 #define MAX_SDIO_TTY_DEV_NAME_SIZE	25
 
+/* Configurations per channel device */
 /* CSVT */
 #define SDIO_TTY_CSVT_DEV		"sdio_tty_csvt_0"
 #define SDIO_TTY_CSVT_TEST_DEV		"sdio_tty_csvt_test_0"

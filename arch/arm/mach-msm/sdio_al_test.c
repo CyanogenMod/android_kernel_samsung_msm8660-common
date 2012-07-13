@@ -1848,7 +1848,7 @@ static ssize_t open_close_test_write(struct file *file,
 			break;
 
 		pr_info(TEST_MODULE_NAME " -- correctness test for"
-				"DIAG");
+				"DIAG ");
 		set_params_loopback_9k(ch_arr[SDIO_DIAG]);
 
 		ret = test_start();
@@ -6333,6 +6333,10 @@ static int __init test_init(void)
 #endif
 
 	test_class = class_create(THIS_MODULE, TEST_MODULE_NAME);
+    if (IS_ERR(test_class)) {
+        pr_err(TEST_MODULE_NAME ":class_create err.\n") ;
+        return -ENODEV ;
+    }
 
 	ret = alloc_chrdev_region(&test_ctx->dev_num, 0, 1, TEST_MODULE_NAME);
 	if (ret) {
