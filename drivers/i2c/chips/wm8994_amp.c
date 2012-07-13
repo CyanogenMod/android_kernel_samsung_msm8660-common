@@ -28,7 +28,10 @@
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/wm8994/gpio.h>
 
-
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030 beacause of amp off while speaker call / Kenel suspend
+#include <linux/wakelock.h>
+static struct wake_lock wm8994_wake_lock;
+#endif
 
 
 //------------------------------------------------
@@ -244,7 +247,7 @@ EXPORT_SYMBOL_GPL(wm8994_reg_write);
 //------------------------------------------------
 // Definition external function prototype.
 //------------------------------------------------
-#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+#if defined(CONFIG_TARGET_SERIES_P5LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
 /*
  * ONLY FOR P5_LTE_KOR SKT/KT/LGU
  */
@@ -948,7 +951,7 @@ void wm8994_set_spk_cradle(int onoff)
 	}
 }
 
-#elif defined(CONFIG_MACH_P8_LTE)
+#elif defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
 /*
  FOR ONLY P8_LTE_SKT WM8994
 */
@@ -956,25 +959,35 @@ void wm8994_set_spk_cradle(int onoff)
 int audio_power(int en)
 {
 	struct wm8994 *amp = wm8994_amp;
+	u16 nReadServo4Val = 0;
+	static u16 ncompensationResult = 0;
+	u16 nCompensationResultLow=0;
+	u16 nCompensationResultHigh=0;
+	u8	nServo4Low = 0;
+	u8	nServo4High = 0;
 
 	if(en == 1) {
-		printk("[P8_LTE] %s: audio_power on\n",__func__);
+		printk("%s: audio_power on\n",__func__);
 		CompensationCAL = 0;
 		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_AMP_EN), 1);
 		msleep(50);
+		wm8994_reg_write(amp,0x0, 0x0);
+		msleep(10);
+		// wolfson HQ recommended 50ms
+		wm8994_reg_write(amp,0x102, 0x0003);
+		wm8994_reg_write(amp,0x55, 0x03E0);
+		wm8994_reg_write(amp,0x56, 0x0003);
+		wm8994_reg_write(amp,0x102, 0x0000);
+		
+		wm8994_reg_write(amp,0x39, 0x6C);
+		wm8994_reg_write(amp,0x1, 0x3);
+		wm8994_reg_write(amp,0x15, 0x40);		
+		msleep(650);	//kkuram 2011.11.30 50 -> 650 request by H/W
 
-		wm8994_reg_write(amp, 0x39, 0x006C);
-		wm8994_reg_write(amp, 0x01, 0x0003);
-		msleep(50);
-
-		// internal osc enable
 		wm8994_reg_write(amp, 0x220, 0x0002);
-		msleep(200);
-
-		wm8994_reg_write(amp, 0x224, 0x0EC0);
-		wm8994_reg_write(amp, 0x221, 0x0600);
-
-		wm8994_reg_write(amp, 0x200, 0x0010);
+		wm8994_reg_write(amp, 0x221, 0x0700);
+		wm8994_reg_write(amp, 0x224, 0x0CC0);
+		wm8994_reg_write(amp, 0x200, 0x0011); // End of clocking
 
 		wm8994_reg_write(amp, 0x620, 0x0000);
 		wm8994_reg_write(amp, 0x302, 0x7000);
@@ -990,24 +1003,18 @@ int audio_power(int en)
 		wm8994_reg_write(amp, 0x208, 0x000A);
 		wm8994_reg_write(amp, 0x200, 0x0011); // End of clocking
 		msleep(10);
-
-		//wm8994_reg_write(amp, 0x01, 0x0303);
-		//wm8994_reg_write(amp, 0x02, 0x63F0);
-
+		wm8994_reg_write(amp, 0x2, 0x63A0);
 		wm8994_reg_write(amp, 0x18, 0x010B);
 		wm8994_reg_write(amp, 0x1A, 0x010B);
 
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
 
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x2D, 0x0001);
-		wm8994_reg_write(amp, 0x2E, 0x0001);
-
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 
 		wm8994_reg_write(amp, 0x22, 0x0000);
 		wm8994_reg_write(amp, 0x23, 0x0000);
@@ -1019,17 +1026,23 @@ int audio_power(int en)
 
 		wm8994_reg_write(amp, 0x410, 0x3800);
 
-		wm8994_reg_write(amp, 0x444, 0x02B9);
-		wm8994_reg_write(amp, 0x443, 0x01EF);
-		wm8994_reg_write(amp, 0x442, 0x0418);
+		wm8994_reg_write(amp, 0x444, 0x0277); //AIF1 DRC1
+		wm8994_reg_write(amp, 0x443, 0x0000);
+		wm8994_reg_write(amp, 0x442, 0x0400);
 
 		wm8994_reg_write(amp, 0x441, 0x0845);
 		wm8994_reg_write(amp, 0x440, 0x01BB);
 
-		wm8994_reg_write(amp, 0x400, 0x1D8);
-		wm8994_reg_write(amp, 0x401, 0x1D8);
+		wm8994_reg_write(amp, 0x400, 0x1D2);
+		wm8994_reg_write(amp, 0x401, 0x1D2);
+
+		wm8994_reg_write(amp, 0x15, 0x0000);
+		msleep(100);
+
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
 	} else {
-		printk("[P8_LTE] %s: audio_power off\n",__func__);
+		printk("%s: audio_power off\n",__func__);
 
 		wm8994_reg_write(amp, 0x420, 0x0200);
 
@@ -1047,6 +1060,131 @@ int audio_power(int en)
 	return 0;
 }
 
+void wm8994_set_normal_headset(int onoff) //kks_111017
+{
+	struct wm8994 *amp = wm8994_amp;
+	u16 nReadServo4Val = 0;
+	static u16 ncompensationResult = 0;
+	u16 nCompensationResultLow=0;
+	u16 nCompensationResultHigh=0;
+	u8	nServo4Low = 0;
+	u8	nServo4High = 0;
+
+	if(wm_check_inited == 0)
+		return;
+
+	if(onoff == 1) {
+		printk("%s: headset amp on\n",__func__);
+		wm8994_reg_write(amp, 0x15, 0x0040);
+		wm8994_reg_write(amp, 0x02, 0x6000);
+		msleep(50);
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
+		
+		wm8994_reg_write(amp, 0x2D, 0x0010);
+		wm8994_reg_write(amp, 0x2E, 0x0010);
+
+		wm8994_reg_write(amp, 0x19, 0x0107); //left line input 3,4 volume //kks_111018 0x010B->0x0107
+		wm8994_reg_write(amp, 0x1B, 0x0107); //right line input 3,4 volume //kks_111018 0x010B->0x0107
+
+		wm8994_reg_write(amp, 0x1C, 0x0177); //left output volume kks_111018 0x01F4->0x0177
+		wm8994_reg_write(amp, 0x1D, 0x0177); //left output volume kks_111018 0x01F4->0x0177
+
+		wm8994_reg_write(amp, 0x26, 0x0139);
+		wm8994_reg_write(amp, 0x27, 0x0139);
+
+		wm8994_reg_write(amp, 0x410, 0x1800); //AIF1 ADC1 Filters
+		wm8994_reg_write(amp, 0x442, 0x0800); //AIF1 ADC1 GAIN //kks_111018 add
+
+		wm8994_reg_write(amp, 0x400, 0x1D5); //AIF1 ADC1 left volume //kks_111018 add
+		wm8994_reg_write(amp, 0x401, 0x1D5); //AIF1 ADC1 right volume //kks_111018 add
+
+		wm8994_reg_write(amp, 0x480, 0x6318); //AIF1 DAC1 EQ Gain //kks_111018 add
+
+		wm8994_reg_write(amp, 0x610, 0x01c0);
+		wm8994_reg_write(amp, 0x611, 0x01c0);
+			 
+		wm8994_reg_write(amp, 0x420, 0x0000);
+		wm8994_reg_write(amp, 0x15, 0x0000);
+		msleep(50);
+		if(CompensationCAL == 0){
+			wm8994_reg_write(amp, 0x1, 0x0303);
+			wm8994_reg_write(amp, 0x60, 0x0022);
+			wm8994_reg_write(amp, 0x4C, 0x9f25);
+			msleep(5);
+			wm8994_reg_write(amp, 0x1C, 0x01F4);
+			wm8994_reg_write(amp, 0x1D, 0x01F4);
+
+			wm8994_reg_write(amp, 0x2D, 0x0010); // DC Offset calibration by DC_Servo calculation
+			wm8994_reg_write(amp, 0x2E, 0x0010);
+			wm8994_reg_write(amp, 0x3, 0x0030);
+			wm8994_reg_write(amp, 0x54, 0x0303);
+
+			msleep(160);
+			nReadServo4Val=wm8994_reg_read(amp, 0x57);
+			nServo4Low=(signed char)(nReadServo4Val & 0xff);
+			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
+			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
+
+			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
+			wm8994_reg_write(amp, 0x54, 0x000F);
+			msleep(15);
+			CompensationCAL = 1;
+		}
+		else{
+			wm8994_reg_write(amp, 0x55, 0x00E0);
+			wm8994_reg_write(amp, 0x54, 0x0303);
+			msleep(50);
+			nReadServo4Val=wm8994_reg_read(amp, 0x57);
+			nServo4Low=(signed char)(nReadServo4Val & 0xff);
+			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
+			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
+
+			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
+			wm8994_reg_write(amp, 0x54, 0x000F);
+			msleep(15);
+		}
+		wm8994_reg_write(amp, 0x60, 0x00EE);
+	} else {
+		printk("%s: headset amp off\n",__func__);
+		wm8994_reg_write(amp, 0x60, 0x0022);
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
+		
+		wm8994_reg_write(amp, 0x420, 0x0200);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
+
+		wm8994_reg_write(amp, 0x18, 0x010B);
+		wm8994_reg_write(amp, 0x1A, 0x010B);
+
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
+
+		wm8994_reg_write(amp, 0x22, 0x0000);
+		wm8994_reg_write(amp, 0x23, 0x0000);
+
+		wm8994_reg_write(amp, 0x3, 0x0FF0);
+
+		wm8994_reg_write(amp, 0x26, 0x0139);
+		wm8994_reg_write(amp, 0x27, 0x0139);
+	}
+	wake_unlock(&wm8994_wake_lock); //kks_111030
+}
+
 void wm8994_set_headset(int onoff)
 {
 	struct wm8994 *amp = wm8994_amp;
@@ -1061,16 +1199,26 @@ void wm8994_set_headset(int onoff)
 		return;
 
 	if(onoff == 1) {
-		printk("[P8_LTE] %s: headset amp on\n",__func__);
-
-		wm8994_reg_write(amp, 0x02, 0x63F0);
+		printk("%s: headset amp on\n",__func__);
+		wm8994_reg_write(amp, 0x15, 0x0040);
+		wm8994_reg_write(amp, 0x02, 0x6000);
 		msleep(50);
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
+		
+		wm8994_reg_write(amp, 0x2D, 0x0010);
+		wm8994_reg_write(amp, 0x2E, 0x0010);
 
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
 
-		wm8994_reg_write(amp, 0x1C, 0x0174);
-		wm8994_reg_write(amp, 0x1D, 0x0174);
+		wm8994_reg_write(amp, 0x1C, 0x01F9); //kks_111021 0x01F4->0x01F9
+		wm8994_reg_write(amp, 0x1D, 0x01F9); //kks_111021 0x01F4->0x01F9
 
 		wm8994_reg_write(amp, 0x26, 0x0139);
 		wm8994_reg_write(amp, 0x27, 0x0139);
@@ -1079,284 +1227,85 @@ void wm8994_set_headset(int onoff)
 
 		wm8994_reg_write(amp, 0x610, 0x01c0);
 		wm8994_reg_write(amp, 0x611, 0x01c0);
-		
-		if(CompensationCAL == 0)
-		{
-			wm8994_reg_write(amp, 0x39, 0x006C);
-			wm8994_reg_write(amp, 0x1, 0x0003);
-			msleep(20);
-			wm8994_reg_write(amp, 0x102, 0x0003);
-			wm8994_reg_write(amp, 0x56, 0x0003);
-			wm8994_reg_write(amp, 0x102, 0x0000);
-
-			wm8994_reg_write(amp, 0x5D, 0x0002);
-			wm8994_reg_write(amp, 0x55, 0x03E0);
-
+			 
+		wm8994_reg_write(amp, 0x420, 0x0000);
+		wm8994_reg_write(amp, 0x15, 0x0000);
+		msleep(50);
+		if(CompensationCAL == 0){
 			wm8994_reg_write(amp, 0x1, 0x0303);
 			wm8994_reg_write(amp, 0x60, 0x0022);
-
-			wm8994_reg_write(amp, 0x4C, 0x9F25);
+			wm8994_reg_write(amp, 0x4C, 0x9f25);
 			msleep(5);
+			wm8994_reg_write(amp, 0x1C, 0x01F9); // byeongguk.kim_120106
+			wm8994_reg_write(amp, 0x1D, 0x01F9); // byeongguk.kim_120106
 
-			wm8994_reg_write(amp, 0x5, 0x3303);
-			wm8994_reg_write(amp, 0x3, 0x0FF0);
-			wm8994_reg_write(amp, 0x4, 0x0303);
-
+			wm8994_reg_write(amp, 0x2D, 0x0010); // DC Offset calibration by DC_Servo calculation
+			wm8994_reg_write(amp, 0x2E, 0x0010);
+			wm8994_reg_write(amp, 0x3, 0x0030);
 			wm8994_reg_write(amp, 0x54, 0x0303);
 
 			msleep(160);
 			nReadServo4Val=wm8994_reg_read(amp, 0x57);
 			nServo4Low=(signed char)(nReadServo4Val & 0xff);
 			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
-			nCompensationResultLow=((signed short)nServo4Low -2)&0x00ff;
-			nCompensationResultHigh=((signed short)(nServo4High -2)<<8)&0xff00;
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
 			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
-			
+
 			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
 			wm8994_reg_write(amp, 0x54, 0x000F);
-			msleep(20);
-			wm8994_reg_write(amp, 0x60, 0x00EE);
-			wm8994_reg_write(amp, 0x01, 0x3303);
+			msleep(15);
 			CompensationCAL = 1;
-		}	 
-		wm8994_reg_write(amp, 0x420, 0x0000);
-	} else {
-		printk("[P8_LTE] %s: headset amp off\n",__func__);
-
-		wm8994_reg_write(amp, 0x420, 0x0200);
-		wm8994_reg_write(amp, 0x02, 0x63F0);
-
-		wm8994_reg_write(amp, 0x18, 0x010B);
-		wm8994_reg_write(amp, 0x1A, 0x010B);
-
-		wm8994_reg_write(amp, 0x19, 0x010B);
-		wm8994_reg_write(amp, 0x1B, 0x010B);
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
-
-		wm8994_reg_write(amp, 0x36, 0x0003);
-
-		wm8994_reg_write(amp, 0x22, 0x0000);
-		wm8994_reg_write(amp, 0x23, 0x0000);
-
-		wm8994_reg_write(amp, 0x3, 0x0FF0);
-
-
-		wm8994_reg_write(amp, 0x26, 0x0139);
-		wm8994_reg_write(amp, 0x27, 0x0139);
-
-		wm8994_reg_write(amp, 0x1C, 0x01B4);
-		wm8994_reg_write(amp, 0x1D, 0x01B4);
-	}
-}
-
-
-void wm8994_set_normal_headset(int onoff)
-{
-	struct wm8994 *amp = wm8994_amp;
-	u16 nReadServo4Val = 0;
-	static u16 ncompensationResult = 0;
-	u16 nCompensationResultLow=0;
-	u16 nCompensationResultHigh=0;
-	u8	nServo4Low = 0;
-	u8	nServo4High = 0;
-
-	if(wm_check_inited == 0)
-		return;
-
-	if(onoff == 1) {
-		printk("[P8_LTE] %s: headset amp on\n",__func__);
-		wm8994_reg_write(amp, 0x02, 0x63F0);
-		msleep(50);
-
-		wm8994_reg_write(amp, 0x2D, 0x0010);  //kks_111006 0x0001->0x0010 kks_110922 remain //kks_110916_2 0x0010->0x0001
-		wm8994_reg_write(amp, 0x2E, 0x0010);  //kks_111006 0x0001->0x0010 kks_110922 remain //kks_110916_2 0x0010->0x0001
-
-		wm8994_reg_write(amp, 0x19, 0x0107);  //kks_110922 remain //kks_110916_2 0x010F->0x0107
-		wm8994_reg_write(amp, 0x1B, 0x0107);  //kks_110922 remain //kks_110916_2 0x010F->0x0107
-
-		wm8994_reg_write(amp, 0x1C, 0x0177); //kks_110922 remain //kks_110916_2 0x0176->0x0177 //kks_110916_3 0x0074->0x0176
-		wm8994_reg_write(amp, 0x1D, 0x0177); //kks_110922 remain //kks_110916_2 0x0176->0x0177 //kks_110916_3 0x0174->0x0176
-
-		wm8994_reg_write(amp, 0x26, 0x0139);
-		wm8994_reg_write(amp, 0x27, 0x0139);
-
-		wm8994_reg_write(amp, 0x410, 0x1800); //kks_110922 remain 
-
-		wm8994_reg_write(amp, 0x444, 0x0277); //kks_110922 remain 
-		wm8994_reg_write(amp, 0x443, 0x0000);
-		wm8994_reg_write(amp, 0x442, 0x0800);   //kks_110922 remain //kks_110916_3 0x0000->0x0800
-		wm8994_reg_write(amp, 0x441, 0x0845); //kks_110922 remain 
-		wm8994_reg_write(amp, 0x440, 0x01BB);
-
-		wm8994_reg_write(amp, 0x400, 0x1D5); //kks_110916_2 0x1D3->0x1D5 //kks_110916_3 0x1C3->0x1D3
-		wm8994_reg_write(amp, 0x401, 0x1D5); //kks_110916_2 0x1D3->0x1D5 //kks_110916_3 0x1C3->0x1D3
-
-		wm8994_reg_write(amp, 0x480, 0x6318); //kks_110922 remain //kks_110916_2
-
-		wm8994_reg_write(amp, 0x610, 0x01c0);
-		wm8994_reg_write(amp, 0x611, 0x01c0);
-		
-		if(CompensationCAL == 0)
-		{
-			wm8994_reg_write(amp, 0x39, 0x006C);
-			wm8994_reg_write(amp, 0x1, 0x0003);
-			msleep(20);
-			wm8994_reg_write(amp, 0x102, 0x0003);
-			wm8994_reg_write(amp, 0x56, 0x0003);
-			wm8994_reg_write(amp, 0x102, 0x0000);
-
-			wm8994_reg_write(amp, 0x5D, 0x0002);
-			wm8994_reg_write(amp, 0x55, 0x03E0);
-
-			wm8994_reg_write(amp, 0x1, 0x0303);
-			wm8994_reg_write(amp, 0x60, 0x0022);
-
-			wm8994_reg_write(amp, 0x4C, 0x9F25);
-			msleep(5);
-
-			wm8994_reg_write(amp, 0x5, 0x3303);
-			wm8994_reg_write(amp, 0x3, 0x0FF0);
-			wm8994_reg_write(amp, 0x4, 0x0303);
-
+		}
+		else{
+			wm8994_reg_write(amp, 0x55, 0x00E0);
 			wm8994_reg_write(amp, 0x54, 0x0303);
-
-			msleep(160);
+			msleep(50);
 			nReadServo4Val=wm8994_reg_read(amp, 0x57);
 			nServo4Low=(signed char)(nReadServo4Val & 0xff);
 			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
-			nCompensationResultLow=((signed short)nServo4Low -2)&0x00ff;
-			nCompensationResultHigh=((signed short)(nServo4High -2)<<8)&0xff00;
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
 			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
-			
+
 			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
 			wm8994_reg_write(amp, 0x54, 0x000F);
-			msleep(20);
-			wm8994_reg_write(amp, 0x60, 0x00EE);
-			wm8994_reg_write(amp, 0x01, 0x3303);
-			CompensationCAL = 1;
-		}	 
-		wm8994_reg_write(amp, 0x420, 0x0000);
+			msleep(15);
+		}
+		wm8994_reg_write(amp, 0x60, 0x00EE);
+		wake_lock(&wm8994_wake_lock); //kks_111030
 	} else {
-		printk("[P8_LTE] %s: headset amp off\n",__func__);
-
+		printk("%s: headset amp off\n",__func__);
+		wm8994_reg_write(amp, 0x60, 0x0022);
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
+		
 		wm8994_reg_write(amp, 0x420, 0x0200);
-		wm8994_reg_write(amp, 0x02, 0x63F0);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
 
 		wm8994_reg_write(amp, 0x18, 0x010B);
 		wm8994_reg_write(amp, 0x1A, 0x010B);
 
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 
 		wm8994_reg_write(amp, 0x22, 0x0000);
 		wm8994_reg_write(amp, 0x23, 0x0000);
 
 		wm8994_reg_write(amp, 0x3, 0x0FF0);
 
-
 		wm8994_reg_write(amp, 0x26, 0x0139);
 		wm8994_reg_write(amp, 0x27, 0x0139);
-
-		wm8994_reg_write(amp, 0x1C, 0x01B4);
-		wm8994_reg_write(amp, 0x1D, 0x01B4);
+		wake_unlock(&wm8994_wake_lock); //kks_111030
 	}
 }
 
-void wm8994_set_speaker(int onoff)
-{
-	struct wm8994 *amp = wm8994_amp;
-	u16 nReadServo4Val = 0;
-	static u16 ncompensationResult = 0;
-	u16 nCompensationResultLow=0;
-	u16 nCompensationResultHigh=0;
-	u8	nServo4Low = 0;
-	u8	nServo4High = 0;
-	if(wm_check_inited == 0)
-		return;
-
-	if(onoff==1){
-		printk("[P8_LTE] %s: spk amp on\n",__func__);
-
-		wm8994_reg_write(amp, 0x26, 0x017F);
-		wm8994_reg_write(amp, 0x27, 0x017F);
-
-		wm8994_reg_write(amp, 0x1C, 0x0131);
-		wm8994_reg_write(amp, 0x1D, 0x0131);
-
-		wm8994_reg_write(amp, 0x20, 0x0131);
-		wm8994_reg_write(amp, 0x21, 0x0131);
-		
-		wm8994_reg_write(amp, 0x02, 0x63F0);
-		msleep(50);
-
-		wm8994_reg_write(amp, 0x610, 0x01c0);
-		wm8994_reg_write(amp, 0x611, 0x01c0);
-
-		wm8994_reg_write(amp, 0x420, 0x0000);
-
-		wm8994_reg_write(amp, 0x410, 0x3800);
-
-		wm8994_reg_write(amp, 0x444, 0x02DA);
-		wm8994_reg_write(amp, 0x443, 0x01EF);
-		wm8994_reg_write(amp, 0x442, 0x0418);
-
-		wm8994_reg_write(amp, 0x400, 0x1D3);
-		wm8994_reg_write(amp, 0x401, 0x1D3);
-
-		wm8994_reg_write(amp, 0x481, 0x5A80);
-		wm8994_reg_write(amp, 0x480, 0x6319);
-
-		// Analogue out gain control
-		wm8994_reg_write(amp, 0x25, 0x017F);
-
-		if(CompensationCAL == 0)
-		{
-			wm8994_reg_write(amp, 0x39, 0x006C);
-			wm8994_reg_write(amp, 0x1, 0x0003);
-			msleep(20);
-			wm8994_reg_write(amp, 0x102, 0x0003);
-			wm8994_reg_write(amp, 0x56, 0x0003);
-			wm8994_reg_write(amp, 0x102, 0x0000);
-
-			wm8994_reg_write(amp, 0x5D, 0x0002);
-			wm8994_reg_write(amp, 0x55, 0x03E0);
-
-			wm8994_reg_write(amp, 0x1, 0x0303);
-			wm8994_reg_write(amp, 0x60, 0x0022);
-
-			wm8994_reg_write(amp, 0x4C, 0x9F25);
-			msleep(5);
-
-			wm8994_reg_write(amp, 0x5, 0x3303);
-			wm8994_reg_write(amp, 0x3, 0x0FF0);
-			wm8994_reg_write(amp, 0x4, 0x0303);
-
-			wm8994_reg_write(amp, 0x54, 0x000F);
-			msleep(20);
-			wm8994_reg_write(amp, 0x60, 0x00EE);
-			wm8994_reg_write(amp, 0x01, 0x3303);
-		}	 
-	} else {
-		printk("[P8_LTE] %s: spk amp off\n",__func__);
-
-		wm8994_reg_write(amp, 0x420, 0x0200);
-
-		wm8994_reg_write(amp, 0x26, 0x0139);
-		wm8994_reg_write(amp, 0x27, 0x0139);
-
-		wm8994_reg_write(amp, 0x1C, 0x0131);
-		wm8994_reg_write(amp, 0x1D, 0x0131);
-	}
-}
-
-void wm8994_set_normal_speaker(int onoff)
+void wm8994_set_normal_speaker(int onoff) //kks_111017
 {
 	struct wm8994 *amp = wm8994_amp;
 	u16 nReadServo4Val = 0;
@@ -1370,15 +1319,21 @@ void wm8994_set_normal_speaker(int onoff)
 		return;
 
 	if(onoff==1){
-		printk("[P8_LTE] %s: spk amp on\n",__func__);
+		printk("%s: spk amp on\n",__func__);
+		wm8994_reg_write(amp, 0x1, 0x3303);
+		wm8994_reg_write(amp, 0x4, 0x0000); //kks_111212 0x0303-->0x0000
+		wm8994_reg_write(amp, 0x5, 0x0000); //kks_111212 0x3303-->0x0000
 
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0011); //kks_111209 0x0055->0x0011
+		wm8994_reg_write(amp, 0x29, 0x0020); //kks_111209 0x0120->0x0020
+		wm8994_reg_write(amp, 0x2A, 0x0020); //kks_111209 0x0120->0x0020
 
-		wm8994_reg_write(amp, 0x2D, 0x0001);
-		wm8994_reg_write(amp, 0x2E, 0x0001);
-
-
-		wm8994_reg_write(amp, 0x26, 0x017D); //kks_110926 kks_110925 0x007F->0x017D
-		wm8994_reg_write(amp, 0x27, 0x017D); //kks_110926 kks_110925 0x017F->0x017D
+		wm8994_reg_write(amp, 0x36, 0x00C0); //kks_111209 0x0003->0x00C0
+		
+		wm8994_reg_write(amp, 0x26, 0x013d); //speaker volume left //kks_111212 0x017d-> 0x013d //kks_111018 0x017F->0x017d
+		wm8994_reg_write(amp, 0x27, 0x013d); //speaker volume right //kks_111212 0x017d-> 0x013d //kks_111018 0x017F->0x017d
 
 		wm8994_reg_write(amp, 0x1C, 0x0131);
 		wm8994_reg_write(amp, 0x1D, 0x0131);
@@ -1396,70 +1351,192 @@ void wm8994_set_normal_speaker(int onoff)
 		wm8994_reg_write(amp, 0x410, 0x3800);
 
 		// DRC Control tuning
-		wm8994_reg_write(amp, 0x444, 0x02DA);
-		wm8994_reg_write(amp, 0x441, 0x0845); //kks_110922 remain //kks_110916
-
+		wm8994_reg_write(amp, 0x444, 0x02DA); //AIF1 DRC1(5)  //kks_111018 0x037F->0x02DA
 		wm8994_reg_write(amp, 0x443, 0x0000);
-		wm8994_reg_write(amp, 0x442, 0x0400); //kks_110916_2 0x0000->0x0400
+		wm8994_reg_write(amp, 0x442, 0x0400); //AIF1 DRC1(3)  //kks_111018 0x2400->0x0400
 
-		wm8994_reg_write(amp, 0x400, 0x1C8);    //kks_110922 0x0C8->0x1C8 //kks_110917 0x0C6->0x0C8
-		wm8994_reg_write(amp, 0x401, 0x1C8);    //kks_110922 0x0C8->0x1C8  //kks_110917 0x1C6->0x0C8
+		wm8994_reg_write(amp, 0x440, 0x010B); //kks_111201 add 0x01BB->0x010B
 
-		wm8994_reg_write(amp, 0x481, 0x5280); //kks_110925 0x5A80->0x5280 
-		wm8994_reg_write(amp, 0x480, 0x6319); //kks_110926 kks_110925 0x6318->0x6319 //kks_110922 remain //kks_110916 0x6319->0x6318 EQ Off
+		wm8994_reg_write(amp, 0x400, 0x1C8); //AIF1 ADC1 left volume   //kks_111018 0x1C0->0x1C8
+		wm8994_reg_write(amp, 0x401, 0x1C8); //AIF1 ADC1 right volume   //kks_111018 0x1C0->0x1C8
+
+		wm8994_reg_write(amp, 0x481, 0x5280); //AIF1 DAC1 EQ Gain(2)   //kks_111018 0x48C0->0x5280
+		wm8994_reg_write(amp, 0x480, 0x6318); //AIF1 DAC1 EQ Gain(1)  //kks_111201 0x6319->0x6318
 
 		// Analogue out gain control
-		wm8994_reg_write(amp, 0x25, 0x0164); //kks_110922 remain //kks_110917 0x0176->0x0164
+		wm8994_reg_write(amp, 0x25, 0x0164);    //SPKOUT Boost //kks_111018 0x016D->0x0164
+
+		wm8994_reg_write(amp, 0x26, 0x017d); //speaker volume left //kks_111212 add
+		wm8994_reg_write(amp, 0x27, 0x017d); //speaker volume right //kks_111212 add
 
 		if(CompensationCAL == 0)
 		{
 			wm8994_reg_write(amp, 0x39, 0x006C);
-			wm8994_reg_write(amp, 0x1, 0x0003);
 			msleep(20);
 			wm8994_reg_write(amp, 0x102, 0x0003);
 			wm8994_reg_write(amp, 0x56, 0x0003);
 			wm8994_reg_write(amp, 0x102, 0x0000);
 
-			wm8994_reg_write(amp, 0x5D, 0x0002);
 			wm8994_reg_write(amp, 0x55, 0x03E0);
-
-			wm8994_reg_write(amp, 0x1, 0x0303);
 			wm8994_reg_write(amp, 0x60, 0x0022);
-
 			wm8994_reg_write(amp, 0x4C, 0x9F25);
 			msleep(5);
-
 			wm8994_reg_write(amp, 0x5, 0x3303);
 			wm8994_reg_write(amp, 0x3, 0x0FF0);
 			wm8994_reg_write(amp, 0x4, 0x0303);
-
-			wm8994_reg_write(amp, 0x54, 0x0303);
-
-			msleep(180);
-			nReadServo4Val=wm8994_reg_read(amp, 0x57);
-			nServo4Low=(signed char)(nReadServo4Val & 0xff);
-			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
-			nCompensationResultLow=((signed short)nServo4Low -2)&0x00ff;
-			nCompensationResultHigh=((signed short)(nServo4High -2)<<8)&0xff00;
-			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
-			
-			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
-			wm8994_reg_write(amp, 0x54, 0x000F);
 			msleep(20);
-			wm8994_reg_write(amp, 0x60, 0x00EE);
 			wm8994_reg_write(amp, 0x01, 0x3303);
-			CompensationCAL = 1;
 		}	 
 	} else {
-		printk("[P8_LTE] %s: spk amp off\n",__func__);
+		printk("%s: spk amp off\n",__func__);
+		wm8994_reg_write(amp, 0x26, 0x0139); //kks_111213 add
+		wm8994_reg_write(amp, 0x27, 0x0139); //kks_111213 add
 
+		wm8994_reg_write(amp, 0x60, 0x0022);
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
+
+		wm8994_reg_write(amp, 0x440, 0x01BB); //kks_111201 add
+		
 		wm8994_reg_write(amp, 0x420, 0x0200);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
 
-		wm8994_reg_write(amp, 0x26, 0x0139);
-		wm8994_reg_write(amp, 0x27, 0x0139);
+		wm8994_reg_write(amp, 0x18, 0x010B);
+		wm8994_reg_write(amp, 0x1A, 0x010B);
+
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
+
+		wm8994_reg_write(amp, 0x22, 0x0000);
+		wm8994_reg_write(amp, 0x23, 0x0000);
+
+		wm8994_reg_write(amp, 0x3, 0x0FF0);
+	}
+	wake_unlock(&wm8994_wake_lock); //kks_111030
+}
+
+void wm8994_set_speaker(int onoff)
+{
+	struct wm8994 *amp = wm8994_amp;
+	u16 nReadServo4Val = 0;
+	//u16 gain_count = 0; //kks_120125
+	static u16 ncompensationResult = 0;
+	u16 nCompensationResultLow=0;
+	u16 nCompensationResultHigh=0;
+	u8	nServo4Low = 0;
+	u8	nServo4High = 0;
+
+	if(wm_check_inited == 0)
+		return;
+
+	if(onoff==1){
+		printk("%s: spk amp on\n",__func__);
+		wm8994_reg_write(amp, 0x1, 0x3303);
+		wm8994_reg_write(amp, 0x4, 0x0303);
+		wm8994_reg_write(amp, 0x5, 0x3303);
+
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0055);
+		wm8994_reg_write(amp, 0x29, 0x0120);
+		wm8994_reg_write(amp, 0x2A, 0x0120);
+
+		wm8994_reg_write(amp, 0x36, 0x000c); //kks_111021 0x0003->0x000c
+		wm8994_reg_write(amp, 0x2D, 0x0004); //kks_111021 
+		wm8994_reg_write(amp, 0x2E, 0x0004); //kks_111021 
+		
+		wm8994_reg_write(amp, 0x26, 0x013F); //kks_111123
+		wm8994_reg_write(amp, 0x27, 0x013F); //kks_111123
 
 		wm8994_reg_write(amp, 0x1C, 0x0131);
 		wm8994_reg_write(amp, 0x1D, 0x0131);
+
+		wm8994_reg_write(amp, 0x20, 0x0131);
+		wm8994_reg_write(amp, 0x21, 0x0131);
+		
+		wm8994_reg_write(amp, 0x02, 0x63F0);
+		msleep(50);
+
+		wm8994_reg_write(amp, 0x610, 0x01c0);
+		wm8994_reg_write(amp, 0x611, 0x01c0);
+
+		wm8994_reg_write(amp, 0x420, 0x0000);
+		wm8994_reg_write(amp, 0x410, 0x3800);
+
+		// DRC Control tuning
+		wm8994_reg_write(amp, 0x444, 0x02DA); //kks_111018 0x037F->0x02DA
+		wm8994_reg_write(amp, 0x443, 0x01EF); //kks_111018 0x0000->0x01EF
+		wm8994_reg_write(amp, 0x442, 0x0418); //kks_111018 0x2400->0x0418
+
+		wm8994_reg_write(amp, 0x400, 0x1D3); //kks_111018 0x1C0->0x1D3
+		wm8994_reg_write(amp, 0x401, 0x1D3); //kks_111018 0x1C0->0x1D3
+
+		wm8994_reg_write(amp, 0x481, 0x5A80); //kks_111018 0x48C0->0x5A80
+		wm8994_reg_write(amp, 0x480, 0x6319);
+
+		// Analogue out gain control
+		wm8994_reg_write(amp, 0x25, 0x0176); //kks_111221 0x0164->0x0176 //kks_111021 0x017F->0x0164 //kks_111018 0x016D->0x017F
+
+		//Speaker volume control // byeongguk.kim_20120131 //kks_120125 prevent pop up noise when speakerphone call chage
+		//for(gain_count = 0x0140;gain_count<=0x017F;gain_count=gain_count+3)
+		//{
+		    wm8994_reg_write(amp, 0x26, 0x017f); //kks_111123
+		    wm8994_reg_write(amp, 0x27, 0x017f); //kks_111123
+		   // msleep(25);
+		//}
+
+		if(CompensationCAL == 0)
+		{
+			wm8994_reg_write(amp, 0x39, 0x006C);
+			msleep(20);
+			wm8994_reg_write(amp, 0x102, 0x0003);
+			wm8994_reg_write(amp, 0x56, 0x0003);
+			wm8994_reg_write(amp, 0x102, 0x0000);
+
+			wm8994_reg_write(amp, 0x55, 0x03E0);
+			wm8994_reg_write(amp, 0x60, 0x0022);
+			wm8994_reg_write(amp, 0x4C, 0x9F25);
+			msleep(5);
+			wm8994_reg_write(amp, 0x5, 0x3303);
+			wm8994_reg_write(amp, 0x3, 0x0FF0);
+			wm8994_reg_write(amp, 0x4, 0x0303);
+			msleep(20);
+			wm8994_reg_write(amp, 0x01, 0x3303);
+		}	 
+		wake_lock(&wm8994_wake_lock); //kks_111030
+	} else {
+		printk("%s: spk amp off\n",__func__);
+		wm8994_reg_write(amp, 0x60, 0x0022);
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
+		
+		wm8994_reg_write(amp, 0x420, 0x0200);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
+
+		wm8994_reg_write(amp, 0x18, 0x010B);
+		wm8994_reg_write(amp, 0x1A, 0x010B);
+
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
+
+		wm8994_reg_write(amp, 0x22, 0x0000);
+		wm8994_reg_write(amp, 0x23, 0x0000);
+
+		wm8994_reg_write(amp, 0x3, 0x0FF0);
+
+		wm8994_reg_write(amp, 0x26, 0x0139);
+		wm8994_reg_write(amp, 0x27, 0x0139);
+		wake_unlock(&wm8994_wake_lock); //kks_111030
 	}
 }
 
@@ -1477,96 +1554,113 @@ void wm8994_set_speaker_headset(int onoff)
 		return;
 
 	if(onoff==1){
-		printk("[P8_LTE] %s: headset_spk amp on\n",__func__);
+		printk("%s: headset_spk amp on\n",__func__);
+		wm8994_reg_write(amp, 0x1, 0x3303);
+		wm8994_reg_write(amp, 0x4, 0x0000); //kks_111209 0x0303->0x0000
+		wm8994_reg_write(amp, 0x5, 0x0000); //kks_111209 0x3303->0x0000
 
-		wm8994_reg_write(amp, 0x02, 0x63F0);
+		wm8994_reg_write(amp, 0x20, 0x0131);
+		wm8994_reg_write(amp, 0x21, 0x0131);
+		
+		wm8994_reg_write(amp, 0x15, 0x0040);
 		msleep(50);
+		wm8994_reg_write(amp, 0x2D, 0x0010);
+		wm8994_reg_write(amp, 0x2E, 0x0010);		
 		// Analgoue input gain
-		wm8994_reg_write(amp, 0x18, 0x000b);
-		wm8994_reg_write(amp, 0x1A, 0x010b);
-		wm8994_reg_write(amp, 0x28, 0x0011);
-		wm8994_reg_write(amp, 0x29, 0x0020);
-		wm8994_reg_write(amp, 0x2A, 0x0020);
-		wm8994_reg_write(amp, 0x03, 0x03F0);
-		wm8994_reg_write(amp, 0x22, 0x0000);
-		wm8994_reg_write(amp, 0x23, 0x0000);
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x02, 0x6350); //kks_111209_1 0x6000->0x6350
+		wm8994_reg_write(amp, 0x18, 0x010B);
+		wm8994_reg_write(amp, 0x1A, 0x010B);
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x0011); //kks_111209 0x0055->0x0011
+		wm8994_reg_write(amp, 0x29, 0x0020); //kks_111209 0x0120->0x0020
+		wm8994_reg_write(amp, 0x2A, 0x0020); //kks_111209 0x0120->0x0020
+		wm8994_reg_write(amp, 0x36, 0x00C0); //kks_111209 0x000C->0x00C0
+		
+		wm8994_reg_write(amp, 0x03, 0x0FF0);
 
-		wm8994_reg_write(amp, 0x26, 0x0179); //kks_110928 0x0175->0x0179
-		wm8994_reg_write(amp, 0x27, 0x0179); //kks_110928 0x0175->0x0179		
+		wm8994_reg_write(amp, 0x26, 0x017D); //speaker volume left  //kks_111216 0x017f->0x017D //kks_111021 0x0179->0x017f //kks_111018 0x017C->0x0179
+		wm8994_reg_write(amp, 0x27, 0x017D); //speaker volume right   //kks_111216 0x017f->0x017D //kks_111021 0x0179->0x017f //kks_111018 0x017C->0x0179
 
 		wm8994_reg_write(amp, 0x610, 0x01c0);
 		wm8994_reg_write(amp, 0x611, 0x01c0);
 
 		wm8994_reg_write(amp, 0x420, 0x0000);
 
-		wm8994_reg_write(amp, 0x443, 0x01EF);
-		wm8994_reg_write(amp, 0x442, 0x0418);
+		wm8994_reg_write(amp, 0x443, 0x0000);
+		wm8994_reg_write(amp, 0x442, 0x0400);
+		// Analogue out gain control
+		wm8994_reg_write(amp, 0x400, 0x1C0);
+		wm8994_reg_write(amp, 0x401, 0x1C0);
 
-		wm8994_reg_write(amp, 0x400, 0x1D8);
-		wm8994_reg_write(amp, 0x401, 0x1D8);
+		wm8994_reg_write(amp, 0x25, 0x0164); //kks_111021 0x0167->0x0164
 
-		wm8994_reg_write(amp, 0x25, 0x017F);
+		wm8994_reg_write(amp, 0x1C, 0x0177); //kks_111209 0x015b->0x0177 //kks_111026 0x005b->0x015b //kks_111021 0x0167->0x005b
+		wm8994_reg_write(amp, 0x1D, 0x0177); //kks_111209 0x015b->0x0177 //kks_111026 0x005b->0x015b //kks_111021 0x0167->0x005b
 
-		wm8994_reg_write(amp, 0x1C, 0x01E0);
-		wm8994_reg_write(amp, 0x1D, 0x01E0);
-		
-		if(CompensationCAL == 0)
-		{
-			wm8994_reg_write(amp, 0x39, 0x006C);
-			wm8994_reg_write(amp, 0x1, 0x0003);
-			msleep(20);
-			wm8994_reg_write(amp, 0x102, 0x0003);
-			wm8994_reg_write(amp, 0x56, 0x0003);
-			wm8994_reg_write(amp, 0x102, 0x0000);
-
-			wm8994_reg_write(amp, 0x5D, 0x0002);
-			wm8994_reg_write(amp, 0x55, 0x03E0);
-
-			wm8994_reg_write(amp, 0x1, 0x0303);
+		wm8994_reg_write(amp, 0x15, 0x0000);
+		msleep(50);
+		if(CompensationCAL == 0){
+			wm8994_reg_write(amp, 0x1, 0x3303); //kks_111220 0x0303->0x3303
 			wm8994_reg_write(amp, 0x60, 0x0022);
-
-			wm8994_reg_write(amp, 0x4C, 0x9F25);
+			wm8994_reg_write(amp, 0x4C, 0x9f25);
 			msleep(5);
+			wm8994_reg_write(amp, 0x1C, 0x01F4);
+			wm8994_reg_write(amp, 0x1D, 0x01F4);
 
-			wm8994_reg_write(amp, 0x5, 0x3303);
-			wm8994_reg_write(amp, 0x3, 0x0FF0);
-			wm8994_reg_write(amp, 0x4, 0x0303);
-
+			wm8994_reg_write(amp, 0x2D, 0x0010); // DC Offset calibration by DC_Servo calculation
+			wm8994_reg_write(amp, 0x2E, 0x0010);
+			wm8994_reg_write(amp, 0x3, 0x0030);
 			wm8994_reg_write(amp, 0x54, 0x0303);
 
-			msleep(180);
+			msleep(160);
 			nReadServo4Val=wm8994_reg_read(amp, 0x57);
 			nServo4Low=(signed char)(nReadServo4Val & 0xff);
 			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
-			nCompensationResultLow=((signed short)nServo4Low -2)&0x00ff;
-			nCompensationResultHigh=((signed short)(nServo4High -2)<<8)&0xff00;
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
 			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
-			
+
 			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
 			wm8994_reg_write(amp, 0x54, 0x000F);
-			msleep(20);
-			wm8994_reg_write(amp, 0x60, 0x00EE);
-			wm8994_reg_write(amp, 0x01, 0x3303);
+			msleep(15);
 			CompensationCAL = 1;
-		}	 
-	} else {
-		printk("[P8_LTE] %s: headset_spk amp off\n",__func__);
+		}
+		else{
+			wm8994_reg_write(amp, 0x55, 0x00E0);
+			wm8994_reg_write(amp, 0x54, 0x0303);
+			msleep(50);
+			nReadServo4Val=wm8994_reg_read(amp, 0x57);
+			nServo4Low=(signed char)(nReadServo4Val & 0xff);
+			nServo4High=(signed char)((nReadServo4Val>>8) & 0xff);
+			nCompensationResultLow=((signed short)nServo4Low -5)&0x00ff;
+			nCompensationResultHigh=((signed short)(nServo4High -5)<<8)&0xff00;
+			ncompensationResult=nCompensationResultLow|nCompensationResultHigh;
 
+			wm8994_reg_write(amp, 0x57, ncompensationResult); // popup
+			wm8994_reg_write(amp, 0x54, 0x000F);
+			msleep(15);
+		}
+//		wm8994_reg_write(amp, 0x1, 0x3303);
+		wm8994_reg_write(amp, 0x60, 0x00EE);
+	} else {
+		printk("%s: headset_spk amp off\n",__func__);
+		wm8994_reg_write(amp, 0x60, 0x0022);
+		wm8994_reg_write(amp, 0x2D, 0x0000);
+		wm8994_reg_write(amp, 0x2E, 0x0000);
+		
 		wm8994_reg_write(amp, 0x420, 0x0200);
 
 		wm8994_reg_write(amp, 0x02, 0x63F0);
-
 		wm8994_reg_write(amp, 0x18, 0x010B);
 		wm8994_reg_write(amp, 0x1A, 0x010B);
-
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 
 		wm8994_reg_write(amp, 0x22, 0x0000);
 		wm8994_reg_write(amp, 0x23, 0x0000);
@@ -1575,10 +1669,8 @@ void wm8994_set_speaker_headset(int onoff)
 
 		wm8994_reg_write(amp, 0x26, 0x0139);
 		wm8994_reg_write(amp, 0x27, 0x0139);
-
-		wm8994_reg_write(amp, 0x1C, 0x01A0);
-		wm8994_reg_write(amp, 0x1D, 0x01A0);
 	}
+	wake_unlock(&wm8994_wake_lock); //kks_111030
 }
 
 void wm8994_set_cradle(int onoff)
@@ -1595,19 +1687,26 @@ void wm8994_set_cradle(int onoff)
 		return;
 
 	if(onoff==1){
-		printk("[P8_LTE] %s: cradle amp on\n",__func__);
-
-		wm8994_reg_write(amp, 0x19, 0x0005);
-		wm8994_reg_write(amp, 0x1b, 0x0105);
+		printk("%s: cradle amp on\n",__func__);
+		wm8994_reg_write(amp, 0x4, 0x303); //kks_111021 0x0->0x303
+		wm8994_reg_write(amp, 0x5, 0x3303); //kks_111021 0x0->0x3303
+		
+		wm8994_reg_write(amp, 0x19, 0x0105); //kks_111106 0x0005->0x0105 //kks_111021 0x010b->0x0005
+		wm8994_reg_write(amp, 0x1b, 0x0105); //kks_111106 0x0005->0x0105 //kks_111021 0x010b->0x0005
 
 		wm8994_reg_write(amp, 0x28, 0x00cc);
 		wm8994_reg_write(amp, 0x29, 0x0100);
 		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x2d, 0x0001);
-		wm8994_reg_write(amp, 0x2e, 0x0001);
-		wm8994_reg_write(amp, 0x37, 0x0000);
+		wm8994_reg_write(amp, 0x2B, 0x0000);
+		wm8994_reg_write(amp, 0x2C, 0x0000);
+		wm8994_reg_write(amp, 0x2F, 0x0200);
+		wm8994_reg_write(amp, 0x30, 0x0200);
 
+		wm8994_reg_write(amp, 0x2d, 0x0001); //kks_111021 0x0002->0x0001
+		wm8994_reg_write(amp, 0x2e, 0x0001); //kks_111021 0x0002->0x0001
+
+		wm8994_reg_write(amp, 0x37, 0x0000);
 		wm8994_reg_write(amp, 0x38, 0x0080);
 		wm8994_reg_write(amp, 0x35, 0x0031);
 
@@ -1618,24 +1717,20 @@ void wm8994_set_cradle(int onoff)
 		wm8994_reg_write(amp, 0x410, 0x1800);
 
 		// DRC Control tuning
-		wm8994_reg_write(amp, 0x444, 0x0217); //kks_110928 0x0256->0x0217
-
-		wm8994_reg_write(amp, 0x443, 0x0000); //kks_110916_4 0x01EF->0x0000
-		wm8994_reg_write(amp, 0x442, 0x0800); //kks_110916_4 0x0418->0x0800
-
+		wm8994_reg_write(amp, 0x444, 0x0256); //kks_111021 0x0217->0x0256 //kks_111018 0x02DA->0x0217
+		wm8994_reg_write(amp, 0x443, 0x0000);
+		wm8994_reg_write(amp, 0x442, 0x0800); //kks_111018 0x0400->0x0800
 		wm8994_reg_write(amp, 0x441, 0x0845);
 		wm8994_reg_write(amp, 0x440, 0x01BB);
-
 		wm8994_reg_write(amp, 0x480, 0x6318);
 
-		wm8994_reg_write(amp, 0x400, 0x1E1); //kks_110922 0x1E3->0x1E1 //kks_110916_4 0x0C0->0x1E3
-		wm8994_reg_write(amp, 0x401, 0x1E1); //kks_110922 0x1E3->0x1E1 //kks_110916_4 0x1C0->0x1E3
+		wm8994_reg_write(amp, 0x400, 0x1E1); //AIF1 ADC1 left volume //kks_111018 0x1CA->0x1E1
+		wm8994_reg_write(amp, 0x401, 0x1E1); //AIF1 ADC1 right volume //kks_111018 0x1CA->0x1E1
 		wm8994_reg_write(amp, 0x480, 0x6318);
-
 
 		// Analogue out gain control
-		wm8994_reg_write(amp, 0x20, 0x0177); //kks_110922 0x0176->0x0177 //kks_110916_4 0x007E->0x0176
-		wm8994_reg_write(amp, 0x21, 0x0177); //kks_110922 0x0176->0x0177 //kks_110916_4 0x017E->0x0176
+		wm8994_reg_write(amp, 0x20, 0x0177); //kks_111018 0x017F->0x0177
+		wm8994_reg_write(amp, 0x21, 0x0177); //kks_111018 0x017F->0x0177
 
 		// Line AMP Enable
 		wm8994_reg_write(amp, 0x1E, 0x60); // Check schematic
@@ -1687,22 +1782,22 @@ void wm8994_set_cradle(int onoff)
 		// Unmute
 		wm8994_reg_write(amp, 0x420, 0x0000);
 	} else {
-		printk("[P8_LTE] %s: cradle amp off\n",__func__);
+		printk("%s: cradle amp off\n",__func__);
 
 		wm8994_reg_write(amp, 0x420, 0x0200);
 
-		wm8994_reg_write(amp, 0x02, 0x63F0);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
 
 		wm8994_reg_write(amp, 0x18, 0x010B);
 		wm8994_reg_write(amp, 0x1A, 0x010B);
 
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 
 		wm8994_reg_write(amp, 0x22, 0x0000);
 		wm8994_reg_write(amp, 0x23, 0x0000);
@@ -1714,7 +1809,10 @@ void wm8994_set_cradle(int onoff)
 		
 		wm8994_reg_write(amp, 0x4c, 0x9f25);
 		wm8994_reg_write(amp, 0x1, 0x3303);
+		wm8994_reg_write(amp, 0x4, 0x0303);
+		wm8994_reg_write(amp, 0x5, 0x3303);
 	}
+	wake_unlock(&wm8994_wake_lock); //kks_111030
 }
 
 void wm8994_set_spk_cradle(int onoff)
@@ -1731,15 +1829,21 @@ void wm8994_set_spk_cradle(int onoff)
 	return;
 
 	if(onoff==1){
-		printk("[P8_LTE] %s: cradle_spk amp on\n",__func__);
+		printk("%s: cradle_spk amp on\n",__func__);
 
 		// Analgoue input gain, IN2P L/R
-		wm8994_reg_write(amp, 0x19, 0x000b);
-		wm8994_reg_write(amp, 0x1b, 0x010b);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
 
-		wm8994_reg_write(amp, 0x28, 0x00cc);
+		wm8994_reg_write(amp, 0x18, 0x010B);
+		wm8994_reg_write(amp, 0x1A, 0x010B);
+
+		wm8994_reg_write(amp, 0x19, 0x010B);
+		wm8994_reg_write(amp, 0x1B, 0x010B);
+		wm8994_reg_write(amp, 0x28, 0x00CC);
 		wm8994_reg_write(amp, 0x29, 0x0100);
 		wm8994_reg_write(amp, 0x2A, 0x0100);
+
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 		
 		wm8994_reg_write(amp, 0x2d, 0x0001);
 		wm8994_reg_write(amp, 0x2e, 0x0001);
@@ -1753,14 +1857,14 @@ void wm8994_set_spk_cradle(int onoff)
 		// DRC Control tuning
 		wm8994_reg_write(amp, 0x444, 0x02DA);
 		wm8994_reg_write(amp, 0x443, 0x0000);
-		wm8994_reg_write(amp, 0x442, 0x0418);
+		wm8994_reg_write(amp, 0x442, 0x0400);
 
 		wm8994_reg_write(amp, 0x441, 0x0845);
 		wm8994_reg_write(amp, 0x440, 0x01BB);
 		wm8994_reg_write(amp, 0x480, 0x6318);
 
-		wm8994_reg_write(amp, 0x400, 0x1D8);
-		wm8994_reg_write(amp, 0x401, 0x1D8);
+		wm8994_reg_write(amp, 0x400, 0x1D4);
+		wm8994_reg_write(amp, 0x401, 0x1D4);
 
 		// Analogue out gain control
 		wm8994_reg_write(amp, 0x20, 0x0079);
@@ -1771,13 +1875,13 @@ void wm8994_set_spk_cradle(int onoff)
 
 		wm8994_reg_write(amp, 0x22, 0x0); // Check schematic
 		wm8994_reg_write(amp, 0x23, 0x0); // Check schematic
-		wm8994_reg_write(amp, 0x36, 0x3);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 		// Analogue out gain control
-		wm8994_reg_write(amp, 0x25, 0x017F);
+		wm8994_reg_write(amp, 0x25, 0x0176);
 		wm8994_reg_write(amp, 0x26, 0x0078);
 		wm8994_reg_write(amp, 0x27, 0x0178);
 
-		wm8994_reg_write(amp, 0x02, 0x63F0); // Check schematic
+		wm8994_reg_write(amp, 0x02, 0x63A0); // Check schematic
 		wm8994_reg_write(amp, 0x03, 0x0FF0);
 		wm8994_reg_write(amp, 0x01, 0x3303); //
 		
@@ -1823,22 +1927,22 @@ void wm8994_set_spk_cradle(int onoff)
 		// Unmute
 		wm8994_reg_write(amp, 0x420, 0x0000);
 	} else {
-		printk("[P8_LTE] %s: cradle_spk amp off\n",__func__);
+		printk("%s: cradle_spk amp off\n",__func__);
 
 		wm8994_reg_write(amp, 0x420, 0x0200);
 
-		wm8994_reg_write(amp, 0x02, 0x63F0);
+		wm8994_reg_write(amp, 0x02, 0x63A0);
 
 		wm8994_reg_write(amp, 0x18, 0x010B);
 		wm8994_reg_write(amp, 0x1A, 0x010B);
 
 		wm8994_reg_write(amp, 0x19, 0x010B);
 		wm8994_reg_write(amp, 0x1B, 0x010B);
-		wm8994_reg_write(amp, 0x28, 0x0055);
-		wm8994_reg_write(amp, 0x29, 0x0120);
-		wm8994_reg_write(amp, 0x2A, 0x0120);
+		wm8994_reg_write(amp, 0x28, 0x0044);
+		wm8994_reg_write(amp, 0x29, 0x0100);
+		wm8994_reg_write(amp, 0x2A, 0x0100);
 
-		wm8994_reg_write(amp, 0x36, 0x0003);
+		wm8994_reg_write(amp, 0x36, 0x00C0);
 
 		wm8994_reg_write(amp, 0x22, 0x0000);
 		wm8994_reg_write(amp, 0x23, 0x0000);
@@ -1849,10 +1953,10 @@ void wm8994_set_spk_cradle(int onoff)
 		wm8994_reg_write(amp, 0x4c, 0x9f25);
 		wm8994_reg_write(amp, 0x1, 0x3303);
 	}
+	wake_unlock(&wm8994_wake_lock); //kks_111030
 }
 
 #elif defined(CONFIG_MACH_P5_LTE)
-
 int audio_power(int en)
 {
 	struct wm8994 *amp = wm8994_amp;
@@ -5128,6 +5232,11 @@ static int wm8994_amp_probe(struct i2c_client *i2c,
 
 	mutex_init(&wm8994->io_lock);
 
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030
+	/* wake lock init */
+	wake_lock_init(&wm8994_wake_lock, WAKE_LOCK_SUSPEND, "wm8994_wake_lock");
+#endif
+
 // LDO PIN SETTING
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_AMP_EN), &amp_en);
 	if (rc) {
@@ -5194,6 +5303,14 @@ static int wm8994_amp_probe(struct i2c_client *i2c,
 
 }
 
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
+static struct work_struct wm8994_amp_on_work;
+
+static void wm8994_amp_on_work_func(struct work_struct *work)
+{
+    audio_power(1);
+}
+#endif
 
 static int __devexit wm8994_amp_remove(struct i2c_client *i2c)
 {
@@ -5211,7 +5328,11 @@ static int wm8994_suspend(struct i2c_client *i2c)
 
 static int wm8994_resume(struct i2c_client *i2c)
 {
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
+	schedule_work(&wm8994_amp_on_work);
+#else
 	audio_power(1);
+#endif
 	return 0;
 }
 
@@ -5246,6 +5367,9 @@ static __init int wm8994_amp_init(void)
 			return;
 	#endif
 
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030
+    INIT_WORK(&wm8994_amp_on_work, wm8994_amp_on_work_func);
+#endif
 
 	return i2c_add_driver(&wm8994_amp_driver);
 
@@ -5271,7 +5395,7 @@ module_exit(wm8994_amp_exit);
 //EXPORT_SYMBOL(wm8994_set_common);
 EXPORT_SYMBOL(wm8994_set_headset);
 EXPORT_SYMBOL(wm8994_set_speaker);
-#if defined(CONFIG_MACH_P8_LTE) //kks_110915_1
+#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_110915_1
 EXPORT_SYMBOL(wm8994_set_normal_headset); //kks_110916_1
 EXPORT_SYMBOL(wm8994_set_normal_speaker);
 #endif

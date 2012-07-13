@@ -54,6 +54,22 @@ extern void modem_unregister(void);
 extern void notify_control_line_state(u32 value);
 #endif
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+/* "Attributed Vender Descriptor : vender descriptor */
+struct usb_avd_desc {
+	__u8	bLength;
+	__u8	bDescriptorType;
+	__u8	bDescriptorSubType;
+	__u16	bTypeofDAU;
+	__u16	bLengthofType;
+	__u16	bValueoftype;
+} __packed;
+
+#define USB_AVD_VENDER_TYPE		0x80
+/*Samsung Vender specific request */
+#define NOTI_DRV_VERSION 0xA1
+#endif
+
 struct acm_ep_descs {
 	struct usb_endpoint_descriptor	*in;
 	struct usb_endpoint_descriptor	*out;
@@ -300,6 +316,18 @@ static struct usb_cdc_union_desc acm_union_desc = {
 	/* .bSlaveInterface0 =	DYNAMIC */
 };
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+/* vender specific descriptor */
+/* request for host driver version */
+static struct usb_avd_desc acm_avd_desc = {
+	.bLength =		sizeof(acm_avd_desc),
+	.bDescriptorType =	USB_DT_CS_INTERFACE,
+	.bDescriptorSubType =	USB_AVD_VENDER_TYPE,
+	.bTypeofDAU = 0x0007,
+	.bLengthofType = 0x0002,
+	.bValueoftype = 0x0001,
+};
+#endif
 /* full speed support: */
 
 static struct usb_endpoint_descriptor acm_fs_notify_desc = {
@@ -334,6 +362,9 @@ static struct usb_descriptor_header *acm_fs_function[] = {
 	(struct usb_descriptor_header *) &acm_union_desc,
 	(struct usb_descriptor_header *) &acm_fs_notify_desc,
 	(struct usb_descriptor_header *) &acm_data_interface_desc,
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	(struct usb_descriptor_header *) &acm_avd_desc,
+#endif
 	(struct usb_descriptor_header *) &acm_fs_in_desc,
 	(struct usb_descriptor_header *) &acm_fs_out_desc,
 	NULL,
@@ -373,6 +404,9 @@ static struct usb_descriptor_header *acm_hs_function[] = {
 	(struct usb_descriptor_header *) &acm_union_desc,
 	(struct usb_descriptor_header *) &acm_hs_notify_desc,
 	(struct usb_descriptor_header *) &acm_data_interface_desc,
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	(struct usb_descriptor_header *) &acm_avd_desc,
+#endif
 	(struct usb_descriptor_header *) &acm_hs_in_desc,
 	(struct usb_descriptor_header *) &acm_hs_out_desc,
 	NULL,
@@ -870,6 +904,52 @@ acm_unbind(struct usb_configuration *c, struct usb_function *f)
 	kfree(acm->port.func.name);
 	kfree(acm);
 }
+
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+static void avd_setup_complete(struct usb_ep *ep, struct usb_request *req)
+{
+	if (req->status || req->actual != req->length)
+		DBG((struct usb_composite_dev *) ep->driver_data,
+				"avd_setup_complete --> %d, %d/%d\n",
+				req->status, req->actual, req->length);
+
+	if (req->length == 8) {
+		printk(KERN_DEBUG "usb: Host driver version %d.%d.%d.%d",
+		  (*((char *)req->buf+1)<<8) | *((char *)req->buf),
+		  (*((char *)req->buf+3)<<8) | *((char *)req->buf+2),
+		  (*((char *)req->buf+5)<<8) | *((char *)req->buf+4),
+		  (*((char *)req->buf+7)<<8) | *((char *)req->buf+6));
+	}
+}
+static int acm_avd_request(struct usb_composite_dev *cdev,
+				const struct usb_ctrlrequest *ctrl)
+{
+	int	value = -EOPNOTSUPP;
+	u16	w_length = le16_to_cpu(ctrl->wLength);
+
+	if (ctrl->bRequestType != (USB_DIR_OUT|USB_TYPE_VENDOR))
+		return value;
+	/* Handle avd cmd */
+	if (ctrl->bRequest == NOTI_DRV_VERSION) {
+		value = w_length;
+		cdev->host_state_info = 0;
+		printk(KERN_DEBUG "usb: OEM_DRV_VERSION\n");
+	}
+
+	/* respond ZLP */
+	if (value >= 0) {
+		int rc;
+		cdev->req->complete = avd_setup_complete;
+		cdev->req->zero = 0;
+		cdev->req->length = value;
+		rc = usb_ep_queue(cdev->gadget->ep0, cdev->req, GFP_ATOMIC);
+		if (rc < 0)
+			printk(KERN_DEBUG "usb: %s failed usb_ep_queue\n",
+					__func__);
+	}
+	return value;
+}
+#endif
 
 /* Some controllers can't support CDC ACM ... */
 static inline bool can_support_cdc(struct usb_configuration *c)

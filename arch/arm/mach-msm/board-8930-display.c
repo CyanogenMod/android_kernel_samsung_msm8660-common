@@ -72,7 +72,6 @@
 
 #define MDP_VSYNC_GPIO 0
 
-#define PANEL_NAME_MAX_LEN	30
 #define MIPI_CMD_NOVATEK_QHD_PANEL_NAME	"mipi_cmd_novatek_qhd"
 #define MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME	"mipi_video_novatek_qhd"
 #define MIPI_VIDEO_TOSHIBA_WSVGA_PANEL_NAME	"mipi_video_toshiba_wsvga"
@@ -420,7 +419,7 @@ static int mdp_core_clk_rate_table[] = {
 #else
 static int mdp_core_clk_rate_table[] = {
 	85330000,
-	85330000,
+	128000000,
 	160000000,
 	200000000,
 };

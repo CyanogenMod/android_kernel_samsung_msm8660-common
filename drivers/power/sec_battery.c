@@ -62,7 +62,7 @@
 #endif /* CONFIG_PMIC8058_XOADC_CAL */
 #define RCOMP0_TEMP			20	/* 'C */
 #elif defined(CONFIG_KOR_MODEL_SHV_E160S) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #if defined(CONFIG_PMIC8058_XOADC_CAL)
 #define CURRENT_OF_FULL_CHG		2300	/* 170mA */
 #else
@@ -83,8 +83,8 @@
 	defined(CONFIG_CAN_MODEL_SGH_I577R) || \
 	defined(CONFIG_CAN_MODEL_SGH_I757M)
 #if defined(CONFIG_PMIC8058_XOADC_CAL)
-#define CURRENT_OF_FULL_CHG_UI		2780	/* 278mA */
-#define CURRENT_OF_FULL_CHG		2780	/* 278mA */
+#define CURRENT_OF_FULL_CHG_UI		2600    /* 260mA */
+#define CURRENT_OF_FULL_CHG		2600    /* 260mA */
 #define RCOMP0_TEMP			20	/* 'C */
 #else
 #define CURRENT_OF_FULL_CHG_UI		2300	/* 278mA */
@@ -132,7 +132,7 @@
 */
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define FULL_CHARGING_TIME	(8 * 60 * 60 * HZ)	/* 8hr */
 #define RECHARGING_TIME		(2 * 60 * 60 * HZ)	/* 2hr */
 #else
@@ -318,7 +318,7 @@
 #define JPN_CHARGE_CURRENT_DOWN_TEMP		240
 #define JPN_CHARGE_CURRENT_RECOVERY_TEMP	235
 #else
-#if defined(CONFIG_KOR_MODEL_SHV_E160S)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define HIGH_BLOCK_TEMP_ADC_PMICTHERM		727
 #define HIGH_RECOVER_TEMP_ADC_PMICTHERM		667
 #define LOW_BLOCK_TEMP_ADC_PMICTHERM		504
@@ -344,7 +344,7 @@
 #define HIGH_RECOVER_TEMP_ADC_SETTHERM		365
 #define LOW_BLOCK_TEMP_ADC_SETTHERM		226
 #define LOW_RECOVER_TEMP_ADC_SETTHERM		241
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define HIGH_BLOCK_TEMP_ADC_SETTHERM		390
 #define HIGH_RECOVER_TEMP_ADC_SETTHERM		369
 #define LOW_BLOCK_TEMP_ADC_SETTHERM		232
@@ -997,6 +997,12 @@ static int sec_bat_get_property(struct power_supply *ps,
 		if (info->ui_full_charge_status &&
 		    info->charging_status == POWER_SUPPLY_STATUS_CHARGING) {
 			val->intval = 100;
+			break;
+		}
+
+		if( info->batt_soc == 100 &&
+		    info->charging_status == POWER_SUPPLY_STATUS_CHARGING) {
+			val->intval = 99;
 			break;
 		}
 #endif
@@ -2133,7 +2139,7 @@ static void check_chgcurrent(struct sec_bat_info *info)
 
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (info->hw_rev < 0x04)
 		return;
 #endif
@@ -2167,7 +2173,7 @@ static void check_chgcurrent(struct sec_bat_info *info)
 
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 static void check_chgstop_from_charger(struct sec_bat_info *info)
 {
 	struct power_supply *psy = power_supply_get_by_name(info->charger_name);
@@ -2670,12 +2676,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 #if !defined(CONFIG_TARGET_LOCALE_USA)
 	case CABLE_TYPE_UARTOFF:
 #endif
-
-#if defined(CONFIG_TARGET_LOCALE_USA)
-		if (!info->dcin_intr_triggered) {
-#else
 		if (!info->dcin_intr_triggered && !info->lpm_chg_mode) {
-#endif
 			wake_lock_timeout(&info->vbus_wake_lock, 5 * HZ);
 			pr_info("%s : dock inserted, "
 				"but dcin nok skip charging!\n", __func__);
@@ -2685,14 +2686,18 @@ static void sec_bat_cable_work(struct work_struct *work)
 		}
 #if defined(CONFIG_TARGET_LOCALE_USA)
 	case CABLE_TYPE_UARTOFF:
-		if (!info->dcin_intr_triggered) {
-			pr_info("%s : jig cable is attached without vbus, "
-				"skip charging!\n",
-				   __func__);
-			break;
-		} else
-			pr_info("%s : jig cable is attached with vbus\n",
-				   __func__);
+		if (info->cable_type == CABLE_TYPE_UARTOFF) {
+			if (!info->dcin_intr_triggered) {
+				pr_info("%s : "
+					"jig cable is attached without vbus, "
+					"skip charging!\n",
+					__func__);
+				break;
+			} else
+				pr_info("%s : "
+					"jig cable is attached with vbus\n",
+					__func__);
+		}
 #endif
 	case CABLE_TYPE_UNKNOWN:
 #if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
@@ -2834,7 +2839,7 @@ static void sec_bat_monitor_work(struct work_struct *work)
 	sec_bat_check_vf(info);
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (info->hw_rev < 0x04)
 		check_chgstop_from_charger(info);
 	else
@@ -2998,7 +3003,7 @@ static void sec_bat_measure_work(struct work_struct *work)
 	defined(CONFIG_KOR_MODEL_SHV_E120L) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	bool isFirstCheck = false;
 #endif
 
@@ -3200,7 +3205,7 @@ static void sec_bat_measure_work(struct work_struct *work)
 	defined(CONFIG_KOR_MODEL_SHV_E120L) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		if (info->charging_enabled &&
 			(((0 < info->batt_temp_high_cnt) &&
 			(info->batt_temp_high_cnt < TEMP_BLOCK_COUNT))  ||
@@ -3221,7 +3226,7 @@ static void sec_bat_measure_work(struct work_struct *work)
 	defined(CONFIG_KOR_MODEL_SHV_E120L) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	else if (isFirstCheck) {
 		queue_delayed_work(info->monitor_wqueue, &info->measure_work,
 					  HZ);
@@ -4019,7 +4024,7 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 /*
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (!pdata->charger_name_old) {
 		dev_err(info->dev, "%s: no old charger name\n",
 			__func__);
@@ -4032,7 +4037,7 @@ static __devinit int sec_bat_probe(struct platform_device *pdev)
 /*
 #if defined(CONFIG_KOR_MODEL_SHV_E160S) || \
 	defined(CONFIG_KOR_MODEL_SHV_E160K) || \
-	defined(CONFIG_KOR_MODEL_SHV_E160L)
+	defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (info->hw_rev < 0x04) {
 		info->charger_name = pdata->charger_name_old;
 	}

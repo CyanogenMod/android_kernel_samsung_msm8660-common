@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -22,7 +22,8 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
-#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957) || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L)
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
 #include <mach/board-msm8660.h>
 #endif
 
@@ -60,7 +61,6 @@ struct pm_irq_chip {
 	unsigned int		num_masters;
 	u8			config[0];
 };
-
 
 static int pm8xxx_read_root_irq(const struct pm_irq_chip *chip, u8 *rp)
 {
@@ -226,6 +226,11 @@ static void pm8xxx_irq_mask(struct irq_data *d)
 	master = block / 8;
 	irq_bit = pmirq % 8;
 
+	if (chip->config[pmirq] == 0) {
+		pr_warn("masking rouge irq=%d pmirq=%d\n", d->irq, pmirq);
+		chip->config[pmirq] = irq_bit << PM_IRQF_BITS_SHIFT;
+	}
+
 	config = chip->config[pmirq] | PM_IRQF_MASK_ALL;
 	pm8xxx_write_config_irq(chip, block, config);
 }
@@ -240,6 +245,11 @@ static void pm8xxx_irq_mask_ack(struct irq_data *d)
 	block = pmirq / 8;
 	master = block / 8;
 	irq_bit = pmirq % 8;
+
+	if (chip->config[pmirq] == 0) {
+		pr_warn("mask acking rouge irq=%d pmirq=%d\n", d->irq, pmirq);
+		chip->config[pmirq] = irq_bit << PM_IRQF_BITS_SHIFT;
+	}
 
 	config = chip->config[pmirq] | PM_IRQF_MASK_ALL | PM_IRQF_CLR;
 	pm8xxx_write_config_irq(chip, block, config);
@@ -373,7 +383,8 @@ bail_out:
 EXPORT_SYMBOL_GPL(pm8xxx_get_irq_stat);
 
 
-#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957) || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L)
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
 // This function clears hw revision gpio's irq configuration set incorrectly by sbl3 bootloader.
 // Only E120L and E160(S/K/L)'s sbl3 bootloader uses hw revision gpio for irq, even though it is ueseless actually.
 // (In other words, it' a sort of bug.) Originally I should've changed the bootloader, but the bootloader
@@ -459,7 +470,8 @@ struct pm_irq_chip *  __devinit pm8xxx_irq_init(struct device *dev,
 	}
 
 
-#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957) || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L)
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
         // E120L's and E160(S/K/L)'s bootloader bug fix
         pm8xxx_clear_hw_rev_gpio_irq(chip, devirq);
 #endif

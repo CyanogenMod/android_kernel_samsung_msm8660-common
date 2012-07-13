@@ -34,7 +34,11 @@ extern "C" {
 
 /* X-TAL Frequency Configuration */
 /* #define FC8050_FREQ_XTAL  16384 */
+#ifdef CONFIG_KOR_MODEL_SHV_E140L
+#define FC8050_FREQ_XTAL  24576
+#else
 #define FC8050_FREQ_XTAL    19200
+#endif
 /* #define FC8050_FREQ_XTAL  24576 */
 /* #define FC8050_FREQ_XTAL  27000 */
 /* #define FC8050_FREQ_XTAL  38400 */
@@ -388,7 +392,7 @@ extern "C" {
 #define FIC_BUF_THR	(FIC_BUF_LENGTH/2-1)
 
 #define CH0_BUF_START	(FIC_BUF_START + FIC_BUF_LENGTH)
-#define CH0_BUF_LENGTH	(188*40*2)
+#define CH0_BUF_LENGTH	(188*20*2)
 #define CH0_BUF_END	(CH0_BUF_START + CH0_BUF_LENGTH - 1)
 #define CH0_BUF_THR	(CH0_BUF_LENGTH/2-1)
 

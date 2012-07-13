@@ -954,6 +954,8 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 		case USB_DT_STRING:
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 			set_string_mode(w_length);
+			if (w_length == 2)
+				cdev->mac_connected = 1;
 #endif
 			value = get_string(cdev, req->buf,
 					w_index, w_value & 0xff);

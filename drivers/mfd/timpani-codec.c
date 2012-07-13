@@ -3058,6 +3058,10 @@ static u32 timpani_adie_codec_freq_supported(
 			break;
 		}
 	}
+
+	if (rc != 0)
+		pr_info("%s : rc = %d\n", __func__, rc); /* QC_debug */
+
 	return rc;
 }
 int timpani_adie_codec_enable_sidetone(struct adie_codec_path *rx_path_ptr,

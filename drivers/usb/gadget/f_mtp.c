@@ -410,15 +410,6 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	ep->driver_data = dev;		/* claim the endpoint */
 	dev->ep_out = ep;
 
-	ep = usb_ep_autoconfig(cdev->gadget, out_desc);
-	if (!ep) {
-		DBG(cdev, "usb_ep_autoconfig for ep_out failed\n");
-		return -ENODEV;
-	}
-	DBG(cdev, "usb_ep_autoconfig for mtp ep_out got %s\n", ep->name);
-	ep->driver_data = dev;		/* claim the endpoint */
-	dev->ep_out = ep;
-
 	ep = usb_ep_autoconfig(cdev->gadget, intr_desc);
 	if (!ep) {
 		DBG(cdev, "usb_ep_autoconfig for ep_intr failed\n");
@@ -504,7 +495,17 @@ requeue_req:
 	}
 
 	/* wait for a request to complete */
-	ret = wait_event_interruptible(dev->read_wq, dev->rx_done);
+	ret = wait_event_interruptible(dev->read_wq,
+				dev->rx_done || dev->state != STATE_BUSY);
+	if (dev->state == STATE_CANCELED) {
+		r = -ECANCELED;
+		if (!dev->rx_done)
+			usb_ep_dequeue(dev->ep_out, req);
+		spin_lock_irq(&dev->lock);
+		dev->state = STATE_CANCELED;
+		spin_unlock_irq(&dev->lock);
+		goto done;
+	}
 	if (ret < 0) {
 		r = ret;
 		usb_ep_dequeue(dev->ep_out, req);
