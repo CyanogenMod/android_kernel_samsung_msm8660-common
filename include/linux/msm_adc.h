@@ -171,7 +171,7 @@ enum {
 #define CHANNEL_ADC_625_REF	0xf
 #define CHANNEL_ADC_1250_REF	0x10
 #define CHANNEL_ADC_325_REF	0x11
-#if defined(CONFIG_BATTERY_P5LTE)
+#if defined(CONFIG_BATTERY_P5LTE) || defined(CONFIG_BATTERY_P8LTE)
 #define CHANNEL_ADC_CABLE_CHECK 0x12
 #endif 
 // for getting ADC of accessory

@@ -99,6 +99,11 @@ config CMC623_P5LTE
 	depends on FB && ARCH_MSM
 	default n
 
+config CMC624_P8LTE
+	bool "Support for CMC624"
+	depends on FB && ARCH_MSM
+	default n
+
 config FB_MSM_OVERLAY
 	depends on FB_MSM_MDP40 && ANDROID_PMEM
 	bool "MDP4 overlay support"
@@ -110,7 +115,7 @@ config FB_MSM_MDP_ADDITIONAL_BUS_SCALING
 
 config FB_MSM_DTV
 	depends on FB_MSM_OVERLAY
-	bool
+	bool "Support DTV"
 	default n
 
 config FB_MSM_EXTMDDI
@@ -211,6 +216,12 @@ config FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1
 	select FB_MSM_MIPI_DSI
 	select FB_MSM_MIPI_DSI_ESD_REFRESH
 	select FB_MSM_MDP_ADDITIONAL_BUS_SCALING
+	default n
+
+config FB_MSM_MIPI_DSI_S6E8AB0_WXGA
+	bool
+	select FB_MSM_MIPI_DSI
+	select FB_MSM_MIPI_DSI_ESD_REFRESH
 	default n
 
 config FB_MSM_MIPI_DSI_ESD_REFRESH
@@ -359,6 +370,11 @@ config FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PT
 	select FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1
 	default n
 
+config FB_MSM_MIPI_S6E8AB0_WXGA_PT
+	bool
+	select FB_MSM_MIPI_DSI_S6E8AB0_WXGA
+	default n
+
 config FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_TRULY
@@ -373,6 +389,13 @@ config FB_MSM_OVERLAY0_WRITEBACK
         bool "MDP overlay0 write back mode enable"
 	---help---
 	  Support for MDP4 OVERLAY0 write back mode
+
+
+config FB_MSM_OVERLAY1_WRITEBACK
+        depends on FB_MSM_OVERLAY
+        bool "MDP overlay1 write back mode enable"
+        ---help---
+          Support for MDP4 OVERLAY1 write back mode
 
 config FB_MSM_WRITEBACK_MSM_PANEL
 	depends on FB_MSM_OVERLAY
@@ -606,6 +629,10 @@ config FB_MSM_MIPI_S6E8AA0_HD720_PANEL
 config FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL
 	bool "MIPI S6E8AA0)WXGA_Q1 Panel"
 	select FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PT
+
+config FB_MSM_MIPI_S6E8AB0_WXGA_PANEL
+	bool "MIPI S6E8AB0) WXGA Panel"
+	select FB_MSM_MIPI_S6E8AB0_WXGA_PT
 	
 config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT_PANEL
 	bool "MIPI NOVATEK CMD QHD PT Panel"
@@ -630,6 +657,7 @@ config FB_MSM_EBI2_TMD_QVGA_EPSON_QCIF
 	  Support for EBI2 TMD QVGA (240x320) and Epson QCIF (176x220) panel
 
 config FB_MSM_HDMI_AS_PRIMARY
+	depends on FB_MSM_HDMI_COMMON
 	bool "Use HDMI as primary panel"
 	---help---
 	Support for using HDMI as primary

@@ -109,9 +109,9 @@ static int k3dh_read_accel_raw_xyz(struct k3dh_data *k3dh, struct k3dh_acc *acc)
 }
 
 #if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D)|| defined(CONFIG_USA_MODEL_SGH_I727)|| defined(CONFIG_USA_MODEL_SGH_T989) \
- || defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_EUR_MODEL_GT_I9210) || defined(CONFIG_USA_MODEL_SGH_I957) \
+ || defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_EUR_MODEL_GT_I9210) || defined(CONFIG_EUR_MODEL_GT_P7320) || defined(CONFIG_USA_MODEL_SGH_I957) \
  || defined(CONFIG_USA_MODEL_SGH_I757)|| defined (CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577) \
- || defined(CONFIG_KOR_MODEL_SHV_E140S)|| defined (CONFIG_KOR_MODEL_SHV_E140K) || defined(CONFIG_KOR_MODEL_SHV_E140L)
+ || defined(CONFIG_KOR_MODEL_SHV_E140S)|| defined (CONFIG_KOR_MODEL_SHV_E140K) || defined(CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_TARGET_LOCALE_JPN)
 
 extern unsigned int get_hw_rev(void);
 #endif
@@ -133,7 +133,7 @@ static int k3dh_read_accel_xyz(struct k3dh_data *k3dh, struct k3dh_acc *acc)
 	acc->y -= k3dh->cal_data.y;
 	acc->z -= k3dh->cal_data.z;
 
-#if defined (CONFIG_TARGET_LOCALE_KOR)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 #if defined (CONFIG_KOR_MODEL_SHV_E110S)
 	if (get_hw_rev() >= 0x06 )
 	{
@@ -170,7 +170,7 @@ static int k3dh_read_accel_xyz(struct k3dh_data *k3dh, struct k3dh_acc *acc)
 	}
 #endif
 
-#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined (CONFIG_KOR_MODEL_SHV_E160K) && !defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if !defined(CONFIG_KOR_MODEL_SHV_E160S) && !defined (CONFIG_KOR_MODEL_SHV_E160K) && !defined(CONFIG_KOR_MODEL_SHV_E160L) && !defined (CONFIG_JPN_MODEL_SC_05D)
 	if (get_hw_rev() >= 0x04 )
 	{
 		s16 temp = acc->x;
@@ -204,6 +204,7 @@ static int k3dh_read_accel_xyz(struct k3dh_data *k3dh, struct k3dh_acc *acc)
                 s16 temp = acc->x;
                 acc->x = acc->y;
                 acc->y = (temp);
+	 	acc->z = -(acc->z);
 	}
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
 	if (get_hw_rev() >= 0x04 ) 

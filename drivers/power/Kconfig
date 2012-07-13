@@ -287,6 +287,12 @@ config BATTERY_P5LTE
 	help
 	  Say Y here to enable support for batteries with SEC features.
 
+config BATTERY_P8LTE
+	bool "Enable SEC P8 LTE battery driver"
+	default n
+	help
+	  Say Y here to enable support for batteries with SEC features.
+
 config BATTERY_MSM_FAKE
 	tristate "Fake MSM battery"
 	depends on ARCH_MSM && BATTERY_MSM

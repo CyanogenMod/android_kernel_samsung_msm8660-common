@@ -62,7 +62,7 @@
 #include "timpani_profile_dali_kt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E120L)  //DALI-LGT
 #include "timpani_profile_dali_lgt.h"
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S)  //QUINCY-SKT
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S)  || defined (CONFIG_JPN_MODEL_SC_05D) //QUINCY-SKT
 #include "timpani_profile_quincy_skt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E160K)  //QUINCY-KT
 #include "timpani_profile_quincy_kt.h"
@@ -70,12 +70,16 @@
 #include "timpani_profile_quincy_lgt.h"
 #elif defined(CONFIG_USA_MODEL_SGH_I957)  //P5LTE-ATT
 #include "timpani_profile_p5lte_att.h"
+#elif defined (CONFIG_EUR_MODEL_GT_P7320)  //P5LTE-EUR-OPEN //SHOULD BE CHECKED
+#include "timpani_profile_p5lte_att.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140S)  //P5LTE-SKT
 #include "timpani_profile_p5lte_skt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140K)  //P5LTE-KT
 #include "timpani_profile_p5lte_kt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140L)  //P5LTE-LGU
 #include "timpani_profile_p5lte_lgt.h"
+#elif defined(CONFIG_KOR_MODEL_SHV_E150S)  //P5LTE-SKT
+#include "timpani_profile_p8lte_skt.h"
 #else
 #include "timpani_profile_celox_kor.h"
 #endif
@@ -937,7 +941,7 @@ int msm_snddev_poweramp_off_lineout_I9210(void)
 }
 #endif
 
-#if defined (CONFIG_TARGET_LOCALE_KOR)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 static struct regulator *snddev_reg_l1;
 
 int msm_snddev_poweramp_on_lineout(void)
@@ -1603,7 +1607,7 @@ ADIE_HEADSET_TX_48000_256;
 
 
 // ------- DEFINITION OF VT CALL PAIRED DEVICES ------ 
-#if defined(CONFIG_TARGET_LOCALE_KOR)
+#if defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 static struct adie_codec_action_unit handset_vt_rx_48KHz_osr256_actions[] =
 ADIE_HANDSET_VT_RX_48000_256;
 static struct adie_codec_action_unit handset_vt_tx_48KHz_osr256_actions[] =
@@ -1788,7 +1792,7 @@ static struct adie_codec_action_unit fm_radio_speaker_rx_48KHz_osr256_actions[] 
 ADIE_SPEAKER_RX_48000_256;
 
 // ------- DEFINITION OF EXTERNAL DEVICES ------ 
-#if defined (CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_EUR_MODEL_GT_I9210)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_EUR_MODEL_GT_I9210) || defined (CONFIG_TARGET_LOCALE_JPN)
 static struct adie_codec_action_unit lineout_rx_48KHz_osr256_actions[] =
 ADIE_LINEOUT_RX_48000_256;
 #else
@@ -3106,7 +3110,12 @@ static struct snddev_icodec_data speaker_call_tx_data = {
 	.capability = (SNDDEV_CAP_TX | SNDDEV_CAP_VOICE),
 	.name = "speaker_call_tx",
 	.copp_id = PRIMARY_I2S_TX,
+/*sound mute on speaker fix*/
+#ifdef CONFIG_USA_MODEL_SGH_T769
+	.profile = &handset_call_tx_profile,
+#else
 	.profile = &speaker_call_tx_profile,
+#endif
 	.channel_mode = 1,
 	.default_sample_rate = AUDIO_FREQUENCY,
 #ifdef CONFIG_USA_MODEL_SGH_T769
@@ -3408,7 +3417,7 @@ static struct snddev_icodec_data lineout_rx_data = {
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 	.pamp_on = msm_snddev_vpsamp_on_headset,
 	.pamp_off = msm_snddev_vpsramp_off_headset,
-#elif defined(CONFIG_TARGET_LOCALE_KOR)
+#elif defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 	.pamp_on = msm_snddev_poweramp_on_lineout,
 	.pamp_off = msm_snddev_poweramp_off_lineout,	
 #elif defined(CONFIG_EUR_MODEL_GT_I9210)

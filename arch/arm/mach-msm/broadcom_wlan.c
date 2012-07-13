@@ -250,7 +250,11 @@ static struct resource brcm_wlan_resources[] = {
 		.name	= "bcmdhd_wlan_irq",
 		.start	=  MSM_GPIO_TO_INT(GPIO_WLAN_HOST_WAKE),
 		.end		=  MSM_GPIO_TO_INT(GPIO_WLAN_HOST_WAKE),
+#if defined(CONFIG_TARGET_SERIES_Q1) && defined(CONFIG_TARGET_LOCALE_USA)
+		.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
+#else
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+#endif
 	},
 };
 

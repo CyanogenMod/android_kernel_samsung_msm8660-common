@@ -354,7 +354,12 @@ enum rgnd_state {
 	RGND_2K,
 	RGND_SHORT
 };
-
+enum mhl_power_mode {
+	MHL_POWER_MODE_D0,
+	MHL_POWER_MODE_D2,
+	MHL_POWER_MODE_D3,
+	MHL_POWER_MODE_OFF=0xFF,
+};
 enum mhl_state {
 	STATE_DISCONNECTED = 0,
 	STATE_DISCOVERY_FAILED,
@@ -460,6 +465,7 @@ struct sii9234_data {
 	bool				claimed;
 	enum mhl_state			state;
 	enum rgnd_state			rgnd;
+	enum mhl_power_mode	power_mode;
 	bool				rsen;
 
 	struct mutex			lock;
@@ -473,9 +479,14 @@ struct sii9234_data {
 	struct input_dev		*input_dev;
 #endif
 	struct work_struct		redetect_work;
+#if defined(CONFIG_MHL_D3_SUPPORT)
+	struct workqueue_struct		*vbus_workqueue;
+	struct delayed_work		d3_timer_work;
+#endif
 };
 static struct device *sii9244_mhldev;
 extern void mhl_hpd_handler(bool state);
+extern int get_vbus_valid(void);
 static int sii9234_detection_callback(void);
 static void sii9234_cancel_callback(void);
 static u8 sii9234_tmds_control(struct sii9234_data *sii9234, bool enable);

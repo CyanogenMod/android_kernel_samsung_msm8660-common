@@ -60,6 +60,9 @@
 #if defined(CONFIG_SAMSUNG_8X60_TABLET) && defined (CONFIG_CMC623_P5LTE)
 #define MSM_CMC623_I2C_BUS_ID   17
 #endif
+#if defined(CONFIG_SAMSUNG_8X60_TABLET) && defined (CONFIG_CMC624_P8LTE)
+#define MSM_CMC624_I2C_BUS_ID   17
+#endif
 
 #define MSM_MOTOR_I2C_BUS_ID		17
 

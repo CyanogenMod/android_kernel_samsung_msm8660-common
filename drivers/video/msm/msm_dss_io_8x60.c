@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -32,8 +32,9 @@ static struct clk *dsi_m_pclk;
 static struct clk *dsi_s_pclk;
 
 static struct clk *amp_pclk;
+int mipi_dsi_clk_on;
 
-void mipi_dsi_clk_init(struct device *dev)
+void mipi_dsi_clk_init(struct platform_device *pdev)
 {
 	amp_pclk = clk_get(NULL, "amp_pclk");
 	if (IS_ERR(amp_pclk)) {
@@ -390,24 +391,43 @@ void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
 	wmb();
 }
 
+void cont_splash_clk_ctrl(void)
+{
+}
+
 void mipi_dsi_ahb_ctrl(u32 enable)
 {
+	static int ahb_ctrl_done;
 	if (enable) {
+		if (ahb_ctrl_done) {
+			pr_info("%s: ahb clks already ON\n", __func__);
+			return;
+		}
 		clk_enable(amp_pclk); /* clock for AHB-master to AXI */
 		clk_enable(dsi_m_pclk);
 		clk_enable(dsi_s_pclk);
 		mipi_dsi_ahb_en();
 		mipi_dsi_sfpb_cfg();
+		ahb_ctrl_done = 1;
 	} else {
+		if (ahb_ctrl_done == 0) {
+			pr_info("%s: ahb clks already OFF\n", __func__);
+			return;
+		}
 		clk_disable(dsi_m_pclk);
 		clk_disable(dsi_s_pclk);
 		clk_disable(amp_pclk); /* clock for AHB-master to AXI */
+		ahb_ctrl_done = 0;
 	}
 }
 
 void mipi_dsi_clk_enable(void)
 {
 	u32 pll_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0200);
+	if (mipi_dsi_clk_on) {
+		pr_info("%s: mipi_dsi_clks already ON\n", __func__);
+		return;
+	}
 	MIPI_OUTP(MIPI_DSI_BASE + 0x0200, pll_ctrl | 0x01);
 	mb();
 
@@ -417,10 +437,15 @@ void mipi_dsi_clk_enable(void)
 	mipi_dsi_clk_ctrl(&dsicore_clk, 1);
 	clk_enable(dsi_byte_div_clk);
 	clk_enable(dsi_esc_clk);
+	mipi_dsi_clk_on = 1;
 }
 
 void mipi_dsi_clk_disable(void)
 {
+	if (mipi_dsi_clk_on == 0) {
+		pr_info("%s: mipi_dsi_clks already OFF\n", __func__);
+		return;
+	}
 	clk_disable(dsi_esc_clk);
 	clk_disable(dsi_byte_div_clk);
 
@@ -428,6 +453,7 @@ void mipi_dsi_clk_disable(void)
 	mipi_dsi_clk_ctrl(&dsicore_clk, 0);
 	/* DSIPHY_PLL_CTRL_0, disable dsi pll */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x0200, 0x40);
+	mipi_dsi_clk_on = 0;
 }
 
 void mipi_dsi_phy_ctrl(int on)

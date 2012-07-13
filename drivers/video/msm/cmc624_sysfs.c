@@ -269,7 +269,7 @@ static ssize_t mdnie_scenario_store(struct device *dev,
 
 	return size;
 }
-static DEVICE_ATTR(mdnie_scenario, 0664, mdnie_scenario_show, mdnie_scenario_store);
+static DEVICE_ATTR(scenario, 0664, mdnie_scenario_show, mdnie_scenario_store);
 
 /* ##########################################################
  * #
@@ -347,7 +347,7 @@ static ssize_t mdnie_ove_store(struct device *dev,
     return size;
 }
 
-static DEVICE_ATTR(mdnie_ove, 0664, mdnie_ove_show, mdnie_ove_store);
+static DEVICE_ATTR(outdoor, 0664, mdnie_ove_show, mdnie_ove_store);
 
 /* ##########################################################
  * #
@@ -458,7 +458,7 @@ static ssize_t mdnie_bg_store(struct device *dev,
     return size;
 }
 
-static DEVICE_ATTR(mdnie_bg, 0664, mdnie_bg_show, mdnie_bg_store);
+static DEVICE_ATTR(mode, 0664, mdnie_bg_show, mdnie_bg_store);
 
 
 static ssize_t mdnie_roi_show(struct device *dev,
@@ -542,7 +542,7 @@ int cmc624_sysfs_init(void)
 		ret = -1;
 	}
 
-	tune_cmc624_dev = device_create(mdnie_class, NULL, 0, NULL, "cmc624");
+	tune_cmc624_dev = device_create(mdnie_class, NULL, 0, NULL, "mdnie");
 	if(IS_ERR(tune_cmc624_dev)) {
 		printk("Failed to create device(tune_cmc624_dev)!!");
 		ret = -1;
@@ -567,16 +567,16 @@ int cmc624_sysfs_init(void)
 		pr_err("Failed to create device file!(%s)!\n", dev_attr_lcdtype.attr.name);
 		ret = -1;
 	}
-    if (device_create_file(tune_cmc624_dev, &dev_attr_mdnie_scenario) < 0) {
-        pr_err("Failed to create device file!(%s)!\n", dev_attr_mdnie_scenario.attr.name);
+    if (device_create_file(tune_cmc624_dev, &dev_attr_scenario) < 0) {
+        pr_err("Failed to create device file!(%s)!\n", dev_attr_scenario.attr.name);
 		ret = -1;
     }
 	 if (device_create_file(tune_cmc624_dev, &dev_attr_tuning) < 0) {
         pr_err("Failed to create device file(%s)!\n",dev_attr_tuning.attr.name);
         ret = -1;
     }
-	if (device_create_file(tune_cmc624_dev, &dev_attr_mdnie_ove) < 0) {
-        printk("[CMC624:ERROR] device_crate_filed(%s) \n", dev_attr_mdnie_ove.attr.name);
+	if (device_create_file(tune_cmc624_dev, &dev_attr_outdoor) < 0) {
+        printk("[CMC624:ERROR] device_crate_filed(%s) \n", dev_attr_outdoor.attr.name);
         ret = -1;
     }
 
@@ -585,8 +585,8 @@ int cmc624_sysfs_init(void)
         ret = -1;
     }
 
-    if(device_create_file(tune_cmc624_dev, &dev_attr_mdnie_bg) < 0) {
-        printk("[CMC624:ERROR] device_crate_filed(%s) \n", dev_attr_mdnie_bg.attr.name);
+    if(device_create_file(tune_cmc624_dev, &dev_attr_mode) < 0) {
+        printk("[CMC624:ERROR] device_crate_filed(%s) \n", dev_attr_mode.attr.name);
         ret = -1;
     }
 #if defined(CONFIG_TARGET_LOCALE_KOR_SKT)

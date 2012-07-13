@@ -75,6 +75,7 @@ static const u16 mgmt_commands[] = {
 	MGMT_OP_CONFIRM_NAME,
 	MGMT_OP_BLOCK_DEVICE,
 	MGMT_OP_UNBLOCK_DEVICE,
+	MGMT_OP_LE_TEST_END,
 };
 
 static const u16 mgmt_events[] = {
@@ -2184,6 +2185,44 @@ unlock:
 	return err;
 }
 
+static int test_end_le(struct sock *sk, u16 index)
+{
+	struct hci_dev *hdev;
+	struct pending_cmd *cmd;
+	int err;
+
+	BT_DBG("test_end_le : hci%u", index);
+
+	hdev = hci_dev_get(index);
+	if (!hdev) {
+		BT_ERR("hci_dev_get : Failed !!!");
+		return cmd_status(sk, index, MGMT_OP_LE_TEST_END,	MGMT_STATUS_INVALID_PARAMS);
+	}
+
+	hci_dev_lock_bh(hdev);
+
+	cmd = mgmt_pending_add(sk, MGMT_OP_LE_TEST_END, hdev, NULL, 0);
+	if (!cmd) {
+		BT_ERR("mgmt_pending_add : Failed !!!");
+		err = -ENOMEM;
+		goto unlock;
+	}
+
+	err = hci_send_cmd(hdev, HCI_OP_LE_TEST_END , 0, NULL);
+
+	if (err < 0) {
+		BT_ERR("test_end_le : hci_send_cmd : Failed  err = %d!!!", err);
+		mgmt_pending_remove(cmd);
+	}
+
+unlock:
+	hci_dev_unlock_bh(hdev);
+	hci_dev_put(hdev);
+
+	return err;
+}
+
+
 static int confirm_name(struct sock *sk, u16 index, void *data, u16 len)
 {
 	struct mgmt_cp_confirm_name *cp = data;
@@ -2657,6 +2696,27 @@ int mgmt_read_rssi_complete(struct hci_dev *hdev, bdaddr_t *bdaddr, s8 rssi, u8 
 	return err;
 }
 
+static int le_test_end_complete(struct hci_dev *hdev, u8 status, u16 num_pkts)
+{
+	struct pending_cmd *cmd;
+	struct mgmt_rp_le_test_end rp;
+	int err;
+
+	cmd = mgmt_pending_find(MGMT_OP_LE_TEST_END, hdev);
+	if (!cmd) {
+		BT_ERR("le_test_end_complete : ENOENT");
+		return -ENOENT;
+	}
+
+	rp.status = status;
+	rp.num_pkts = num_pkts;
+
+	BT_DBG("le_test_end_complete : %s status %d, num_pkts 0x%x(%d)", hdev->name, rp.status, rp.num_pkts, rp.num_pkts);
+	err = cmd_complete(cmd->sk, hdev->id, MGMT_OP_LE_TEST_END, &rp, sizeof(rp));
+	mgmt_pending_remove(cmd);
+	return err;
+}
+
 int mgmt_control(struct sock *sk, struct msghdr *msg, size_t msglen)
 {
 	void *buf;
@@ -2808,6 +2868,9 @@ int mgmt_control(struct sock *sk, struct msghdr *msg, size_t msglen)
 	/* monitoring of the RSSI of the link between two Bluetooth devices */
 	case MGMT_OP_READ_RSSI:
 		err = read_rssi(sk, index, cp, len);
+		break;
+	case MGMT_OP_LE_TEST_END:
+		err = test_end_le(sk, index);
 		break;
 	default:
 		BT_DBG("Unknown op %u", opcode);
@@ -3383,6 +3446,12 @@ int mgmt_le_enable_complete(struct hci_dev *hdev, u8 enable, u8 status)
 		sock_put(match.sk);
 
 	return err;
+}
+
+int mgmt_le_test_end_complete(struct hci_dev *hdev, u8 status, __u16 num_pkts)
+{
+	BT_DBG("mgmt_le_test_end_complete : %s status %d, num_pkts 0x%x(%d)", hdev->name, status, num_pkts, num_pkts);
+	return le_test_end_complete(hdev, status, num_pkts);
 }
 
 int mgmt_device_found(struct hci_dev *hdev, bdaddr_t *bdaddr, u8 link_type,

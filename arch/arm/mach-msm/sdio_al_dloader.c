@@ -1028,10 +1028,13 @@ static int sdio_dld_create_thread(void)
 			__func__);
 		return -ENOMEM;
 	}
-	wake_up_process(sdio_dld->dld_main_thread.dld_task);
 	return 0;
 }
 
+static void sdio_dld_wakeup_thread(void)
+{
+	wake_up_process(sdio_dld->dld_main_thread.dld_task);
+}
 /**
   * start_timer
   * sets the timer and starts.
@@ -1167,6 +1170,8 @@ static int sdio_dld_open(struct tty_struct *tty, struct file *file)
 	init_timer(&sdio_dld->push_timer);
 	sdio_dld->push_timer.data = (unsigned long) sdio_dld;
 	sdio_dld->push_timer.function = sdio_dld_push_timer_handler;
+	
+	sdio_dld_wakeup_thread();
 
 	return 0;
 }
@@ -1204,18 +1209,18 @@ static void sdio_dld_close(struct tty_struct *tty, struct file *file)
 
 	sdio_dld_dealloc_local_buffers();
 
-    /* When multiple locks must be acquired, they should always be acquired in
-     * the same order. This func will be invoked from tty_release with obtaining the BTM. 
-     * then tty_mutex will be acquired in tty_unregister_device.
-     * Since the order of locks on tty_release func is tty_mutex then BTM, 
-     * We release the BTM to avoid the race with tty_mutex and BTM */
-    tty_unlock();
+	/* When multiple locks must be acquired, they should always be acquired in
+	  * the same order. This func will be invoked from tty_release with obtaining the BTM. 
+	  * then tty_mutex will be acquired in tty_unregister_device and tty_unregister_driver.
+	  * Since the order of locks on tty_release func is tty_mutex then BTM, 
+	  * We release the BTM to avoid the race with tty_mutex and BTM */
+	tty_unlock();
 
 	tty_unregister_device(sdio_dld->tty_drv, 0);
 
-    tty_lock();
-
 	status = tty_unregister_driver(sdio_dld->tty_drv);
+
+	tty_lock();
 
 	if (status) {
 		pr_err(MODULE_NAME ": %s - tty_unregister_driver() failed\n",
@@ -2164,7 +2169,10 @@ static int sdio_dld_main_task(void *card)
 				tty_flip_buffer_push(tty);
 			} while (left != 0);
 
-			del_timer(&sdio_dld->push_timer);
+			if (&sdio_dld->push_timer != NULL)
+				del_timer(&sdio_dld->push_timer);
+			else
+    			  pr_err(MODULE_NAME ": %s - invalid timer", __func__);
 
 			if (bytes_pushed != incoming->num_of_bytes_in_use) {
 				pr_err(MODULE_NAME ": %s - failed\n",

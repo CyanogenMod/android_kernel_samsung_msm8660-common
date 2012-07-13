@@ -726,6 +726,9 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 	if (data->opcode == RESET_EVENTS) {
 		pr_debug("q6asm_callback: Reset event is received: %d %d apr[%p]\n",
 				data->reset_event, data->reset_proc, ac->apr);
+			if (ac->cb)
+				ac->cb(data->opcode, data->token,
+					(uint32_t *)data->payload, ac->priv);
 		apr_reset(ac->apr);
 		return 0;
 	}
@@ -3211,7 +3214,7 @@ int q6asm_get_apr_service_id(int session_id)
 {
 	pr_debug("%s\n", __func__);
 
-	if (session_id < 0) {
+	if (session_id < 0 || session_id > SESSION_MAX) {
 		pr_err("%s: invalid session_id = %d\n", __func__, session_id);
 		return -EINVAL;
 	}
@@ -3230,14 +3233,22 @@ static int __init q6asm_init(void)
 	out_dentry = debugfs_create_file("audio_out_latency_measurement_node",\
 				S_IFREG | S_IRUGO | S_IWUGO,\
 				NULL, NULL, &audio_output_latency_debug_fops);
-	if (IS_ERR(out_dentry))
+	if (IS_ERR(out_dentry)) {
 		pr_err("debugfs_create_file failed\n");
+		kfree(out_buffer);
+		return 0;
+	}
 	in_buffer = kmalloc(IN_BUFFER_SIZE, GFP_KERNEL);
 	in_dentry = debugfs_create_file("audio_in_latency_measurement_node",\
 				S_IFREG | S_IRUGO | S_IWUGO,\
 				NULL, NULL, &audio_input_latency_debug_fops);
-	if (IS_ERR(in_dentry))
+	if (IS_ERR(in_dentry)) {
 		pr_err("debugfs_create_file failed\n");
+		kfree(in_buffer);
+		kfree(out_buffer);
+		debugfs_remove(out_dentry);
+		return 0;
+	}
 #endif
 	return 0;
 }
