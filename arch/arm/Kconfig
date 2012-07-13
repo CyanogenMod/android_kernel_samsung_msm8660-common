@@ -131,7 +131,7 @@ config GENERIC_IRQ_PROBE
 
 config GENERIC_LOCKBREAK
 	bool
-	default y
+	default y if !ARM_TICKET_LOCKS
 	depends on SMP && PREEMPT
 
 config ARM_TICKET_LOCKS
@@ -140,7 +140,7 @@ config ARM_TICKET_LOCKS
 	  Enable ticket locks, which help preserve fairness among
 	  contended locks and prevent livelock in multicore systems.
 	  Say 'y' if system stability is important.
-	default y if ARCH_MSM_SCORPIONMP
+	default y if ARCH_MSM_SCORPIONMP || ARCH_MSM_KRAITMP
 	depends on SMP
 
 config RWSEM_GENERIC_SPINLOCK
@@ -1508,19 +1508,18 @@ source "mm/Kconfig"
 
 config ARCH_MEMORY_PROBE
 	def_bool n
-	depends on MEMORY_HOTPLUG
 
 config ARCH_MEMORY_REMOVE
 	def_bool n
-	depends on MEMORY_HOTPLUG
 
 config ARCH_POPULATES_NODE_MAP
 	def_bool n
-	depends on MEMORY_HOTPLUG
+
+config ENABLE_DMM
+	def_bool n
 
 config FIX_MOVABLE_ZONE
 	def_bool n
-	depends on MEMORY_HOTPLUG
 
 config DONT_MAP_HOLE_AFTER_MEMBANK0
 	def_bool n
@@ -1531,6 +1530,10 @@ config ARCH_ENABLE_MEMORY_HOTPLUG
 
 config ARCH_ENABLE_MEMORY_HOTREMOVE
 	def_bool n
+
+config HOLES_IN_ZONE
+	def_bool n
+	depends on SPARSEMEM
 
 config FORCE_MAX_ZONEORDER
 	int "Maximum zone order" if ARCH_SHMOBILE

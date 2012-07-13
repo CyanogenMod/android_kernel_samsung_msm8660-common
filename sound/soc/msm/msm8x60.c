@@ -382,7 +382,7 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 #if defined (CONFIG_TARGET_LOCALE_USA)
 			if(!strcmp(dev_info->name, "dualmic_handset_ef_tx"))
 			{
-				pr_debug("%s : dualmic_enabled\n",__func__);
+				pr_info("%s : dualmic_enabled\n",__func__);
 				dualmic_enabled = 1;
 			}
 #endif
@@ -530,7 +530,7 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 				}
 				if ((dst_dev_info->opened) &&
 					(src_dev_info->opened)) {
-					pr_debug("%d: Enable afe_loopback\n",
+					pr_info("%d: Enable afe_loopback\n",
 							__LINE__);
 					afe_loopback(LOOPBACK_ENABLE,
 					       dst_dev_info->copp_id,
@@ -581,7 +581,7 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 						rc = PTR_ERR(src_dev_info);
 						return rc;
 					}
-					pr_debug("%d: Disable afe_loopback\n",
+					pr_info("%d: Disable afe_loopback\n",
 						__LINE__);
 					afe_loopback(LOOPBACK_DISABLE,
 					       dst_dev_info->copp_id,

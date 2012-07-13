@@ -71,13 +71,19 @@
 #elif defined (CONFIG_Q1_KOR_AUDIO)
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 149
-#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757)
+#elif defined (CONFIG_USA_MODEL_SGH_I727)
+#define KEY_MEDIA_ADC_MIN 0
+#define KEY_MEDIA_ADC_MAX 134
+#elif defined(CONFIG_USA_MODEL_SGH_I757)
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 122
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
 #define KEY_MEDIA_ADC_MIN 0
-#define KEY_MEDIA_ADC_MAX 121
+#define KEY_MEDIA_ADC_MAX 76
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
+#define KEY_MEDIA_ADC_MIN 0
+#define KEY_MEDIA_ADC_MAX 178
+#elif defined (CONFIG_EUR_MODEL_GT_P7320)
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 178
 #elif defined (CONFIG_KOR_MODEL_SHV_E140S)
@@ -95,7 +101,7 @@
 #endif
 
 
-#if defined CONFIG_TARGET_LOCALE_KOR
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 #if defined (CONFIG_KOR_MODEL_SHV_E120S) || defined (CONFIG_KOR_MODEL_SHV_E120K)
 #define KEY_VOLUMEUP_ADC_MIN 117
 #define KEY_VOLUMEUP_ADC_MAX 311
@@ -124,13 +130,22 @@
 #elif defined (CONFIG_USA_MODEL_SGH_T989)
 #define KEY_VOLUMEUP_ADC_MIN 149
 #define KEY_VOLUMEUP_ADC_MAX 284
-#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757)
+#elif defined (CONFIG_USA_MODEL_SGH_I727R) 
+#define KEY_VOLUMEUP_ADC_MIN 134
+#define KEY_VOLUMEUP_ADC_MAX 310
+#elif defined (CONFIG_USA_MODEL_SGH_I727) 
+#define KEY_VOLUMEUP_ADC_MIN 134
+#define KEY_VOLUMEUP_ADC_MAX 310
+#elif defined (CONFIG_USA_MODEL_SGH_I757)
 #define KEY_VOLUMEUP_ADC_MIN 122
 #define KEY_VOLUMEUP_ADC_MAX 310
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
-#define KEY_VOLUMEUP_ADC_MIN 121
-#define KEY_VOLUMEUP_ADC_MAX 251
+#define KEY_VOLUMEUP_ADC_MIN 76
+#define KEY_VOLUMEUP_ADC_MAX 231
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
+#define KEY_VOLUMEUP_ADC_MIN 189
+#define KEY_VOLUMEUP_ADC_MAX 391
+#elif defined (CONFIG_EUR_MODEL_GT_P7320)
 #define KEY_VOLUMEUP_ADC_MIN 189
 #define KEY_VOLUMEUP_ADC_MAX 391
 #elif defined (CONFIG_KOR_MODEL_SHV_E140S)
@@ -148,7 +163,7 @@
 #endif
 
 
-#if defined CONFIG_TARGET_LOCALE_KOR
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 #if defined (CONFIG_KOR_MODEL_SHV_E120S) || defined (CONFIG_KOR_MODEL_SHV_E120K)
 #define KEY_VOLUMEDOWN_ADC_MIN 315
 #define KEY_VOLUMEDOWN_ADC_MAX 758
@@ -181,7 +196,7 @@
 #define KEY_VOLUMEDOWN_ADC_MIN 310
 #define KEY_VOLUMEDOWN_ADC_MAX 681
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
-#define KEY_VOLUMEDOWN_ADC_MIN 251
+#define KEY_VOLUMEDOWN_ADC_MIN 231
 #define KEY_VOLUMEDOWN_ADC_MAX 681
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
 #define KEY_VOLUMEDOWN_ADC_MIN 438
@@ -534,7 +549,7 @@ static void sec_jack_send_key_work_func(struct work_struct *work)
 	struct sec_jack_platform_data *pdata = hi->pdata;
 	int time_left_ms = SEND_KEY_CHECK_TIME_MS;
 	int send_key_state=0;
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 	int adc = 0;
 #endif
 	
@@ -559,7 +574,7 @@ static void sec_jack_send_key_work_func(struct work_struct *work)
 		msleep(10);
 		time_left_ms -= 10;
 		
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 		if(time_left_ms <= 20) {
 			adc = pdata->get_adc_value();
 			if((adc >= KEY_MEDIA_ADC_MIN && adc < KEY_MEDIA_ADC_MAX)) {

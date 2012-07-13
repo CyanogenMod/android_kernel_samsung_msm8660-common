@@ -421,7 +421,7 @@ static void l2cap_chan_del(struct l2cap_chan *chan, int err)
 
 		if (conn->hcon) {
 			conn->hcon->out = 1;
-		hci_conn_put(conn->hcon);
+			hci_conn_put(conn->hcon);
 		}
 	}
 

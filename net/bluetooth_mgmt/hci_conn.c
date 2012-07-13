@@ -215,14 +215,24 @@ void hci_setup_sync(struct hci_conn *conn, __u16 handle)
 	conn->attempt++;
 
 	cp.handle   = cpu_to_le16(handle);
-	cp.pkt_type = cpu_to_le16(conn->pkt_type);
-
+	/* wbs */
 	cp.tx_bandwidth   = cpu_to_le32(0x00001f40);
 	cp.rx_bandwidth   = cpu_to_le32(0x00001f40);
+
+	if (conn->hdev->is_wbs) {
+		/* Transparent Data */
+		uint16_t voice_setting = hdev->voice_setting | ACF_TRANS;
+		cp.max_latency    = cpu_to_le16(0x000A);
+		cp.pkt_type = cpu_to_le16(ESCO_WBS);
+		cp.voice_setting  = cpu_to_le16(voice_setting);
+		/* Retransmission Effort */
+		cp.retrans_effort = RE_LINK_QUALITY;
+	} else {
 	cp.max_latency    = cpu_to_le16(0xffff);
+		cp.pkt_type = cpu_to_le16(conn->pkt_type);
 	cp.voice_setting  = cpu_to_le16(hdev->voice_setting);
 	cp.retrans_effort = 0xff;
-
+	}
 	hci_send_cmd(hdev, HCI_OP_SETUP_SYNC_CONN, sizeof(cp), &cp);
 }
 

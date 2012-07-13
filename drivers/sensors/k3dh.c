@@ -570,7 +570,9 @@ static ssize_t k3dh_acc_raw_data_show(struct device *dev,
 	printk("[K3DH] x=%d, y=%d, z=%d\n", acc_raw_data.x, acc_raw_data.y, acc_raw_data.z );
 
 	return sprintf(buf, "%d,%d,%d\n",
-			acc_raw_data.x, acc_raw_data.y, acc_raw_data.z );
+			-1 * acc_raw_data.y,
+			-1 * acc_raw_data.x,
+			-1 * acc_raw_data.z );
 }
 
 static DEVICE_ATTR(calibration, 0664,

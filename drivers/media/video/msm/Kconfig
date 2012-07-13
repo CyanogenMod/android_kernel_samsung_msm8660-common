@@ -33,7 +33,7 @@ config MT9D112
 	  MICRON 2M YUV Sensor
 config IMX074
 	bool "Sensor IMX074 (BAYER 13.5M)"
-	depends on MSM_CAMERA && (ARCH_MSM8X60 || ARCH_MSM8960)
+	depends on MSM_CAMERA
 	default n
 	---help---
 	SONY 13.5 MP Bayer Sensor
@@ -94,7 +94,7 @@ config WEBCAM_OV7692_QRD
 	  Omni Vision VGA YUV Sensor for QRD Devices
 config MT9M114
         bool "Sensor MT9M114 (YUV 1.26M)"
-        depends on MSM_CAMERA && ARCH_MSM8960
+        depends on MSM_CAMERA
         ---help---
         APTINA 1.26 MP yuv Sensor
 config WEBCAM_OV7692
@@ -113,7 +113,7 @@ config WEBCAM_OV9726
 #	This uses the CSI interface.
 config VX6953
 	bool "Sensor VX6953 (BAYER 5M)"
-	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60)
+	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60) && !MSM_CAMERA_V4L2
 	default n
 	---help---
 	STM 5M Bayer Sensor with EDOF
@@ -163,8 +163,7 @@ config MT9E013
 
 config IMX074_ACT
 	bool "Actuator IMX074 (BAYER 13.5M)"
-	depends on MSM_CAMERA && ARCH_MSM8960
-	default y
+	depends on MSM_CAMERA
 	---help---
 	Actuator for SONY 13.5 MP Bayer Sensor
 
@@ -220,8 +219,7 @@ config IMX072
 
 config OV2720
 	bool "Sensor ov2720 (Omnivision 2MP)"
-	depends on MSM_CAMERA && ARCH_MSM8960
-	default y
+	depends on MSM_CAMERA
 
 config VB6801
 	bool "Sensor vb6801"

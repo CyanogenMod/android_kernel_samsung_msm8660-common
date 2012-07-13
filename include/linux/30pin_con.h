@@ -15,13 +15,31 @@
 #ifndef __ASM_ARCH_ACC_CONN_H
 #define __ASM_ARCH_ACC_CONN_H
 
+#ifdef CONFIG_SEC_KEYBOARD_DOCK
+struct sec_keyboard_callbacks {
+	int (*check_keyboard_dock)(struct sec_keyboard_callbacks *cb,
+		bool attached);
+};
+
+struct sec_keyboard_platform_data {
+	int accessory_irq_gpio;
+	int (*wakeup_key)(void);
+	void (*check_uart_path)(bool en);
+	void	(*acc_power)(u8 token, bool active);
+	void (*register_cb)(struct sec_keyboard_callbacks *cb);
+};
+#endif
+
 struct acc_con_platform_data {
 	void	(*otg_en) (int active);
 	void	(*acc_power) (u8 token, bool active);
 	void    (*usb_ldo_en) (int active);
+	int (*get_acc_state)(void);
 	int (*get_dock_state)(void);
+	int (*check_keyboard)(bool attached);
 	int     accessory_irq_gpio;
-	int     dock_irq;
+	int dock_irq_gpio;
+	int dock_irq;
 	int     mhl_irq_gpio;
 	int     hdmi_hpd_gpio;
 };

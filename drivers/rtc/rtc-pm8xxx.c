@@ -409,10 +409,10 @@ static int __devinit pm8xxx_rtc_probe(struct platform_device *pdev)
 	struct resource *rtc_resource;
 	const struct pm8xxx_rtc_platform_data *pdata =
 		pdev->dev.platform_data;
-#ifdef CONFIG_SAMSUNG_8X60_TABLET
+
+	/* Added by SEC */
 	struct rtc_time tm;
 	unsigned long tv_sec;
-#endif
 
 	if (pdata != NULL)
 		rtc_write_enable = pdata->rtc_write_enable;
@@ -502,7 +502,7 @@ static int __devinit pm8xxx_rtc_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, 1);
 
-#ifdef CONFIG_SAMSUNG_8X60_TABLET
+	/* Added by SEC */
 	rc = pm8xxx_rtc_read_time(&pdev->dev, &tm);
 	if (rc) {
 		pr_err("%s: Unable to read RTC time\n", __func__);
@@ -526,7 +526,6 @@ static int __devinit pm8xxx_rtc_probe(struct platform_device *pdev)
 			}
 		}
 	}
-#endif
 
 	dev_dbg(&pdev->dev, "Probe success !!\n");
 

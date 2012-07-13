@@ -37,7 +37,7 @@ struct akm8975_data {
 	struct mutex lock;
 	struct miscdevice akmd_device;
 	struct completion data_ready;
-#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M) ||  defined(CONFIG_USA_MODEL_SGH_T769)
 	struct class *akm8975_class;
 	struct device *akm8975_dev;
 #endif		
@@ -241,7 +241,7 @@ done:
 	return sprintf(buf, "%d,%d,%d\n", x, y, z);
 }
 
-#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M) || defined(CONFIG_USA_MODEL_SGH_T769)  
 /* sysfs for logging Power line noise */
 static ssize_t akm8975_rawdata_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -517,8 +517,8 @@ int akm8975_probe(struct i2c_client *client,
 		akm->power_off = pdata->power_off;
 
 #if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_EUR_MODEL_GT_I9210) \
-     ||	 defined(CONFIG_USA_MODEL_SGH_I577) 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+     ||	 defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_T769) || defined (CONFIG_JPN_MODEL_SC_05D)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (get_hw_rev() >= 0x04 ) {
 #elif  defined(CONFIG_USA_MODEL_SGH_I577)
 	if (get_hw_rev() >= 0x06 ) {	
@@ -574,7 +574,7 @@ int akm8975_probe(struct i2c_client *client,
 	if (err)
 		goto exit_akmd_device_register_failed;
 
-#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M) || defined(CONFIG_USA_MODEL_SGH_T769)
 	/* creating class/device for test */
 	akm->akm8975_class = class_create(THIS_MODULE, "magnetometer");
 	if(IS_ERR(akm->akm8975_class)) {
@@ -604,7 +604,7 @@ int akm8975_probe(struct i2c_client *client,
 	printk("ak8975 probe success!\n");
 
 	return 0;
-#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_CAN_MODEL_SGH_I757M) || defined(CONFIG_USA_MODEL_SGH_T769)
 exit_device_create_file_failed:
 	device_destroy(akm->akm8975_class, 0);
 exit_device_create_failed:

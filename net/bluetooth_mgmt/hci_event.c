@@ -1096,6 +1096,13 @@ static inline void hci_cc_write_le_host_supported(struct hci_dev *hdev,
 	hci_send_cmd(hdev, HCI_OP_READ_LOCAL_EXT_FEATURES, sizeof(cp), &cp);
 }
 
+static void hci_cc_le_test_end(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	struct hci_rp_le_test_end *rp = (void *) skb->data;
+	BT_DBG("hci_cc_le_test_end : %s status 0x%x, num_pkts 0x%x(%d)", hdev->name, rp->status, rp->num_pkts, rp->num_pkts);
+	mgmt_le_test_end_complete(hdev, rp->status, rp->num_pkts);
+}
+
 static inline void hci_cs_inquiry(struct hci_dev *hdev, __u8 status)
 {
 	BT_DBG("%s status 0x%x", hdev->name, status);
@@ -1976,9 +1983,19 @@ static inline void hci_remote_name_evt(struct hci_dev *hdev, struct sk_buff *skb
 	if (!test_bit(HCI_MGMT, &hdev->dev_flags))
 		goto check_auth;
 
-	if (ev->status == 0)
+	if (ev->status == 0) {
 		hci_check_pending_name(hdev, conn, &ev->bdaddr, ev->name,
 					strnlen(ev->name, HCI_MAX_NAME_LENGTH));
+		/* workaround for HM1800
+		* If HM1800 & incoming connection, change the role as master
+		*/
+		if (conn != NULL && !conn->out
+		&& (!strncmp(ev->name, "HM1800", 6) || !strncmp(ev->name, "HM5000", 6))) {
+			BT_ERR("VPS's device should be change role");
+			hci_conn_switch_role(conn, 0x00);
+		}
+
+	}
 	else
 		hci_check_pending_name(hdev, conn, &ev->bdaddr, NULL, 0);
 
@@ -2362,6 +2379,10 @@ static inline void hci_cmd_complete_evt(struct hci_dev *hdev, struct sk_buff *sk
 	/* monitoring of the RSSI of the link between two Bluetooth devices */
 	case HCI_OP_READ_RSSI:
 		hci_cc_read_rssi(hdev, skb);
+		break;
+
+	case HCI_OP_LE_TEST_END:
+		hci_cc_le_test_end(hdev, skb);
 		break;
 
 	default:
@@ -2894,6 +2915,8 @@ static inline void hci_sync_conn_complete_evt(struct hci_dev *hdev, struct sk_bu
 	case 0x1a:	/* Unsupported Remote Feature */
 	case 0x1f:	/* Unspecified error */
 		if (conn->out && conn->attempt < 2) {
+			/* wbs */
+			if (!conn->hdev->is_wbs)
 			conn->pkt_type = (hdev->esco_type & SCO_ESCO_MASK) |
 					(hdev->esco_type & EDR_ESCO_MASK);
 			hci_setup_sync(conn, conn->link->handle);

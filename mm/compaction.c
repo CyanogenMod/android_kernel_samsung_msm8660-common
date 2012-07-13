@@ -604,7 +604,12 @@ unsigned long compact_zone_order(struct zone *zone,
 	return compact_zone(zone, &cc);
 }
 
+#if defined(CONFIG_USA_MODEL_SGH_I717)
+/* Change the fragmentation index to 300 as we observed the oom-killer happend with index 500 */
+int sysctl_extfrag_threshold = 300 ;
+#else
 int sysctl_extfrag_threshold = 500;
+#endif
 
 /**
  * try_to_compact_pages - Direct compact to satisfy a high-order allocation
