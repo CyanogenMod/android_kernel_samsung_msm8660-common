@@ -1357,7 +1357,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	fbi->fix.smem_start = (unsigned long)fbram_phys;
 
 	mfd->map_buffer = msm_subsystem_map_buffer(
-		fbi->fix.smem_start, fbi->fix.smem_len,
+		fbi->fix.smem_start, fbi->fix.smem_len * 2,
 		flags, subsys_id, 2);
 	if (mfd->map_buffer) {
 		pr_debug("%s(): buf 0x%lx, mfd->map_buffer->iova[0] 0x%lx\n"

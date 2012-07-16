@@ -3159,7 +3159,7 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 			mfd->mem_hid);
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
 			if (ion_map_iommu(mfd->iclient, buf->ihdl,
-				DISPLAY_DOMAIN, GEN_POOL, SZ_4K, 0, &addr,
+				DISPLAY_DOMAIN, GEN_POOL, SZ_4K, buffer_size * 2, &addr,
 				&len, 0, 0)) {
 				pr_err("ion_map_iommu() failed\n");
 				return -ENOMEM;
