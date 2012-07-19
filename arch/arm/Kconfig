@@ -1296,6 +1296,14 @@ config SMP_ON_UP
 
 	  If you don't know what to do here, say Y.
 
+config ARM_CPU_TOPOLOGY
+	bool "Support cpu topology definition"
+	depends on SMP && CPU_V7
+	default y
+	help
+	  Support ARM cpu topology definition. The MPIDR register defines
+	  affinity between processors which is then used to describe the cpu
+	  topology of an ARM System.
 config HAVE_ARM_SCU
 	bool
 	depends on SMP

@@ -110,4 +110,5 @@ extern struct acpuclk_soc_data acpuclk_9xxx_soc_data;
 extern struct acpuclk_soc_data acpuclk_9615_soc_data;
 extern struct acpuclk_soc_data acpuclk_8930_soc_data;
 
+extern uint32_t acpu_check_khz_value(unsigned long khz);
 #endif

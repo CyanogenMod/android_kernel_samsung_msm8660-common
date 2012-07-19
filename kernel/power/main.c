@@ -16,6 +16,7 @@
 #include "power.h"
 #ifdef CONFIG_SEC_DVFS
 #include <linux/cpufreq.h>
+#include <linux/rq_stats.h>
 #endif
 
 DEFINE_MUTEX(pm_mutex);
@@ -317,112 +318,21 @@ power_attr(wake_unlock);
 #endif
 
 #ifdef CONFIG_SEC_DVFS
-DEFINE_MUTEX(dvfs_mutex);
-static unsigned long dvfs_id = 0;
-static unsigned long apps_min_freq = MIN_FREQ_LIMIT;
-static unsigned long apps_max_freq = MAX_FREQ_LIMIT;
-static unsigned long thermald_max_freq = MAX_FREQ_LIMIT;
+static unsigned int freq_min_apps;
+static unsigned int freq_max_apps;
+static unsigned int freq_min_apps_lock;
+static unsigned int freq_max_apps_lock;
 
-static unsigned long touch_min_freq = MAX_TOUCH_LIMIT;
-static unsigned long unicpu_max_freq = MAX_UNICPU_LIMIT;
-
-static int verify_cpufreq_target(unsigned int target)
+int cpufreq_get_dvfs_state(void)
 {
-	int i;
-	struct cpufreq_frequency_table *table;
+	int ret = -1;
 
-	table = cpufreq_frequency_get_table(BOOT_CPU);
-	if (table == NULL)
-		return -EFAULT;
+	if (freq_min_apps_lock)
+		ret = 0;
+	else if (freq_max_apps_lock)
+		ret = 1;
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) 
-	{
-		if (table[i].frequency < MIN_FREQ_LIMIT || table[i].frequency > MAX_FREQ_LIMIT)
-			continue;
-		
-		if (target == table[i].frequency)
-			return 0;
-	}
-
-	return -EINVAL;
-}
-
-int set_freq_limit(unsigned long id, unsigned int freq)
-{
-	int ret = 0;
-	unsigned int min = MIN_FREQ_LIMIT;
-	unsigned int max = MAX_FREQ_LIMIT;
-	unsigned int cur = 0;	
-
-	if (id < 0)
-		return -EINVAL;
-	
-	if (freq != 0 && freq != -1 && verify_cpufreq_target(freq))
-		return -EINVAL;
-
-	mutex_lock(&dvfs_mutex);
-
-	if (freq == -1)
-		dvfs_id &= ~id;
-	else
-		dvfs_id |= id;
-
-	/* update freq for apps/thermald */
-	if (id == DVFS_APPS_MIN_ID)
-		apps_min_freq = freq;
-	else if (id == DVFS_APPS_MAX_ID)
-		apps_max_freq = freq;
-	else if (id == DVFS_THERMALD_ID)
-		thermald_max_freq = freq;
-
-	/* set min - apps */
-	if (dvfs_id & DVFS_APPS_MIN_ID && min < apps_min_freq)
-		min = apps_min_freq;
-	if (dvfs_id & DVFS_TOUCH_ID && min < touch_min_freq)
-		min = touch_min_freq;
-
-	/* set max */
-	if (dvfs_id & DVFS_APPS_MAX_ID && max > apps_max_freq)
-		max = apps_max_freq;
-	if (dvfs_id & DVFS_THERMALD_ID && max > thermald_max_freq)
-		max = thermald_max_freq;
-	if (dvfs_id & DVFS_UNICPU_ID && max > unicpu_max_freq)
-		max = unicpu_max_freq;
-
-	/* check min max*/
-	if (min > max)
-		min = max;
-
-	/* update */
-	set_min_lock(min);
-	set_max_lock(max);
-
-	printk("%s: 0x%x %d, min %d, max %d\n", __FUNCTION__, id, freq, min, max);
-
-	/* need to update now */
-	if (id & UPDATE_NOW_BITS)
-	{
-		int cpu;
-
-		for_each_online_cpu(cpu) 
-		{
-			cur = cpufreq_quick_get(cpu);
-			if (cur)
-			{
-				struct cpufreq_policy policy;
-				policy.cpu = cpu;
-				
-				if (cur < min)
-					cpufreq_driver_target(&policy, min, CPUFREQ_RELATION_H);
-				else if (cur > max)
-					cpufreq_driver_target(&policy, max, CPUFREQ_RELATION_L);
-			}
-		}
-	}
-	
-	mutex_unlock(&dvfs_mutex);	
-
-	return 0;
+	return ret;
 }
 
 static ssize_t cpufreq_min_limit_show(struct kobject *kobj,
@@ -430,9 +340,10 @@ static ssize_t cpufreq_min_limit_show(struct kobject *kobj,
 {
 	int freq;
 
-	freq = get_min_lock();
-	if (!freq)
+	if (!freq_min_apps_lock)
 		freq = -1;
+	else
+		freq = freq_min_apps;
 
 	return sprintf(buf, "%d\n", freq);
 }
@@ -445,9 +356,51 @@ static ssize_t cpufreq_min_limit_store(struct kobject *kobj,
 	
 	sscanf(buf, "%d", &freq_min_limit);
 
-	set_freq_limit(DVFS_APPS_MIN_ID, freq_min_limit);
+	if (freq_min_limit == -1) {
+		cpufreq_set_limit(
+			APPS_MIN_STOP,
+			MIN_FREQ_LIMIT);
+		freq_min_apps = MIN_FREQ_LIMIT;
+		freq_min_apps_lock = 0;
+	} else {
+		int i;
+		struct cpufreq_frequency_table *table;
+
+		table = cpufreq_frequency_get_table(0);
+		if (table != NULL) {
+			for (i = 0;
+				table[i].frequency != CPUFREQ_TABLE_END; i++) {
+
+				if (table[i].frequency == freq_min_limit) {
+					if (freq_min_limit <= MIN_FREQ_LIMIT) {
+						cpufreq_set_limit(
+							APPS_MIN_STOP,
+							MIN_FREQ_LIMIT);
+						freq_min_apps = MIN_FREQ_LIMIT;
+						freq_min_apps_lock = 1;
+					} else if (freq_min_limit
+							  >= MAX_FREQ_LIMIT) {
+						cpufreq_set_limit(
+							APPS_MIN_START,
+							MAX_FREQ_LIMIT);
+						freq_min_apps = MAX_FREQ_LIMIT;
+						freq_min_apps_lock = 1;
+					} else {
+						cpufreq_set_limit(
+							APPS_MIN_START,
+							freq_min_limit);
+						freq_min_apps = freq_min_limit;
+						freq_min_apps_lock = 1;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
 #ifdef CONFIG_SEC_DVFS_DUAL
-	if (freq_min_limit == MAX_FREQ_LIMIT)
+	if (freq_min_limit >= MAX_FREQ_LIMIT)
 		dual_boost(1);
 	else
 		dual_boost(0);
@@ -460,10 +413,11 @@ static ssize_t cpufreq_max_limit_show(struct kobject *kobj,
 {
 	int freq;
 
-	freq = get_max_lock();
-	if (!freq)
+	if (!freq_max_apps_lock)
 		freq = -1;
-	
+		else
+			freq = freq_max_apps;
+
 	return sprintf(buf, "%d\n", freq);
 }
 
@@ -475,8 +429,48 @@ static ssize_t cpufreq_max_limit_store(struct kobject *kobj,
 
 	sscanf(buf, "%d", &freq_max_limit);
 
-	set_freq_limit(DVFS_APPS_MAX_ID, freq_max_limit);
-	
+	if (freq_max_limit == -1) {
+		cpufreq_set_limit(
+			APPS_MAX_STOP,
+			MAX_FREQ_LIMIT);
+		freq_max_apps = MAX_FREQ_LIMIT;
+		freq_max_apps_lock = 0;
+	} else {
+		int i;
+		struct cpufreq_frequency_table *table;
+
+		table = cpufreq_frequency_get_table(0);
+		if (table != NULL) {
+			for (i = 0;
+				table[i].frequency != CPUFREQ_TABLE_END; i++) {
+
+				if (table[i].frequency == freq_max_limit) {
+					if (freq_max_limit <= MIN_FREQ_LIMIT) {
+						cpufreq_set_limit(
+							APPS_MAX_START,
+							MIN_FREQ_LIMIT);
+						freq_max_apps = MIN_FREQ_LIMIT;
+						freq_max_apps_lock = 1;
+					} else if (freq_max_limit
+							  >= MAX_FREQ_LIMIT) {
+						cpufreq_set_limit(
+							APPS_MAX_STOP,
+							MAX_FREQ_LIMIT);
+						freq_max_apps = MAX_FREQ_LIMIT;
+						freq_max_apps_lock = 1;
+					} else {
+						cpufreq_set_limit(
+							APPS_MAX_START,
+							freq_max_limit);
+						freq_max_apps = freq_max_limit;
+						freq_max_apps_lock = 1;
+					}
+
+					break;
+				}
+			}
+		}
+	}
 	return n;
 }
 static ssize_t cpufreq_table_show(struct kobject *kobj,
@@ -488,20 +482,17 @@ static ssize_t cpufreq_table_show(struct kobject *kobj,
 
 	struct cpufreq_frequency_table *table;
 
-	table = cpufreq_frequency_get_table(BOOT_CPU);
+	table = cpufreq_frequency_get_table(0);
 	if (table == NULL)
 		return 0;
 
-	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++) ;
+	for (i = 0; table[i].frequency != CPUFREQ_TABLE_END; i++)
+		;
+
 	count = i;
 
-	for (i = count-1; i >= 0; i--) 
-	{
+	for (i = count-1; i >= 0; i--) {
 		freq = table[i].frequency;
-
-		if (freq < MIN_FREQ_LIMIT || freq > MAX_FREQ_LIMIT)
-			continue;
-
 		len += sprintf(buf + len, "%u ", freq);
 	}
 
@@ -515,7 +506,7 @@ static ssize_t cpufreq_table_store(struct kobject *kobj,
 					struct kobj_attribute *attr,
 					const char *buf, size_t n)
 {
-	printk("%s: Not supported\n", __func__);
+	printk(KERN_ERR"%s: Not supported\n", __func__);
 	return n;
 }
 
@@ -577,6 +568,12 @@ static int __init pm_init(void)
 	power_kobj = kobject_create_and_add("power", NULL);
 	if (!power_kobj)
 		return -ENOMEM;
+#ifdef CONFIG_SEC_DVFS
+	freq_min_apps = MIN_FREQ_LIMIT;
+	freq_max_apps = MAX_FREQ_LIMIT;
+	freq_min_apps_lock = 0;
+	freq_max_apps_lock = 0;
+#endif
 	return sysfs_create_group(power_kobj, &attr_group);
 }
 

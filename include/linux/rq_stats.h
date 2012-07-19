@@ -26,6 +26,11 @@ struct rq_data {
 	int init;
 };
 
+#ifdef CONFIG_SEC_DVFS_DUAL
+void dual_boost(unsigned int boost_on);
+int get_dual_boost_state(void);
+#endif
+
 extern spinlock_t rq_lock;
 extern struct rq_data rq_info;
 extern struct workqueue_struct *rq_wq;
