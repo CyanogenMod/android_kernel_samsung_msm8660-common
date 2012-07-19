@@ -2,6 +2,7 @@
  * Driver for keys on GPIO lines capable of generating interrupts.
  *
  * Copyright 2005 Phil Blundell
+ * COpyright 2011 Michael Richter (alias neldar)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -28,6 +29,7 @@
 #include <asm/uaccess.h>
 #include <linux/earlysuspend.h>
 #include <asm/io.h>
+#include <linux/bln.h>
 #ifdef CONFIG_CPU_FREQ
 //#include <mach/cpu-freq-v210.h>  //temp ks
 #endif
@@ -616,7 +618,13 @@ static void melfas_touchkey_early_suspend(struct early_suspend *h)
 #if defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717)    
     int ret = 0;
     signed char int_data[] ={0x80};
-#endif    
+#endif
+
+#ifdef CONFIG_GENERIC_BLN
+    if (bln_is_ongoing())
+        return;
+#endif
+
     touchkey_enable = 0;
     set_touchkey_debug('S');
     printk(KERN_DEBUG "melfas_touchkey_early_suspend\n");
@@ -889,6 +897,41 @@ schedule_delayed_work(&touch_resume_work, msecs_to_jiffies(500));
 }
 #endif				// End of CONFIG_HAS_EARLYSUSPEND
 
+static void enable_touchkey_backlights(void){
+    signed char int_data[] ={0x10};
+    i2c_touchkey_write(int_data, 1 );
+}
+
+static void disable_touchkey_backlights(void){
+    signed char int_data[] ={0x20};
+    i2c_touchkey_write(int_data, 1 );
+}
+
+static void cypress_touchkey_enable_led_notification(void){
+    if( touchkey_enable != 1 ){
+        tkey_vdd_enable(1);
+        tkey_led_vdd_enable(1);
+        touchkey_enable = 1;
+        enable_touchkey_backlights();
+    }
+    else
+        pr_info("%s, cannot set notification led, touchkeys are enabled\n", __FUNCTION__);
+}
+
+static void cypress_touchkey_disable_led_notification(void){
+    if( touchkey_enable == 1 ){
+        disable_touchkey_backlights();
+        tkey_led_vdd_enable(0);
+        tkey_vdd_enable(0);
+        touchkey_enable = 0;
+    }
+}
+
+static struct bln_implementation cypress_touchkey_bln = {
+    .enable = cypress_touchkey_enable_led_notification,
+    .disable = cypress_touchkey_disable_led_notification,
+};
+
 extern int mcsdl_download_binary_data(void);
 static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
@@ -1065,6 +1108,9 @@ if (get_hw_rev() >=0x02) {
 }
 #endif
 	set_touchkey_debug('K');
+#ifdef CONFIG_GENERIC_BLN
+    register_bln_implementation(&cypress_touchkey_bln);
+#endif
 	return 0;
 }
 
