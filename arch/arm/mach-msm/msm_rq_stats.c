@@ -30,12 +30,30 @@
 #ifdef CONFIG_SEC_DVFS_DUAL
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
-//#define DUALBOOST_DEFERED_QUEUE
+#define DUALBOOST_DEFERED_QUEUE
 #endif
 
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
 #define DEFAULT_DEF_TIMER_JIFFIES 5
+
+#ifdef CONFIG_MSM_MPDEC
+unsigned int get_rq_info(void)
+{
+	unsigned long flags = 0;
+        unsigned int rq = 0;
+
+        spin_lock_irqsave(&rq_lock, flags);
+
+        rq = rq_info.rq_avg;
+        rq_info.rq_avg = 0;
+
+        spin_unlock_irqrestore(&rq_lock, flags);
+
+        return rq;
+}
+EXPORT_SYMBOL(get_rq_info);
+#endif
 
 static void def_work_fn(struct work_struct *work)
 {
@@ -50,7 +68,7 @@ static void def_work_fn(struct work_struct *work)
 }
 
 #ifdef CONFIG_SEC_DVFS_DUAL
-static int stall_mpdecision = 0;
+static int stall_mpdecision;
 
 #ifdef CONFIG_SEC_DVFS_DUAL_LOCK
 static DEFINE_MUTEX(cpu_hotplug_driver_mutex);
@@ -88,7 +106,13 @@ static void dvfs_hotplug_callback(struct work_struct *unused)
 	cpu_hotplug_driver_unlock();
 }
 static DECLARE_WORK(dvfs_hotplug_work, dvfs_hotplug_callback);
-static int is_dual_locked = 0;
+
+static int is_dual_locked;
+
+int get_dual_boost_state(void)
+{
+	return is_dual_locked;
+}
 
 void dual_boost(unsigned int boost_on)
 {
@@ -160,7 +184,7 @@ static ssize_t show_run_queue_avg(struct kobject *kobj,
 
 #ifdef CONFIG_SEC_DVFS_DUAL
 	if (is_dual_locked == 1)
-		val = val + 1000;
+		val = 1000;
 #endif
 
 	return snprintf(buf, PAGE_SIZE, "%d.%d\n", val/10, val%10);
@@ -271,7 +295,7 @@ static int init_rq_attribs(void)
 	rq_info.attr_group = kzalloc(sizeof(struct attribute_group),
 						GFP_KERNEL);
 	if (!rq_info.attr_group)
-		goto rel2;
+		goto rel3;
 	rq_info.attr_group->attrs = attribs;
 
 	/* Create /sys/devices/system/cpu/cpu0/rq-stats/... */
@@ -313,6 +337,10 @@ static int __init msm_rq_stats_init(void)
 	rq_info.def_timer_jiffies = DEFAULT_DEF_TIMER_JIFFIES;
 	rq_info.rq_poll_last_jiffy = 0;
 	rq_info.def_timer_last_jiffy = 0;
+#ifdef CONFIG_SEC_DVFS_DUAL
+	stall_mpdecision = 0;
+	is_dual_locked = 0;
+#endif
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
