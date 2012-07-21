@@ -88,3 +88,6 @@ endif
 obj-$(CONFIG_STMPE811_ADC) += stmpe811.o
 obj-$(CONFIG_SEC_MISC) += sec_misc.o sec_level.o sec_param.o
 obj-$(CONFIG_TZCOM) += tzic.o
+ifeq ($(CONFIG_GENERIC_BLN),y)
+obj-$(CONFIG_GENERIC_BLN) += bln.o
+endif
