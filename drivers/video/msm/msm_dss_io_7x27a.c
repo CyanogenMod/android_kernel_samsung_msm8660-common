@@ -256,8 +256,11 @@ void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
 	int i, off;
 
 	MIPI_OUTP(MIPI_DSI_BASE + 0x128, 0x0001);/* start phy sw reset */
-	msleep(100);
+	wmb();
+	usleep(10);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x128, 0x0000);/* end phy w reset */
+	wmb();
+	usleep(10);
 	MIPI_OUTP(MIPI_DSI_BASE + 0x2cc, 0x0003);/* regulator_ctrl_0 */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x2d0, 0x0001);/* regulator_ctrl_1 */
 	MIPI_OUTP(MIPI_DSI_BASE + 0x2d4, 0x0001);/* regulator_ctrl_2 */
@@ -314,6 +317,32 @@ void mipi_dsi_phy_init(int panel_ndx, struct msm_panel_info const *panel_info,
 
 void cont_splash_clk_ctrl(int enable)
 {
+}
+
+void mipi_dsi_prepare_clocks(void)
+{
+	clk_prepare(dsi_ref_clk);
+	clk_prepare(ahb_m_clk);
+	clk_prepare(ahb_s_clk);
+	clk_prepare(ebi1_dsi_clk);
+	clk_prepare(mdp_dsi_pclk);
+	clk_prepare(dsi_byte_div_clk);
+	clk_prepare(dsi_esc_clk);
+	clk_prepare(dsi_clk);
+	clk_prepare(dsi_pixel_clk);
+}
+
+void mipi_dsi_unprepare_clocks(void)
+{
+	clk_unprepare(dsi_esc_clk);
+	clk_unprepare(dsi_byte_div_clk);
+	clk_unprepare(mdp_dsi_pclk);
+	clk_unprepare(ebi1_dsi_clk);
+	clk_unprepare(ahb_m_clk);
+	clk_unprepare(ahb_s_clk);
+	clk_unprepare(dsi_ref_clk);
+	clk_unprepare(dsi_clk);
+	clk_unprepare(dsi_pixel_clk);
 }
 
 void mipi_dsi_ahb_ctrl(u32 enable)

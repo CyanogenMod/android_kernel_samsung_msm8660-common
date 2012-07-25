@@ -498,8 +498,13 @@ static void mdp4_scale_setup(struct mdp4_overlay_pipe *pipe)
 	pipe->phasey_step = MDP4_VG_PHASE_STEP_DEFAULT;
 
 	if (pipe->dst_h && pipe->src_h != pipe->dst_h) {
-		if (pipe->dst_h > pipe->src_h * 8)	/* too much */
+		u32 upscale_max;
+		upscale_max = (mdp_rev >= MDP_REV_41) ?
+			MDP4_REV41_OR_LATER_UP_SCALING_MAX :
+			MDP4_REV40_UP_SCALING_MAX;
+		if (pipe->dst_h > pipe->src_h * upscale_max)
 			return;
+
 		pipe->op_mode |= MDP4_OP_SCALEY_EN;
 
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
@@ -521,10 +526,14 @@ static void mdp4_scale_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 	if (pipe->dst_w && pipe->src_w != pipe->dst_w) {
-		if (pipe->dst_w > pipe->src_w * 8)	/* too much */
+		u32 upscale_max;
+		upscale_max = (mdp_rev >= MDP_REV_41) ?
+			MDP4_REV41_OR_LATER_UP_SCALING_MAX :
+			MDP4_REV40_UP_SCALING_MAX;
+
+		if (pipe->dst_w > pipe->src_w * upscale_max)
 			return;
 		pipe->op_mode |= MDP4_OP_SCALEX_EN;
-
 		if (pipe->pipe_type == OVERLAY_TYPE_VIDEO) {
 			if (pipe->flags & MDP_BACKEND_COMPOSITION &&
 				pipe->alpha_enable && pipe->dst_w > pipe->src_w)
@@ -848,6 +857,8 @@ int mdp4_overlay_format2type(uint32 format)
 	case MDP_Y_CB_CR_H2V2:
 	case MDP_Y_CRCB_H1V1:
 	case MDP_Y_CBCR_H1V1:
+	case MDP_YCRCB_H1V1:
+	case MDP_YCBCR_H1V1:
 		return OVERLAY_TYPE_VIDEO;
 	default:
 		mdp4_stat.err_format++;
@@ -1101,6 +1112,28 @@ int mdp4_overlay_format2pipe(struct mdp4_overlay_pipe *pipe)
 		pipe->chroma_sample = MDP4_CHROMA_420;
 		pipe->bpp = 2;	/* 2 bpp */
 		break;
+	case MDP_YCBCR_H1V1:
+	case MDP_YCRCB_H1V1:
+		pipe->frame_format = MDP4_FRAME_FORMAT_LINEAR;
+		pipe->fetch_plane = OVERLAY_PLANE_INTERLEAVED;
+		pipe->a_bit = 0;
+		pipe->r_bit = 3;    /* R, 8 bits */
+		pipe->b_bit = 3;    /* B, 8 bits */
+		pipe->g_bit = 3;    /* G, 8 bits */
+		pipe->alpha_enable = 0;
+		pipe->unpack_tight = 1;
+		pipe->unpack_align_msb = 0;
+		pipe->unpack_count = 2;
+		pipe->element0 = C0_G_Y;    /* G */
+		if (pipe->src_format == MDP_YCRCB_H1V1) {
+			pipe->element1 = C2_R_Cr; /* R */
+			pipe->element2 = C1_B_Cb; /* B */
+		} else {
+			pipe->element1 = C1_B_Cb;   /* B */
+			pipe->element2 = C2_R_Cr;   /* R */
+		}
+		pipe->bpp = 3;  /* 3 bpp */
+		break;
 	default:
 		/* not likely */
 		mdp4_stat.err_format++;
@@ -1177,6 +1210,7 @@ void transp_color_key(int format, uint32 transp,
 	case MDP_Y_CB_CR_H2V2:
 	case MDP_Y_CBCR_H2V2:
 	case MDP_Y_CBCR_H2V1:
+	case MDP_YCBCR_H1V1:
 		b_start = 8;
 		g_start = 16;
 		r_start = 0;
@@ -1190,6 +1224,7 @@ void transp_color_key(int format, uint32 transp,
 	case MDP_Y_CRCB_H2V1:
 	case MDP_Y_CRCB_H1V1:
 	case MDP_Y_CBCR_H1V1:
+	case MDP_YCRCB_H1V1:
 		b_start = 0;
 		g_start = 16;
 		r_start = 8;
@@ -1481,15 +1516,14 @@ static void mdp4_mixer_stage_commit(int mixer)
 			       mixer, data, flush_bits);
 
 			outpdw(MDP_BASE + off, data); /* LAYERMIXER_IN_CFG */
-			if (pull_mode)
+			if (pull_mode) {
 				outpdw(MDP_BASE + 0x18000, flush_bits);
+			/* wait for vsync on both pull mode interfaces */
+				msleep(20);
+			}
 		}
 
 		if (ctrl->mixer_cfg[MDP4_MIXER2] != cfg[MDP4_MIXER2]) {
-			/* wait for vsync on both pull mode interfaces */
-			if (pull_mode)
-				msleep(20);
-
 			off = 0x100F0;
 			ctrl->mixer_cfg[MDP4_MIXER2] = cfg[MDP4_MIXER2];
 			data = cfg[MDP4_MIXER2];
@@ -1860,6 +1894,11 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 	struct mdp4_iommu_pipe_info *iom_pipe_info;
 	int ret, ptype;
 
+	u32 upscale_max;
+	upscale_max = (mdp_rev >= MDP_REV_41) ?
+		MDP4_REV41_OR_LATER_UP_SCALING_MAX :
+		MDP4_REV40_UP_SCALING_MAX;
+
 	if (mfd == NULL) {
 		pr_err("%s: mfd == NULL, -ENODEV\n", __func__);
 		return -ENODEV;
@@ -1884,8 +1923,7 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 		return -EINVAL;
 	}
 
-
-	if (req->dst_rect.h > (req->src_rect.h * 8)) {	/* too much */
+	if (req->dst_rect.h > (req->src_rect.h * upscale_max)) {
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (h)!\n", __func__);
 		return -ERANGE;
@@ -1897,7 +1935,7 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 		return -ERANGE;
 	}
 
-	if (req->dst_rect.w > (req->src_rect.w * 8)) {	/* too much */
+	if (req->dst_rect.w > (req->src_rect.w * upscale_max)) {
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (w)!\n", __func__);
 		return -ERANGE;
@@ -2885,22 +2923,22 @@ static struct {
 } msm_iommu_ctx_names[] = {
 	/* Display */
 	{
-		.name = "mdp_vg1",
+		.name = "mdp_port0_cb0",
 		.domain = DISPLAY_DOMAIN,
 	},
 	/* Display */
 	{
-		.name = "mdp_vg2",
+		.name = "mdp_port0_cb1",
 		.domain = DISPLAY_DOMAIN,
 	},
 	/* Display */
 	{
-		.name = "mdp_rgb1",
+		.name = "mdp_port1_cb0",
 		.domain = DISPLAY_DOMAIN,
 	},
 	/* Display */
 	{
-		.name = "mdp_rgb2",
+		.name = "mdp_port1_cb1",
 		.domain = DISPLAY_DOMAIN,
 	},
 };
@@ -3023,10 +3061,12 @@ int mdp4_v4l2_overlay_play(struct fb_info *info, struct mdp4_overlay_pipe *pipe,
 	else
 		mdp4_overlay_rgb_setup(pipe);
 
+	if (ctrl->panel_mode & MDP4_PANEL_LCDC)
+		mdp4_overlay_reg_flush(pipe, 1);
+
 	mdp4_mixer_stage_up(pipe);
 
 	if (ctrl->panel_mode & MDP4_PANEL_LCDC) {
-		mdp4_overlay_reg_flush(pipe, 1);
 		mdp4_overlay_lcdc_vsync_push(mfd, pipe);
 	} else {
 #ifdef CONFIG_FB_MSM_MIPI_DSI
