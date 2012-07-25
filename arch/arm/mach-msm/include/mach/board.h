@@ -402,6 +402,7 @@ struct mipi_dsi_panel_platform_data {
 	int *gpio;
 	struct mipi_dsi_phy_ctrl *phy_ctrl_settings;
 	void (*dsi_pwm_cfg)(void);
+	char dlane_swap;
 };
 
 #define PANEL_NAME_MAX_LEN 50
