@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -51,7 +51,8 @@
 #define MIPI_DSI_PANEL_QHD_PT 5
 #define MIPI_DSI_PANEL_WXGA	6
 #define MIPI_DSI_PANEL_WUXGA	7
-#define DSI_PANEL_MAX	7
+#define MIPI_DSI_PANEL_720P_PT	8
+#define DSI_PANEL_MAX	8
 
 enum {		/* mipi dsi panel */
 	DSI_VIDEO_MODE,
@@ -125,6 +126,7 @@ enum dsi_trigger_type {
 extern struct device dsi_dev;
 extern int mipi_dsi_clk_on;
 extern u32 dsi_irq;
+extern u32 esc_byte_ratio;
 
 extern void  __iomem *periph_base;
 extern char *mmss_cc_base;	/* mutimedia sub system clock control */
@@ -258,6 +260,8 @@ struct dsi_kickoff_action {
 char *mipi_dsi_buf_reserve_hdr(struct dsi_buf *dp, int hlen);
 char *mipi_dsi_buf_init(struct dsi_buf *dp);
 void mipi_dsi_init(void);
+void mipi_dsi_lane_cfg(void);
+void mipi_dsi_bist_ctrl(void);
 int mipi_dsi_buf_alloc(struct dsi_buf *, int size);
 int mipi_dsi_cmd_dma_add(struct dsi_buf *dp, struct dsi_cmd_desc *cm);
 int mipi_dsi_cmds_tx(struct msm_fb_data_type *mfd,

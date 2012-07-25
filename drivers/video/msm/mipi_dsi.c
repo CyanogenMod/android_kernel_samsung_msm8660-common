@@ -36,6 +36,7 @@
 #include "mdp4.h"
 
 u32 dsi_irq;
+u32 esc_byte_ratio;
 
 static boolean tlmm_settings = FALSE;
 
@@ -164,6 +165,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	fbi = mfd->fbi;
 	var = &fbi->var;
 	pinfo = &mfd->panel_info;
+	esc_byte_ratio = pinfo->mipi.esc_byte_ratio;
 
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
@@ -203,8 +205,8 @@ static int mipi_dsi_on(struct platform_device *pdev)
 
 	mipi  = &mfd->panel_info.mipi;
 	if (mfd->panel_info.type == MIPI_VIDEO_PANEL) {
-		dummy_xres = mfd->panel_info.mipi.xres_pad;
-		dummy_yres = mfd->panel_info.mipi.yres_pad;
+		dummy_xres = mfd->panel_info.lcdc.xres_pad;
+		dummy_yres = mfd->panel_info.lcdc.yres_pad;
 
 		if (mdp_rev >= MDP_REV_41) {
 			MIPI_OUTP(MIPI_DSI_BASE + 0x20,
@@ -557,8 +559,8 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	if (mfd->panel_info.type == MIPI_VIDEO_PANEL &&
 		!mfd->panel_info.clk_rate) {
-		h_period += mfd->panel_info.mipi.xres_pad;
-		v_period += mfd->panel_info.mipi.yres_pad;
+		h_period += mfd->panel_info.lcdc.xres_pad;
+		v_period += mfd->panel_info.lcdc.yres_pad;
 
 		if (lanes > 0) {
 			mfd->panel_info.clk_rate =
