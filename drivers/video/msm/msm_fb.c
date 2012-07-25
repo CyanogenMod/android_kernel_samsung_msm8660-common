@@ -623,6 +623,7 @@ static int msm_fb_runtime_idle(struct device *dev)
 	return 0;
 }
 
+#if (defined(CONFIG_SUSPEND) && defined(CONFIG_FB_MSM_HDMI_MSM_PANEL))
 static int msm_fb_ext_suspend(struct device *dev)
 {
 	struct msm_fb_data_type *mfd = dev_get_drvdata(dev);
@@ -652,13 +653,16 @@ static int msm_fb_ext_resume(struct device *dev)
 
 	return ret;
 }
+#endif
 
 static struct dev_pm_ops msm_fb_dev_pm_ops = {
 	.runtime_suspend = msm_fb_runtime_suspend,
 	.runtime_resume = msm_fb_runtime_resume,
 	.runtime_idle = msm_fb_runtime_idle,
+#if (defined(CONFIG_SUSPEND) && defined(CONFIG_FB_MSM_HDMI_MSM_PANEL))
 	.suspend = msm_fb_ext_suspend,
 	.resume = msm_fb_ext_resume,
+#endif
 };
 
 static struct platform_driver msm_fb_driver = {
@@ -1249,6 +1253,8 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	snprintf(fix->id, sizeof(fix->id), "msmfb31_%x", (__u32) *id);
 #elif defined(CONFIG_FB_MSM_MDP40)
 	snprintf(fix->id, sizeof(fix->id), "msmfb40_%x", (__u32) *id);
+#elif defined(CONFIG_FB_MSM_MDP_NONE)
+	snprintf(fix->id, sizeof(fix->id), "msmfb0_%x", (__u32) *id);
 #else
 	error CONFIG_FB_MSM_MDP undefined !
 #endif
@@ -3638,5 +3644,59 @@ int __init msm_fb_init(void)
 
 	return 0;
 }
+
+/* Called by v4l2 driver to enable/disable overlay pipe */
+int msm_fb_v4l2_enable(struct mdp_overlay *req, bool enable, void **par)
+{
+	int err = 0;
+#ifdef CONFIG_FB_MSM_MDP40
+	struct mdp4_overlay_pipe *pipe;
+	if (enable) {
+
+		err = mdp4_v4l2_overlay_set(fbi_list[0], req, &pipe);
+
+		*(struct mdp4_overlay_pipe **)par = pipe;
+
+	} else {
+		pipe = *(struct mdp4_overlay_pipe **)par;
+		mdp4_v4l2_overlay_clear(pipe);
+	}
+#else
+#ifdef CONFIG_FB_MSM_MDP30
+	if (enable)
+		err = mdp_ppp_v4l2_overlay_set(fbi_list[0], req);
+	else
+		err = mdp_ppp_v4l2_overlay_clear();
+#else
+	err = -EINVAL;
+#endif
+#endif
+
+	return err;
+}
+EXPORT_SYMBOL(msm_fb_v4l2_enable);
+
+/* Called by v4l2 driver to provide a frame for display */
+int msm_fb_v4l2_update(void *par,
+	unsigned long srcp0_addr, unsigned long srcp0_size,
+	unsigned long srcp1_addr, unsigned long srcp1_size,
+	unsigned long srcp2_addr, unsigned long srcp2_size)
+{
+#ifdef CONFIG_FB_MSM_MDP40
+	struct mdp4_overlay_pipe *pipe = (struct mdp4_overlay_pipe *)par;
+	return mdp4_v4l2_overlay_play(fbi_list[0], pipe,
+		srcp0_addr, srcp1_addr,
+		srcp2_addr);
+#else
+#ifdef CONFIG_FB_MSM_MDP30
+	return mdp_ppp_v4l2_overlay_play(fbi_list[0],
+		srcp0_addr, srcp0_size,
+		srcp1_addr, srcp1_size);
+#else
+	return -EINVAL;
+#endif
+#endif
+}
+EXPORT_SYMBOL(msm_fb_v4l2_update);
 
 module_init(msm_fb_init);
