@@ -1164,8 +1164,6 @@ void mipi_dsi_cmd_backlight_tx(int level)
 
 	spin_lock_irqsave(&dsi_mdp_lock, flag);
 	dsi_mdp_busy = TRUE;
-	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
-
 	led_pwm1[1] = (unsigned char)(level);
 	tp = &dsi_tx_buf;
 	cmd = &backlight_cmd;
@@ -1191,10 +1189,6 @@ void mipi_dsi_cmd_backlight_tx(int level)
 	wmb();
 	MIPI_OUTP(MIPI_DSI_BASE + 0x08c, 0x01);	/* trigger */
 	wmb();
-
-	spin_lock_irqsave(&dsi_mdp_lock, flag);
-	dsi_mdp_busy = FALSE;
-	complete(&dsi_mdp_comp);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
 }
 
@@ -1396,6 +1390,8 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	unsigned long ret_completion;
 	int ret = 0;
 
+	unsigned long flags;
+
 #ifdef DSI_HOST_DEBUG
 	int i;
 	char *bp;
@@ -1409,6 +1405,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	pr_debug("\n");
 #endif
 
+	spin_lock_irqsave(&dsi_mdp_lock, flags);
 	tp->len += 3;
 	tp->len &= ~0x03;	/* multipled by 4 */
 
@@ -1423,6 +1420,7 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	wmb();
 	MIPI_OUTP(MIPI_DSI_BASE + 0x08c, 0x01);	/* trigger */
 	wmb();
+	spin_unlock_irqrestore(&dsi_mdp_lock, flags);
 
 #if 0 // If LCD disconnected, this code cannot be pass. wait unlimited time.
 	wait_for_completion(&dsi_dma_comp);
@@ -1576,8 +1574,8 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 
 	if (isr & DSI_INTR_CMD_DMA_DONE) {
 		mipi_dsi_mdp_stat_inc(STAT_DSI_CMD);
-		complete(&dsi_dma_comp);
 		spin_lock(&dsi_mdp_lock);
+		complete(&dsi_dma_comp);
 		dsi_ctrl_lock = FALSE;
 		mipi_dsi_disable_irq_nosync();
 		spin_unlock(&dsi_mdp_lock);
