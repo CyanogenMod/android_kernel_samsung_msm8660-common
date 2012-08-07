@@ -2140,11 +2140,6 @@ config CLOCK_MAP
 	  clock gets a unique id. If the bitmap has that bit set the clock
 	  is enabled, otherwise the clock is disabled.
 
-config MSM_SLEEP_STATS
-	bool "Enable exporting of MSM sleep stats to userspace"
-	depends on CPU_IDLE
-	default n
-
 config MSM_SLEEP_STATS_DEVICE
 	bool "Enable exporting of MSM sleep device stats to userspace"
 
