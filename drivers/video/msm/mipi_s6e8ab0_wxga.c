@@ -668,13 +668,13 @@ void read_reg( char srcReg, int srcLength, char* destBuffer, const int isUseMute
 //	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x14000000); // lp
 
 	packet_size[0] = (char) srcLength;
-	mipi_dsi_cmds_tx(pMFD, &s6e8ab0_tx_buf, &(s6e8ab0_packet_size_cmd),	1);
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8ab0_packet_size_cmd),	1);
 
 	show_cnt = 0;
 	for( j = 0; j < loop_limit; j ++ )
 	{
 		reg_read_pos[1] = read_pos;
-		if( mipi_dsi_cmds_tx(pMFD, &s6e8ab0_tx_buf, &(s6e8ab0_read_pos_cmd), 1) < 1 ) {
+		if( mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8ab0_read_pos_cmd), 1) < 1 ) {
 			LOG_ADD( "Tx command FAILED" );
 			break;
 		}
@@ -770,7 +770,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 		DPRINT("%s +\n", __func__);
 
 		txAmount = ARRAY_SIZE(s6e8ab0_display_on_before_read_id);
-		txCnt = mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_display_on_before_read_id,
+		txCnt = mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_display_on_before_read_id,
 				txAmount );    
 		if( txAmount != txCnt )	
 		{
@@ -829,7 +829,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 #endif
 
 		txAmount = ARRAY_SIZE(s6e8ab0_display_on_before_gamma_cmds);
-		txCnt = mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_display_on_before_gamma_cmds,
+		txCnt = mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_display_on_before_gamma_cmds,
 				txAmount );    
 
 		if( txAmount != txCnt )	
@@ -851,7 +851,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 		}
 		s6e8ab0_lcd.lcd_gamma = s6e8ab0_lcd.stored_gamma;
 		
-		mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_display_on_after_gamma_cmds,
+		mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_display_on_after_gamma_cmds,
 				ARRAY_SIZE(s6e8ab0_display_on_after_gamma_cmds));    
 
 		s6e8ab0_lcd.lcd_state.initialized = TRUE;
@@ -866,7 +866,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 		VREGOUT_SET[1] = s6e8ab0_lcd.lcd_id_buffer[0];
 		VREGOUT_SET[2] = s6e8ab0_lcd.lcd_id_buffer[1];		
 		VREGOUT_SET[3] = s6e8ab0_lcd.lcd_id_buffer[2];
-		mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_wxga_display_on,
+		mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_wxga_display_on,
 				ARRAY_SIZE(s6e8ab0_wxga_display_on));  
 
 		// set acl 
@@ -948,7 +948,7 @@ static int lcd_off_seq(struct msm_fb_data_type *mfd)
 #endif
 	mutex_lock(&(s6e8ab0_lcd.lock));
 //	set_lcd_esd_ignore( TRUE );
-	mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_display_off_cmds,
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_display_off_cmds,
 			ARRAY_SIZE(s6e8ab0_display_off_cmds));
 	s6e8ab0_lcd.lcd_state.display_on = state_lcd_on = FALSE;
 	s6e8ab0_lcd.lcd_state.initialized = FALSE;
@@ -1025,8 +1025,8 @@ static int __devinit lcd_shutdown(struct platform_device *pdev)
 static void lcd_gamma_apply( struct msm_fb_data_type *mfd, int srcGamma)
 {
 	LOG_ADD( " GAMMA(%d=%dcd)", srcGamma, s6e8ab0_lcd.lcd_brightness_table[srcGamma].lux );
-	mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, s6e8ab0_lcd.lcd_brightness_table[srcGamma].cmd,	1);
-	mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &s6e8ab0_gamma_update_cmd, 1);
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, s6e8ab0_lcd.lcd_brightness_table[srcGamma].cmd,	1);
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &s6e8ab0_gamma_update_cmd, 1);
 }
 
 
@@ -1074,8 +1074,8 @@ static void lcd_gamma_smartDimming_apply( struct msm_fb_data_type *mfd, int srcG
 	}
 	DPRINT( "SD: %03d %s\n", gamma_lux, pBuffer );
 #endif 
-	mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &DSI_CMD_SmartDimming_GAMMA,	1);
-	mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &s6e8ab0_gamma_update_cmd, 1);
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &DSI_CMD_SmartDimming_GAMMA,	1);
+	mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &s6e8ab0_gamma_update_cmd, 1);
 
 
 	LOG_ADD( " SDIMMING(%d=%dcd)", srcGamma, gamma_lux );
@@ -1339,7 +1339,7 @@ static  int lcd_apply_elvss(struct msm_fb_data_type *mfd, int srcElvss, struct l
 		elvss_cmd[1] = 0x84;
 		elvss_cmd[2] = srcElvss;
 
-		mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_elvss_cmd),	1);
+		mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_elvss_cmd),	1);
 	//	printk("huggac : apply elvss : %x\n", srcElvss);
 	}
 
@@ -1348,7 +1348,7 @@ static  int lcd_apply_elvss(struct msm_fb_data_type *mfd, int srcElvss, struct l
 		elvss_cmd_dynamic[i] = 0xb2; // addresss
 		for(i = 1; i < 6 ; i++)elvss_cmd_dynamic[i] = srcElvss; //data
 
-		mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_elvss_table_dynamic),	1);			
+		mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_elvss_table_dynamic),	1);			
 	}
 	
 }
@@ -1426,15 +1426,15 @@ static void lcd_set_acl(struct msm_fb_data_type *mfd, struct lcd_setting *lcd)
 			{
 			case 0 ... 1: // 30cd ~ 40cd 
 				if (lcd->lcd_acl != 0) {  // 40%
-					mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_off),	1); 
+					mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_off),	1); 
 					lcd->lcd_acl = 0;					
 					}
 					break;
 					
 			default: // more than 40cd  
 				if (lcd->lcd_acl != 40) {  // not 40% 
-					mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_on),	1);
-					mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_acl_cutoff_table),	1);				
+					mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_on),	1);
+					mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_acl_cutoff_table),	1);				
 					lcd->lcd_acl = 40;					
 					}
 					break;
@@ -1442,7 +1442,7 @@ static void lcd_set_acl(struct msm_fb_data_type *mfd, struct lcd_setting *lcd)
 	} 
 	
 	else {
-		mipi_dsi_cmds_tx(mfd, &s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_off),	1);
+		mipi_dsi_cmds_tx(&s6e8ab0_tx_buf, &(s6e8aa0_seq_acl_off),	1);
 		lcd->lcd_acl = 0;
 	}
 	printk("%s acl_enable:%d , bl-level:%d, cur_acl:%d\n",__func__, lcd->enabled_acl, lcd->stored_acl, lcd->lcd_acl);	
