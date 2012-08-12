@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -113,10 +113,9 @@ static void tz_wake(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
 	if (device->state != KGSL_STATE_NAP &&
-		priv->governor == TZ_GOVERNOR_ONDEMAND &&
-		device->pwrctrl.restore_slumber == 0)
+		priv->governor == TZ_GOVERNOR_ONDEMAND)
 		kgsl_pwrctrl_pwrlevel_change(device,
-					     device->pwrctrl.thermal_pwrlevel);
+					device->pwrctrl.default_pwrlevel);
 }
 
 static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
@@ -180,7 +179,8 @@ static int tz_init(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 	struct tz_priv *priv;
 
 	/* Trustzone is only valid for some SOCs */
-	if (!(cpu_is_msm8x60() || cpu_is_msm8960() || cpu_is_msm8930()))
+	if (!(cpu_is_msm8x60() || cpu_is_msm8960() || cpu_is_apq8064() ||
+		cpu_is_msm8930() || cpu_is_msm8627()))
 		return -EINVAL;
 
 	priv = pwrscale->priv = kzalloc(sizeof(struct tz_priv), GFP_KERNEL);

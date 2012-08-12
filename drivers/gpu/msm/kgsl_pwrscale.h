@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +37,7 @@ struct kgsl_pwrscale {
 	struct kobject kobj;
 	void *priv;
 	int gpu_busy;
+	int enabled;
 };
 
 struct kgsl_pwrscale_policy_attribute {
@@ -54,6 +55,7 @@ struct kgsl_pwrscale_policy_attribute {
 
 extern struct kgsl_pwrscale_policy kgsl_pwrscale_policy_tz;
 extern struct kgsl_pwrscale_policy kgsl_pwrscale_policy_idlestats;
+extern struct kgsl_pwrscale_policy kgsl_pwrscale_policy_msm;
 
 int kgsl_pwrscale_init(struct kgsl_device *device);
 void kgsl_pwrscale_close(struct kgsl_device *device);
@@ -66,6 +68,9 @@ void kgsl_pwrscale_idle(struct kgsl_device *device);
 void kgsl_pwrscale_busy(struct kgsl_device *device);
 void kgsl_pwrscale_sleep(struct kgsl_device *device);
 void kgsl_pwrscale_wake(struct kgsl_device *device);
+
+void kgsl_pwrscale_enable(struct kgsl_device *device);
+void kgsl_pwrscale_disable(struct kgsl_device *device);
 
 int kgsl_pwrscale_policy_add_files(struct kgsl_device *device,
 				   struct kgsl_pwrscale *pwrscale,
