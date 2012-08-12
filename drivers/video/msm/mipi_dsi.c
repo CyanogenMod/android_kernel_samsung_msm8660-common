@@ -116,7 +116,6 @@ int mipi_dsi_off(struct platform_device *pdev)
 	MIPI_OUTP(MIPI_DSI_BASE + 0xA8, 0x00000000); // for LCD-on when wakeup
 #endif
 
-	local_bh_disable();
 	spin_lock_bh(&dsi_clk_lock);
 	mipi_dsi_clk_disable();
 
