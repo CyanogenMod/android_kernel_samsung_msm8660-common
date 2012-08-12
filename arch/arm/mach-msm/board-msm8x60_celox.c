@@ -9764,7 +9764,7 @@ static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.release_region = release_smi_region,
 	.setup_region = setup_smi_region,
 	.iommu_map_all = 1,
-	iommu_2x_map_domain = VIDEO_DOMAIN,
+	.iommu_2x_map_domain = VIDEO_DOMAIN,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
