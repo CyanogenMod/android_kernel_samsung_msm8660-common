@@ -254,8 +254,9 @@ static void TSP_forced_release_for_call(void);
 static int tsp_pattern_tracking(int fingerindex, s16 x, s16 y);
 static void report_input_data(struct mxt224_data *data);
 static void TSP_forced_reboot(void);
+#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
 static void TSP_clear_unused_slots(void);
-
+#endif
 
 extern unsigned int  get_hw_rev(void);
 
@@ -991,8 +992,10 @@ void check_chip_calibration(unsigned char one_touch_input_flag)
 						}
 				#endif
 
+#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
 					// Clear all unused slots after calibration
 					TSP_clear_unused_slots();
+#endif
 
 					#if 0  // Xtopher blocked, it causes trouble when system wake-up             
 					if ((copy_data->read_ta_status)&&(boot_or_resume == 1)) {
@@ -1905,9 +1908,11 @@ static irqreturn_t mxt224_irq_thread(int irq, void *ptr)
 			 Doing_calibration_falg = 0; 
 			printk(KERN_ERR"[TSP] Calibration End!!!!!!");
 
+#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
 			// Clear all unused slots after calibration
 			TSP_clear_unused_slots();
-			
+#endif
+
 			#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)		
 			if(cal_check_flag == 1)
 		    	{
@@ -2412,6 +2417,7 @@ void Mxt224_force_released(void)
 };
 EXPORT_SYMBOL(Mxt224_force_released);
 
+#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
 static void TSP_clear_unused_slots(void)
 {
 #if !defined(TOUCH_NON_SLOT)
@@ -2440,6 +2446,7 @@ static void TSP_clear_unused_slots(void)
 	input_sync(copy_data->input_dev);
 #endif
 }
+#endif
 
 void TSP_forced_release_for_call(void)
 {
