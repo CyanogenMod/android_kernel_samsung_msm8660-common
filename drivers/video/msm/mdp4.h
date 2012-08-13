@@ -711,6 +711,12 @@ static inline void mdp4_dsi_video_blt_start(struct msm_fb_data_type *mfd)
 static inline void mdp4_dsi_video_blt_stop(struct msm_fb_data_type *mfd)
 {
 }
+static inline void mdp4_dsi_cmd_blt_start(struct msm_fb_data_type *mfd)
+{
+}
+static inline void mdp4_dsi_cmd_blt_stop(struct msm_fb_data_type *mfd)
+{
+}
 static inline void mdp4_dsi_overlay_blt(
 	struct msm_fb_data_type *mfd, struct msmfb_overlay_blt *req)
 {
