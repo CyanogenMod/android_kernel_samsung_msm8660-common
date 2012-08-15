@@ -4234,6 +4234,24 @@ unsigned char hdmi_is_primary;
 #endif
 #define MSM_PMEM_AUDIO_SIZE        0x28B000
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+#define RAM_CONSOLE_START           0x77800000
+#define RAM_CONSOLE_SIZE            SZ_1M
+
+static struct resource ram_console_resource[] = {
+	{
+		.flags  = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device ram_console_device = {
+	.name           = "ram_console",
+	.id             = -1,
+	.num_resources  = ARRAY_SIZE(ram_console_resource),
+	.resource       = ram_console_resource,
+};
+#endif
+
 #define MSM_SMI_BASE          0x38000000
 #define MSM_SMI_SIZE          0x4000000
 
@@ -9753,6 +9771,9 @@ static struct platform_device *surf_devices[] __initdata = {
 #endif
 #endif
 	&motor_i2c_gpio_device,
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	&ram_console_device,
+#endif
 };
 
 #ifdef CONFIG_ION_MSM
@@ -10054,6 +10075,13 @@ static void __init msm8x60_reserve(void)
 	msm8x60_set_display_params(prim_panel_name, ext_panel_name);
 	reserve_info = &msm8x60_reserve_info;
 	msm_reserve();
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+    if (memblock_remove(RAM_CONSOLE_START, RAM_CONSOLE_SIZE) == 0) {
+        ram_console_resource[0].start = RAM_CONSOLE_START;
+        ram_console_resource[0].end = RAM_CONSOLE_START+RAM_CONSOLE_SIZE-1;
+    }
+#endif
 }
 
 #define EXT_CHG_VALID_MPP 10
