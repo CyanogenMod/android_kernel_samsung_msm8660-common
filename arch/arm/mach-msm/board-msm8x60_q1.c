@@ -173,6 +173,10 @@ static struct wacom_g5_callbacks *wacom_callbacks;
 #include <mach/tdmb_pdata.h>
 #endif
 
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+#include <linux/video/sec_mipi_lcd_esd_refresh.h>
+#endif
+
 #define MSM_SHARED_RAM_PHYS 0x40000000
 
 #ifdef CONFIG_OPTICAL_GP2A
@@ -9170,6 +9174,9 @@ static struct platform_device *surf_devices[] __initdata = {
 #ifdef CONFIG_SAMSUNG_JACK
 	&sec_device_jack,
 #endif
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+	&sec_device_mipi_esd,
+#endif
 #if defined (CONFIG_OPTICAL_GP2A)
 	&opt_i2c_gpio_device,
 	&opt_gp2a,
@@ -10236,6 +10243,14 @@ static struct pm_gpio chg_stat = {
 	}
 
 	sec_jack_gpio_init();
+#endif
+
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_ESD_DET), &sec_mipi_esd_det_gpio_cfg);
+	if (rc) {
+		pr_err("%s PMIC_GPIO_ESD_DET config failed\n", __func__);
+		return rc;
+	}
 #endif
 
 #if defined (CONFIG_USA_MODEL_SGH_I717)
