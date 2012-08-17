@@ -3610,11 +3610,7 @@ static struct clk_lookup msm_clocks_8x60[] = {
 	CLK_LOOKUP("mmfpb_a_clk",	mmfpb_a_clk.c,	NULL),
 
 	CLK_LOOKUP("core_clk",		gp0_clk.c,		NULL),
-#if defined(CONFIG_TARGET_SERIES_P8LTE)	
-	CLK_LOOKUP("core_clk",		gp1_clk.c,		"vibrator"),
-#else
 	CLK_LOOKUP("core_clk",		gp1_clk.c,		NULL),
-#endif
 	CLK_LOOKUP("core_clk",		gp2_clk.c,		NULL),
 	CLK_LOOKUP("core_clk",		gsbi1_uart_clk.c,	NULL),
 	CLK_LOOKUP("core_clk",		gsbi2_uart_clk.c,	NULL),

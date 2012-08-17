@@ -39,7 +39,6 @@
 #define HCI_DEV_RESUME			6
 #ifdef CONFIG_KOR_MODEL_SHV_E150S
 #define HCI_DEV_WRITE			7
-#define HCI_DEV_READ			8
 #endif
 
 /* HCI notify events */

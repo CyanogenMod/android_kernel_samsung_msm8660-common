@@ -44,7 +44,7 @@ static struct platform_device *surf_devices[] __initdata = {
 #endif 
 
 #ifndef __ASM_ARCH_SEC_MIPI_LCD_ESD_FRESH_C
-static struct pm8058_gpio sec_mipi_esd_det_gpio_cfg = { // kyNam_110824_
+static struct pm_gpio sec_mipi_esd_det_gpio_cfg = { // kyNam_110824_
 		.direction      = PM_GPIO_DIR_IN,
 		.pull           = PM_GPIO_PULL_NO,
 		.vin_sel        = PM_GPIO_VIN_L5, 

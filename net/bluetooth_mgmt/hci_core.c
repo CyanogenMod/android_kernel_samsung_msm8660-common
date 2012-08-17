@@ -2727,25 +2727,16 @@ static void hci_rx_task(unsigned long arg)
 		case HCI_EVENT_PKT:
 			BT_DBG("%s Event packet", hdev->name);
 			hci_event_packet(hdev, skb);
-			#ifdef CONFIG_KOR_MODEL_SHV_E150S
-			hci_notify(hdev, HCI_DEV_READ);
-			#endif
 			break;
 
 		case HCI_ACLDATA_PKT:
 			BT_DBG("%s ACL data packet", hdev->name);
 			hci_acldata_packet(hdev, skb);
-			#ifdef CONFIG_KOR_MODEL_SHV_E150S
-			hci_notify(hdev, HCI_DEV_READ);
-			#endif
 			break;
 
 		case HCI_SCODATA_PKT:
 			BT_DBG("%s SCO data packet", hdev->name);
 			hci_scodata_packet(hdev, skb);
-			#ifdef CONFIG_KOR_MODEL_SHV_E150S
-			hci_notify(hdev, HCI_DEV_READ);
-			#endif
 			break;
 
 		default:

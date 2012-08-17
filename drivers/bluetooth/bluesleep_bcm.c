@@ -139,15 +139,10 @@ static void hsuart_power(int on)
 		msm_hs_request_clock_on(bsi->uport);
 		msm_hs_set_mctrl(bsi->uport, TIOCM_RTS);
 	} else {
-/* SS_BLUETOOTH(john.lim) 2012.05.31 */ 
-/* P120531-0686 kernel panic */
-		if (bsi->uport != NULL )
- 		{
 			msm_hs_set_mctrl(bsi->uport, 0);
 			msm_hs_request_clock_off(bsi->uport);
 		}
 	}
-}
 
 /**
  * @return 1 if the Host can go to sleep, 0 otherwise.

@@ -358,11 +358,6 @@ static int bluesleep_hci_event(struct notifier_block *this,
 	case HCI_DEV_WRITE:
 		bluesleep_outgoing_data();
 		break;
-	#ifdef CONFIG_KOR_MODEL_SHV_E150S
-	case HCI_DEV_READ:
-		mod_timer(&tx_timer, jiffies + (TX_TIMER_INTERVAL * HZ));
-		break;
-	#endif	
 	}
 
 	return NOTIFY_DONE;

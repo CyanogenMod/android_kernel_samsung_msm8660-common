@@ -55,6 +55,7 @@
 #if !defined(WACOM_SLEEP_WITH_PEN_SLP)
 #define WACOM_SLEEP_WITH_PEN_LDO_EN
 #endif
+
 /*PDCT Signal*/
 #if defined(CONFIG_USA_MODEL_SGH_I717)
 #define PDCT_NOSIGNAL 1
