@@ -52,6 +52,7 @@
 #include "timer.h"
 #include "qdss.h"
 #include "pm-boot.h"
+#include <mach/event_timer.h>
 
 /******************************************************************************
  * Debug Definitions
@@ -105,6 +106,8 @@ static char *msm_pm_mode_attr_labels[MSM_PM_MODE_ATTR_NR] = {
 	[MSM_PM_MODE_ATTR_SUSPEND] = "suspend_enabled",
 	[MSM_PM_MODE_ATTR_IDLE] = "idle_enabled",
 };
+
+static struct hrtimer pm_hrtimer;
 
 struct msm_pm_kobj_attribute {
 	unsigned int cpu;
@@ -783,6 +786,27 @@ static irqreturn_t msm_pm_rpm_wakeup_interrupt(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+/**
+ * pm_hrtimer_cb() : Callback function for hrtimer created if the
+ *                   core needs to be awake to handle an event.
+ * @hrtimer : Pointer to hrtimer
+ */
+static enum hrtimer_restart pm_hrtimer_cb(struct hrtimer *hrtimer)
+{
+	return HRTIMER_NORESTART;
+}
+
+/**
+ * msm_pm_set_timer() : Set an hrtimer to wakeup the core in time
+ *                      to handle an event.
+ */
+static void msm_pm_set_timer(uint32_t modified_time_us)
+{
+	u64 modified_time_ns = modified_time_us * NSEC_PER_USEC;
+	ktime_t modified_ktime = ns_to_ktime(modified_time_ns);
+	pm_hrtimer.function = pm_hrtimer_cb;
+	hrtimer_start(&pm_hrtimer, modified_ktime, HRTIMER_MODE_ABS);
+}
 
 /******************************************************************************
  * External Idle/Suspend Functions
@@ -795,13 +819,23 @@ void arch_idle(void)
 
 int msm_pm_idle_prepare(struct cpuidle_device *dev)
 {
-	uint32_t latency_us;
-	uint32_t sleep_us;
 	int i;
+	uint32_t modified_time_us = 0;
+	struct msm_pm_time_params time_param;
 
-	latency_us = (uint32_t) pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
-	sleep_us = (uint32_t) ktime_to_ns(tick_nohz_get_sleep_length());
-	sleep_us = DIV_ROUND_UP(sleep_us, 1000);
+	time_param.latency_us =
+			(uint32_t) pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
+	time_param.sleep_us =
+			(uint32_t) (ktime_to_us(tick_nohz_get_sleep_length())
+															& UINT_MAX);
+	time_param.modified_time_us = 0;
+
+	if (!dev->cpu)
+		time_param.next_event_us =
+				(uint32_t) (ktime_to_us(get_next_event_time())
+															& UINT_MAX);
+	else
+		time_param.next_event_us = 0;
 
 	for (i = 0; i < dev->state_count; i++) {
 		struct cpuidle_state *state = &dev->states[i];
@@ -849,13 +883,14 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev)
 				break;
 
 			rs_limits = msm_rpmrs_lowest_limits(true,
-						mode, latency_us, sleep_us);
+						mode, &time_param);
 
 			if (MSM_PM_DEBUG_IDLE & msm_pm_debug_mask)
 				pr_info("CPU%u: %s: %s, latency %uus, "
 					"sleep %uus, limit %p\n",
 					dev->cpu, __func__, state->desc,
-					latency_us, sleep_us, rs_limits);
+					time_param.latency_us,
+					time_param.sleep_us, rs_limits);
 
 			if ((MSM_PM_DEBUG_IDLE_LIMITS & msm_pm_debug_mask) &&
 					rs_limits)
@@ -886,7 +921,7 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev)
 			state->target_residency = 0;
 			state->exit_latency = 0;
 			state->power_usage = rs_limits->power[dev->cpu];
-
+			modified_time_us = time_param.modified_time_us;
 			if (MSM_PM_SLEEP_MODE_POWER_COLLAPSE == mode)
 				msm_pm_idle_rs_limits = rs_limits;
 		} else {
@@ -894,6 +929,8 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev)
 		}
 	}
 
+	if (modified_time_us && !dev->cpu)
+		msm_pm_set_timer(modified_time_us);
 	return 0;
 }
 
@@ -1071,6 +1108,11 @@ static int msm_pm_enter(suspend_state_t state)
 	int64_t period = 0;
 	int64_t time = msm_timer_get_sclk_time(&period);
 #endif
+	struct msm_pm_time_params time_param;
+
+	time_param.latency_us = -1;
+	time_param.sleep_us = -1;
+	time_param.next_event_us = 0;
 
 	if (MSM_PM_DEBUG_SUSPEND & msm_pm_debug_mask)
 		pr_info("%s\n", __func__);
@@ -1110,7 +1152,7 @@ static int msm_pm_enter(suspend_state_t state)
 			msm_rpmrs_show_resources();
 
 		rs_limits = msm_rpmrs_lowest_limits(false,
-				MSM_PM_SLEEP_MODE_POWER_COLLAPSE, -1, -1);
+				MSM_PM_SLEEP_MODE_POWER_COLLAPSE, &time_param);
 
 		if ((MSM_PM_DEBUG_SUSPEND_LIMITS & msm_pm_debug_mask) &&
 				rs_limits)
@@ -1282,6 +1324,7 @@ static int __init msm_pm_init(void)
 	msm_spm_allow_x_cpu_set_vdd(false);
 
 	suspend_set_ops(&msm_pm_ops);
+	hrtimer_init(&pm_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_ABS);
 	msm_cpuidle_init();
 
 	return 0;
