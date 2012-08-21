@@ -298,18 +298,17 @@ void free_cmap(struct fb_cmap *cmap)
 
 void lut_tune(int num, unsigned int *pLutTable )
 {
-	
-//	int fb;
+
+	__u16 *r, *g, *b, i;
+	int j;
 	struct fb_info *info;
 	struct fb_cmap test_cmap;
 	struct fb_cmap *cmap;
+	struct msm_fb_data_type *mfd;
+	uint32_t out;
 
-	static int mdp_lut_i = 0;
 	u16 r_1, g_1, b_1;//for final assignment
-//	fb = open("/dev/graphics/fb0", O_RDWR);
-	__u16 *r, *g, *b, i;
-	int j = 0;
-	
+
 	info = registered_fb[0];
 	cmap = &test_cmap;
 	//=====================================
@@ -350,20 +349,16 @@ void lut_tune(int num, unsigned int *pLutTable )
 		*g++ = pLutTable[j++];
 		*b++ = pLutTable[j++];
 	}
-#if 1
+
 	/*instead of an ioctl*/
-	mutex_lock(&msm_fb_ioctl_lut_sem1);
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-	//ret = mdp_lut_hw_update(cmap);
+
 	j = 0;
 	for (i = 0; i < cmap->len; i++) {
-//		r_1 = mDNIe_data_R[i];
-//		g_1 = mDNIe_data_G[i];
-//		b_1 = mDNIe_data_B[i];
-		r_1 = pLutTable[j++]; 
+		r_1 = pLutTable[j++];
 		g_1 = pLutTable[j++];
 		b_1 = pLutTable[j++];
-		
+
 
 #ifdef CONFIG_FB_MSM_MDP40
 		MDP_OUTP(MDP_BASE + 0x94800 +
@@ -375,13 +370,22 @@ void lut_tune(int num, unsigned int *pLutTable )
 				 ((b_1 & 0xff) << 8) |
 				 ((r_1 & 0xff) << 16)));
 	}
-	MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x17);
-	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+
+    mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
+    if (mfd->panel.type == MIPI_CMD_PANEL) {
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+        mutex_lock(&mdp_lut_push_sem);
+        mdp_lut_push = 1;
+        mdp_lut_push_i = mdp_lut_i;
+        mutex_unlock(&mdp_lut_push_sem);
+    } else {
+        /*mask off non LUT select bits*/
+        out = inpdw(MDP_BASE + 0x90070) & ~((0x1 << 10) | 0x7);
+        MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x7 | out);
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+    }
+
 	mdp_lut_i = (mdp_lut_i + 1)%2;
-	mutex_unlock(&msm_fb_ioctl_lut_sem1);
-#else	
-	info->fbops->fb_open && info->fbops->fb_ioctl(info, MSMFB_SET_LUT, cmap);
-#endif	
 
  fail_rest:
 	free_cmap(cmap);
@@ -391,9 +395,11 @@ void lut_tune(int num, unsigned int *pLutTable )
 void sharpness_tune(int num )
 {
 	char *vg_base;
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	vg_base = MDP_BASE + MDP4_VIDEO_BASE;
-	outpdw(vg_base + 0x8200, mdp4_ss_table_value((int8_t)num, 0)); 
-	outpdw(vg_base + 0x8204, mdp4_ss_table_value((int8_t)num, 1)); 
+	outpdw(vg_base + 0x8200, mdp4_ss_table_value((int8_t)num, 0));
+	outpdw(vg_base + 0x8204, mdp4_ss_table_value((int8_t)num, 1));
+	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 }
 
 
