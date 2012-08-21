@@ -250,7 +250,7 @@ struct sdio_al_test_debug {
 	struct dentry *rpc_sender_rmnet_a2_perf_test;
 	struct dentry *all_channels_test;
 	struct dentry *host_sender_no_lp_diag_test;
-	struct dentry *host_sender_no_lp_diag_rpc_ciq_test;
+	struct dentry *host_sender_no_lp_diag_rpc_test;
 	struct dentry *rmnet_small_packets_test;
 	struct dentry *rmnet_rtt_test;
 	struct dentry *csvt_rtt_test;
@@ -372,7 +372,7 @@ static int sdio_al_test_extract_number(const char __user *buf,
 {
 	int ret = 0;
 	int number = -1;
-	char local_buf[MAX_STR_SIZE] = {0};
+	char local_buf[MAX_STR_SIZE+1] = {0};
 	char *start = NULL;
 
 	if (count > MAX_STR_SIZE) {
@@ -1284,8 +1284,13 @@ const struct file_operations host_sender_no_lp_diag_test_ops = {
 	.read = host_sender_no_lp_diag_test_read,
 };
 
+<<<<<<< HEAD
 /* HOST SENDER NO LP DIAG, RPC, CIQ TEST */
 static ssize_t host_sender_no_lp_diag_rpc_ciq_test_write(
+=======
+/* HOST SENDER NO LP DIAG, RPC TEST */
+static ssize_t host_sender_no_lp_diag_rpc_test_write(
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 						 struct file *file,
 						 const char __user *buf,
 						 size_t count,
@@ -1295,8 +1300,13 @@ static ssize_t host_sender_no_lp_diag_rpc_ciq_test_write(
 	int i = 0;
 	int number = -1;
 
+<<<<<<< HEAD
 	pr_info(TEST_MODULE_NAME "-- HOST SENDER NO LP FOR DIAG, RPC, "
 		"CIQ TEST --");
+=======
+	pr_info(TEST_MODULE_NAME "-- HOST SENDER NO LP FOR DIAG, RPC "
+		"TEST --");
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 
 	number = sdio_al_test_extract_number(buf, count);
 
@@ -1313,7 +1323,10 @@ static ssize_t host_sender_no_lp_diag_rpc_ciq_test_write(
 		sdio_al_test_initial_dev_and_chan(test_ctx);
 
 		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_DIAG]);
+<<<<<<< HEAD
 		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_CIQ]);
+=======
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_RPC]);
 
 		ret = test_start();
@@ -1325,7 +1338,11 @@ static ssize_t host_sender_no_lp_diag_rpc_ciq_test_write(
 	return count;
 }
 
+<<<<<<< HEAD
 static ssize_t host_sender_no_lp_diag_rpc_ciq_test_read(
+=======
+static ssize_t host_sender_no_lp_diag_rpc_test_read(
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 						 struct file *file,
 						 char __user *buffer,
 						 size_t count,
@@ -1334,7 +1351,11 @@ static ssize_t host_sender_no_lp_diag_rpc_ciq_test_read(
 	memset((void *)buffer, 0, count);
 
 	snprintf(buffer, count,
+<<<<<<< HEAD
 		 "\nHOST_SENDER_NO_LP_DIAG_RPC_CIQ_TEST\n"
+=======
+		 "\nHOST_SENDER_NO_LP_DIAG_RPC_TEST\n"
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		 "===================================\n"
 		 "Description:\n"
 		 "TBD\n");
@@ -1347,10 +1368,17 @@ static ssize_t host_sender_no_lp_diag_rpc_ciq_test_read(
 	}
 }
 
+<<<<<<< HEAD
 const struct file_operations host_sender_no_lp_diag_rpc_ciq_test_ops = {
 	.open = sdio_al_test_open,
 	.write = host_sender_no_lp_diag_rpc_ciq_test_write,
 	.read = host_sender_no_lp_diag_rpc_ciq_test_read,
+=======
+const struct file_operations host_sender_no_lp_diag_rpc_test_ops = {
+	.open = sdio_al_test_open,
+	.write = host_sender_no_lp_diag_rpc_test_write,
+	.read = host_sender_no_lp_diag_rpc_test_read,
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 };
 
 /* RMNET SMALL PACKETS TEST */
@@ -1924,7 +1952,11 @@ static ssize_t open_close_test_write(struct file *file,
 			break;
 
 		pr_info(TEST_MODULE_NAME " -- correctness test for"
+<<<<<<< HEAD
 				"DIAG, CIQ ");
+=======
+				"DIAG ");
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		set_params_loopback_9k(ch_arr[SDIO_DIAG]);
 		set_params_loopback_9k(ch_arr[SDIO_CIQ]);
 
@@ -2438,221 +2470,230 @@ static int sdio_al_test_debugfs_init(void)
 
 	test_ctx->debug.debug_test_result = debugfs_create_u32(
 					"test_result",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->test_result);
 
 	test_ctx->debug.debug_dun_throughput = debugfs_create_u32(
 					"dun_throughput",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->debug.dun_throughput);
 
 	test_ctx->debug.debug_rmnt_throughput = debugfs_create_u32(
 					"rmnt_throughput",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->debug.rmnt_throughput);
 
 	test_ctx->debug.rpc_sender_test =
 		debugfs_create_file("10_rpc_sender_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_sender_test_ops);
 
 	test_ctx->debug.rpc_qmi_diag_sender_test =
 		debugfs_create_file("20_rpc_qmi_diag_sender_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_qmi_diag_sender_test_ops);
 
 	test_ctx->debug.rmnet_a2_validation_test =
 		debugfs_create_file("30_rmnet_a2_validation_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_a2_validation_test_ops);
 
 	test_ctx->debug.dun_a2_validation_test =
 		debugfs_create_file("40_dun_a2_validation_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &dun_a2_validation_test_ops);
 
 	test_ctx->debug.rmnet_a2_perf_test =
 		debugfs_create_file("50_rmnet_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_a2_perf_test_ops);
 
 	test_ctx->debug.dun_a2_perf_test =
 		debugfs_create_file("60_dun_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &dun_a2_perf_test_ops);
 
 	test_ctx->debug.csvt_a2_perf_test =
 		debugfs_create_file("71_csvt_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &csvt_a2_perf_test_ops);
 
 	test_ctx->debug.rmnet_dun_a2_perf_test =
 		debugfs_create_file("70_rmnet_dun_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_dun_a2_perf_test_ops);
 
 	test_ctx->debug.rpc_sender_rmnet_a2_perf_test =
 		debugfs_create_file("80_rpc_sender_rmnet_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_sender_rmnet_a2_perf_test_ops);
 
 	test_ctx->debug.smem_test =
 		debugfs_create_file("90_smem_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &smem_test_ops);
 
 	test_ctx->debug.smem_rpc_test =
 		debugfs_create_file("100_smem_rpc_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &smem_rpc_test_ops);
 
 	test_ctx->debug.all_channels_test =
 		debugfs_create_file("150_all_channels_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &all_channels_test_ops);
 
 	test_ctx->debug.host_sender_no_lp_diag_test =
 		debugfs_create_file("160_host_sender_no_lp_diag_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &host_sender_no_lp_diag_test_ops);
 
+<<<<<<< HEAD
 	test_ctx->debug.host_sender_no_lp_diag_rpc_ciq_test =
 		debugfs_create_file("170_host_sender_no_lp_diag_rpc_ciq_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &host_sender_no_lp_diag_rpc_ciq_test_ops);
+=======
+	test_ctx->debug.host_sender_no_lp_diag_rpc_test =
+		debugfs_create_file("170_host_sender_no_lp_diag_rpc_test",
+				     S_IRUGO | S_IWUSR |S_IWGRP,
+				     test_ctx->debug.debug_root,
+				     NULL,
+				     &host_sender_no_lp_diag_rpc_test_ops);
+>>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 
 	test_ctx->debug.rmnet_small_packets_test =
 		debugfs_create_file("180_rmnet_small_packets_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &rmnet_small_packets_test_ops);
 
 	test_ctx->debug.rmnet_rtt_test =
 		debugfs_create_file("190_rmnet_rtt_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &rmnet_rtt_test_ops);
 
 	test_ctx->debug.csvt_rtt_test =
 		debugfs_create_file("191_csvt_rtt_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &csvt_rtt_test_ops);
 
 	test_ctx->debug.modem_reset_rpc_test =
 		debugfs_create_file("220_modem_reset_rpc_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_rpc_test_ops);
 
 	test_ctx->debug.modem_reset_rmnet_test =
 		debugfs_create_file("230_modem_reset_rmnet_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_rmnet_test_ops);
 
 	test_ctx->debug.modem_reset_channels_4bit_dev_test =
 		debugfs_create_file("240_modem_reset_channels_4bit_dev_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_channels_4bit_dev_test_ops);
 
 	test_ctx->debug.modem_reset_channels_8bit_dev_test =
 		debugfs_create_file("250_modem_reset_channels_8bit_dev_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_channels_8bit_dev_test_ops);
 
 	test_ctx->debug.modem_reset_all_channels_test =
 		debugfs_create_file("260_modem_reset_all_channels_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_all_channels_test_ops);
 
 	test_ctx->debug.open_close_test =
 		debugfs_create_file("270_open_close_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &open_close_test_ops);
 
 	test_ctx->debug.open_close_dun_rmnet_test =
 		debugfs_create_file("271_open_close_dun_rmnet_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &open_close_dun_rmnet_test_ops);
 
 	test_ctx->debug.close_chan_lpm_test =
 		debugfs_create_file("280_close_chan_lpm_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &close_chan_lpm_test_ops);
 
 	test_ctx->debug.lpm_test_client_wakes_host_test =
 		debugfs_create_file("600_lpm_test_client_wakes_host_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_client_wakes_host_test_ops);
 
 	test_ctx->debug.lpm_test_host_wakes_client_test =
 		debugfs_create_file("610_lpm_test_host_wakes_client_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_host_wakes_client_test_ops);
 
 	test_ctx->debug.lpm_test_random_single_channel_test =
 		debugfs_create_file("620_lpm_test_random_single_channel_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_random_single_channel_test_ops);
 
 	test_ctx->debug.lpm_test_random_multi_channel_test =
 		debugfs_create_file("630_lpm_test_random_multi_channel_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_random_multi_channel_test_ops);
@@ -6408,6 +6449,9 @@ static struct platform_driver sdio_dun_drv = {
 	},
 };
 
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+// delete ciq for eur model 9210
+#else
 static struct platform_driver sdio_ciq_drv = {
 	.probe		= sdio_test_channel_ciq_probe,
 	.remove		= sdio_test_channel_ciq_remove,
@@ -6416,6 +6460,7 @@ static struct platform_driver sdio_ciq_drv = {
 		.owner	= THIS_MODULE,
 	},
 };
+#endif
 
 static struct platform_driver sdio_csvt_drv = {
 	.probe		= sdio_test_channel_csvt_probe,
@@ -6460,6 +6505,10 @@ static int __init test_init(void)
 #endif
 
 	test_class = class_create(THIS_MODULE, TEST_MODULE_NAME);
+    if (IS_ERR(test_class)) {
+        pr_err(TEST_MODULE_NAME ":class_create err.\n") ;
+        return -ENODEV ;
+    }
 
 	ret = alloc_chrdev_region(&test_ctx->dev_num, 0, 1, TEST_MODULE_NAME);
 	if (ret) {
@@ -6494,7 +6543,11 @@ static int __init test_init(void)
 	platform_driver_register(&sdio_smem_drv);
 	platform_driver_register(&sdio_rmnt_drv);
 	platform_driver_register(&sdio_dun_drv);
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+	// delete ciq for eur model 9210
+#else
 	platform_driver_register(&sdio_ciq_drv);
+#endif
 	platform_driver_register(&sdio_csvt_drv);
 
 	return ret;
@@ -6523,7 +6576,11 @@ static void __exit test_exit(void)
 	platform_driver_unregister(&sdio_smem_drv);
 	platform_driver_unregister(&sdio_rmnt_drv);
 	platform_driver_unregister(&sdio_dun_drv);
+#ifdef CONFIG_EUR_MODEL_GT_I9210
+	// delete ciq for eur model 9210
+#else
 	platform_driver_unregister(&sdio_ciq_drv);
+#endif
 	platform_driver_unregister(&sdio_csvt_drv);
 
 	for (i = 0; i < SDIO_MAX_CHANNELS; i++) {

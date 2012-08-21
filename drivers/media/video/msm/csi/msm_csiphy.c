@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -79,21 +79,14 @@ int msm_csiphy_config(struct csiphy_cfg_params *cfg_params)
 	msm_io_w(0x1, csiphybase + MIPI_CSIPHY_T_WAKEUP_CFG0_ADDR);
 
 	for (i = 0; i < csiphy_params->lane_cnt; i++) {
-		msm_io_w(0x00, csiphybase + MIPI_CSIPHY_LNn_CFG1_ADDR + 0x40*i);
-		msm_io_w(0x5F, csiphybase + MIPI_CSIPHY_LNn_CFG2_ADDR + 0x40*i);
+		msm_io_w(0x10, csiphybase + MIPI_CSIPHY_LNn_CFG2_ADDR + 0x40*i);
 		msm_io_w(csiphy_params->settle_cnt,
 			csiphybase + MIPI_CSIPHY_LNn_CFG3_ADDR + 0x40*i);
-		msm_io_w(0x00000052,
-			csiphybase + MIPI_CSIPHY_LNn_CFG5_ADDR + 0x40*i);
 	}
 
-	msm_io_w(0x00000000, csiphybase + MIPI_CSIPHY_LNCK_CFG1_ADDR);
-	msm_io_w(0x5F, csiphybase + MIPI_CSIPHY_LNCK_CFG2_ADDR);
+	msm_io_w(0x10, csiphybase + MIPI_CSIPHY_LNCK_CFG2_ADDR);
 	msm_io_w(csiphy_params->settle_cnt,
 			 csiphybase + MIPI_CSIPHY_LNCK_CFG3_ADDR);
-	msm_io_w(0x5, csiphybase + MIPI_CSIPHY_LNCK_CFG4_ADDR);
-	msm_io_w(0x2, csiphybase + MIPI_CSIPHY_LNCK_CFG5_ADDR);
-	msm_io_w(0x0, csiphybase + 0x128);
 
 	msm_io_w(0x24,
 		csiphybase + MIPI_CSIPHY_INTERRUPT_MASK0_ADDR);
@@ -115,19 +108,24 @@ static irqreturn_t msm_csiphy_irq(int irq_num, void *data)
 	struct csiphy_device *csiphy_dev = data;
 	irq = msm_io_r(csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_STATUS0_ADDR);
 	msm_io_w(irq, csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_CLEAR0_ADDR);
-	CDBG("%s MIPI_CSIPHY_INTERRUPT_STATUS0 = 0x%x\n", __func__, irq);
+	CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS0 = 0x%x\n",
+		 __func__, csiphy_dev->pdev->id, irq);
 	irq = msm_io_r(csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_STATUS1_ADDR);
 	msm_io_w(irq, csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_CLEAR1_ADDR);
-	CDBG("%s MIPI_CSIPHY_INTERRUPT_STATUS1 = 0x%x\n", __func__, irq);
+	CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS1 = 0x%x\n",
+		__func__, csiphy_dev->pdev->id, irq);
 	irq = msm_io_r(csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_STATUS2_ADDR);
 	msm_io_w(irq, csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_CLEAR2_ADDR);
-	CDBG("%s MIPI_CSIPHY_INTERRUPT_STATUS2 = 0x%x\n", __func__, irq);
+	CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS2 = 0x%x\n",
+		__func__, csiphy_dev->pdev->id, irq);
 	irq = msm_io_r(csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_STATUS3_ADDR);
 	msm_io_w(irq, csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_CLEAR3_ADDR);
-	CDBG("%s MIPI_CSIPHY_INTERRUPT_STATUS3 = 0x%x\n", __func__, irq);
+	CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS3 = 0x%x\n",
+		__func__, csiphy_dev->pdev->id, irq);
 	irq = msm_io_r(csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_STATUS4_ADDR);
 	msm_io_w(irq, csiphy_dev->base + MIPI_CSIPHY_INTERRUPT_CLEAR4_ADDR);
-	CDBG("%s MIPI_CSIPHY_INTERRUPT_STATUS4 = 0x%x\n", __func__, irq);
+	CDBG("%s MIPI_CSIPHY%d_INTERRUPT_STATUS4 = 0x%x\n",
+		__func__, csiphy_dev->pdev->id, irq);
 	msm_io_w(0x1, csiphy_dev->base + 0x164);
 	msm_io_w(0x0, csiphy_dev->base + 0x164);
 	return IRQ_HANDLED;
@@ -191,12 +189,12 @@ static int msm_csiphy_release(struct v4l2_subdev *sd)
 	msm_io_w(0x0, csiphy_dev->base + MIPI_CSIPHY_LNCK_CFG2_ADDR);
 	msm_io_w(0x0, csiphy_dev->base + MIPI_CSIPHY_GLBL_PWR_CFG_ADDR);
 
-	msm_cam_clk_enable(&csiphy_dev->pdev->dev, csiphy_clk_info,
-		csiphy_dev->csiphy_clk, ARRAY_SIZE(csiphy_clk_info), 0);
-
 #if DBG_CSIPHY
 	disable_irq(csiphy_dev->irq->start);
 #endif
+	msm_cam_clk_enable(&csiphy_dev->pdev->dev, csiphy_clk_info,
+		csiphy_dev->csiphy_clk, ARRAY_SIZE(csiphy_clk_info), 0);
+
 	iounmap(csiphy_dev->base);
 	return 0;
 }
@@ -204,20 +202,28 @@ static int msm_csiphy_release(struct v4l2_subdev *sd)
 static long msm_csiphy_subdev_ioctl(struct v4l2_subdev *sd,
 			unsigned int cmd, void *arg)
 {
+	int rc = -ENOIOCTLCMD;
 	struct csiphy_cfg_params cfg_params;
+	struct csiphy_device *csiphy_dev = v4l2_get_subdevdata(sd);
+	mutex_lock(&csiphy_dev->mutex);
 	switch (cmd) {
 	case VIDIOC_MSM_CSIPHY_CFG:
 		cfg_params.subdev = sd;
 		cfg_params.parms = arg;
-		return msm_csiphy_config(
+		rc = msm_csiphy_config(
 			(struct csiphy_cfg_params *)&cfg_params);
+		break;
 	case VIDIOC_MSM_CSIPHY_INIT:
-		return msm_csiphy_init(sd);
+		rc = msm_csiphy_init(sd);
+		break;
 	case VIDIOC_MSM_CSIPHY_RELEASE:
-		return msm_csiphy_release(sd);
+		rc = msm_csiphy_release(sd);
+		break;
 	default:
-		return -ENOIOCTLCMD;
+		pr_err("%s: command not found\n", __func__);
 	}
+	mutex_unlock(&csiphy_dev->mutex);
+	return rc;
 }
 
 static struct v4l2_subdev_core_ops msm_csiphy_subdev_core_ops = {

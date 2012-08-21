@@ -35,6 +35,13 @@ enum {
 	MEMTYPE_NONE = -1,
 	MEMTYPE_SMI_KERNEL = 0,
 	MEMTYPE_SMI,
+#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
+	MEMTYPE_PMEM_ADSP,
+#endif
+#if defined (CONFIG_SAMSUNG_MEMORY_LAYOUT_ARRANGE)
+	MEMTYPE_PMEM_MDP,
+	MEMTYPE_PMEM_AUDIO,
+#endif
 	MEMTYPE_EBI0,
 	MEMTYPE_EBI1,
 	MEMTYPE_MAX,
@@ -55,10 +62,13 @@ struct memtype_reserve {
 struct reserve_info {
 	struct memtype_reserve *memtype_reserve_table;
 	void (*calculate_reserve_sizes)(void);
+	void (*reserve_fixed_area)(unsigned long);
 	int (*paddr_to_memtype)(unsigned int);
 	unsigned long low_unstable_address;
 	unsigned long max_unstable_size;
 	unsigned long bank_size;
+	unsigned long fixed_area_start;
+	unsigned long fixed_area_size;
 };
 
 extern struct reserve_info *reserve_info;

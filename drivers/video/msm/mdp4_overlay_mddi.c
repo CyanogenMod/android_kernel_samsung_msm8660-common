@@ -578,6 +578,11 @@ void mdp4_mddi_overlay_dmas_restore(void)
 
 void mdp4_mddi_overlay(struct msm_fb_data_type *mfd)
 {
+	if (!mfd)
+		return -ENODEV;
+	if (mfd->key != MFD_KEY)
+		return -EINVAL;
+
 	mutex_lock(&mfd->dma->ov_mutex);
 
 	if (mfd && mfd->panel_power_on) {
@@ -607,6 +612,11 @@ void mdp4_mddi_overlay(struct msm_fb_data_type *mfd)
 int mdp4_mddi_overlay_cursor(struct fb_info *info, struct fb_cursor *cursor)
 {
 	struct msm_fb_data_type *mfd = info->par;
+	
+	if (!mfd)
+		return -ENODEV;	
+	if (mfd->key != MFD_KEY)
+		return -EINVAL;
 	mutex_lock(&mfd->dma->ov_mutex);
 	if (mfd && mfd->panel_power_on) {
 		mdp4_mddi_dma_busy_wait(mfd);

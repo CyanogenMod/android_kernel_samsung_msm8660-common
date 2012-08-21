@@ -1,0 +1,13 @@
+#
+# Copyright (c) 2011 Samsung Electronics Co., Ltd.
+# 		http://www.samsung.com/
+# Aakash Manik
+#	aakash.manik@samsung.com
+
+
+config VIDEO_MHL_V1
+	bool "Samsung Mobile HD Link Interface"
+	depends on MSM_VIDC && ARCH_MSM
+	default n
+	help
+	  This is a MHL v1 driver customized for Qualcomm MSM8660 based chipsets.

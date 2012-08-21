@@ -928,6 +928,21 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 	case VCD_I_META_BUFFER_MODE:
 		vcd_status = VCD_S_SUCCESS;
 		break;
+	case VCD_I_ENABLE_SPS_PPS_FOR_IDR:
+	{
+		struct vcd_property_sps_pps_for_idr_enable *sps_pps =
+		(struct vcd_property_sps_pps_for_idr_enable *) property_value;
+
+		if ((sizeof(struct vcd_property_sps_pps_for_idr_enable)) ==
+		property_hdr->sz) {
+			DDL_MSG_LOW("SPS PPS generation for IDR Encode "
+				"is Requested");
+			encoder->sps_pps.sps_pps_for_idr_enable_flag =
+			sps_pps->sps_pps_for_idr_enable_flag;
+			vcd_status = VCD_S_SUCCESS;
+		}
+		break;
+	}
 	default:
 		DDL_MSG_ERROR("INVALID ID %d\n", (int)property_hdr->prop_id);
 		vcd_status = VCD_ERR_ILLEGAL_OP;
@@ -1392,6 +1407,14 @@ static u32 ddl_get_enc_property(struct ddl_client_context *ddl,
 			property_value);
 		vcd_status = VCD_S_SUCCESS;
 	break;
+	case VCD_I_ENABLE_SPS_PPS_FOR_IDR:
+		if (sizeof(struct vcd_property_sps_pps_for_idr_enable) ==
+			property_hdr->sz) {
+			*(struct vcd_property_sps_pps_for_idr_enable *)
+				property_value = encoder->sps_pps;
+			vcd_status = VCD_S_SUCCESS;
+		}
+	break;
 	default:
 		vcd_status = VCD_ERR_ILLEGAL_OP;
 		break;
@@ -1462,6 +1485,7 @@ static u32 ddl_set_enc_dynamic_property(struct ddl_client_context *ddl,
 			vcd_status = VCD_S_SUCCESS;
 		}
 	}
+	break;
 	case VCD_I_INTRA_REFRESH:
 	{
 		struct vcd_property_intra_refresh_mb_number
@@ -1740,7 +1764,7 @@ u32 ddl_set_default_decoder_buffer_req(struct ddl_decoder_data *decoder,
 	}
 	memset(output_buf_req, 0,
 		sizeof(struct vcd_buffer_requirement));
-	if (!estimate && !decoder->idr_only_decoding && !decoder->cont_mode)
+	if (!decoder->idr_only_decoding && !decoder->cont_mode)
 		output_buf_req->actual_count = min_dpb + 4;
 	else
 		output_buf_req->actual_count = min_dpb;
@@ -1958,5 +1982,6 @@ void ddl_set_initial_default_values(struct ddl_client_context *ddl)
 		encoder->frame_rate.fps_numerator = DDL_INITIAL_FRAME_RATE;
 		encoder->frame_rate.fps_denominator = 1;
 		ddl_set_default_enc_property(ddl);
+		encoder->sps_pps.sps_pps_for_idr_enable_flag = false;
 	}
 }

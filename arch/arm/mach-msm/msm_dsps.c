@@ -39,7 +39,7 @@
 #include <mach/subsystem_restart.h>
 #include <mach/subsystem_notif.h>
 
-#include <timer.h>
+#include "timer.h"
 
 #define DRV_NAME	"msm_dsps"
 #define DRV_VERSION	"3.02"
@@ -494,6 +494,12 @@ static int dsps_alloc_resources(struct platform_device *pdev)
 
 	drv->ppss_base = ioremap(ppss_res->start,
 				 resource_size(ppss_res));
+
+	if (!drv->ppss_base) {
+		pr_err("%s: unable to remap memory\n", __func__);
+		ret = -ENOMEM;
+		goto reg_err;
+	}
 
 	ppss_wdog = platform_get_resource_byname(pdev, IORESOURCE_IRQ,
 						"ppss_wdog");

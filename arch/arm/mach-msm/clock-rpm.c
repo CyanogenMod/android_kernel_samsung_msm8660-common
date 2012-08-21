@@ -31,7 +31,9 @@ static int rpm_clk_enable(struct clk *clk)
 	struct rpm_clk *peer = r->peer;
 
 	spin_lock_irqsave(&rpm_clock_lock, flags);
-
+#if 0
+	printk("[RPM] rpm_clk_enable : %s\n",clk->dbg_name);    /* onlyjazz.el26 : log rpm clk request */
+#endif
 	this_khz = r->last_set_khz;
 	/* Don't send requests to the RPM if the rate has not been set. */
 	if (this_khz == 0)
@@ -74,7 +76,9 @@ static void rpm_clk_disable(struct clk *clk)
 	struct rpm_clk *r = to_rpm_clk(clk);
 
 	spin_lock_irqsave(&rpm_clock_lock, flags);
-
+#if 0
+	printk("[RPM] rpm_clk_disable : %s\n",clk->dbg_name);    /* onlyjazz.el26 : log rpm clk request */
+#endif
 	if (r->last_set_khz) {
 		struct msm_rpm_iv_pair iv;
 		struct rpm_clk *peer = r->peer;
@@ -114,7 +118,9 @@ static int rpm_clk_set_rate(struct clk *clk, unsigned long rate)
 	this_khz = DIV_ROUND_UP(rate, 1000);
 
 	spin_lock_irqsave(&rpm_clock_lock, flags);
-
+#if 0
+	printk("[RPM] rpm_clk_set_rate : %s (%d)\n",clk->dbg_name, rate);    /* onlyjazz.el26 : log rpm clk request */
+#endif
 	/* Ignore duplicate requests. */
 	if (r->last_set_khz == this_khz)
 		goto out;

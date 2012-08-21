@@ -20,6 +20,10 @@ void __list_add(struct list_head *new,
 			      struct list_head *prev,
 			      struct list_head *next)
 {
+#ifdef CONFIG_SEC_DEBUG
+	BUG_ON(next->prev != prev);
+	BUG_ON(prev->next != next);
+#else
 	WARN(next->prev != prev,
 		"list_add corruption. next->prev should be "
 		"prev (%p), but was %p. (next=%p).\n",
@@ -28,6 +32,7 @@ void __list_add(struct list_head *new,
 		"list_add corruption. prev->next should be "
 		"next (%p), but was %p. (prev=%p).\n",
 		next, prev->next, prev);
+#endif
 	next->prev = new;
 	new->next = next;
 	new->prev = prev;
@@ -42,6 +47,12 @@ void __list_del_entry(struct list_head *entry)
 	prev = entry->prev;
 	next = entry->next;
 
+#ifdef CONFIG_SEC_DEBUG
+	BUG_ON(next == LIST_POISON1
+			|| prev == LIST_POISON2
+			|| prev->next != entry
+			|| next->prev != entry);
+#else
 	if (WARN(next == LIST_POISON1,
 		"list_del corruption, %p->next is LIST_POISON1 (%p)\n",
 		entry, LIST_POISON1) ||
@@ -55,7 +66,7 @@ void __list_del_entry(struct list_head *entry)
 		"list_del corruption. next->prev should be %p, "
 		"but was %p\n", entry, next->prev))
 		return;
-
+#endif
 	__list_del(prev, next);
 }
 EXPORT_SYMBOL(__list_del_entry);

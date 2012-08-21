@@ -1423,7 +1423,7 @@ static int vfe31_capture(uint32_t num_frames_capture)
 		}
 	}
 	msm_io_w(irq_comp_mask, vfe31_ctrl->vfebase + VFE_IRQ_COMP_MASK);
-	if (p_sync->stereocam_enabled)
+	if (p_sync && p_sync->stereocam_enabled)
 		msm_camio_set_perf_lvl(S_STEREO_CAPTURE);
 	else
 		msm_camio_set_perf_lvl(S_CAPTURE);

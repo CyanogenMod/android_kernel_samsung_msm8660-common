@@ -27,6 +27,7 @@
 #include <asm/pmu.h>
 #include <asm/stacktrace.h>
 #include <linux/cpu_pm.h>
+#include <linux/percpu.h>
 
 static struct platform_device *pmu_device;
 
@@ -97,6 +98,10 @@ struct arm_pmu {
 
 /* Set at runtime when we know what CPU type we are. */
 static const struct arm_pmu *armpmu;
+
+#if defined(CONFIG_ARCH_MSM8X60)
+static struct arm_pmu_platdata __percpu **armpmu_percpu_pdata;
+#endif
 
 enum arm_perf_pmu_ids
 armpmu_get_pmu_id(void)
@@ -439,9 +444,28 @@ armpmu_reserve_hardware(void)
 		if (irq < 0)
 			continue;
 
-		err = armpmu->request_pmu_irq(irq, &handle_irq);
+#if defined(CONFIG_ARCH_MSM8X60)
+		armpmu_percpu_pdata = alloc_percpu(struct arm_pmu_platdata *);
+		if (!armpmu_percpu_pdata) {
+			pr_err("%s: memory allocation failed for percpu data\n",
+					__func__);
+			return -ENOMEM;
+		}
 
+		*__this_cpu_ptr(armpmu_percpu_pdata) = plat;
+
+		err = request_percpu_irq(irq, handle_irq,
+				  "armpmu", armpmu_percpu_pdata);
+
+		enable_percpu_irq(irq, 0);
+#else
+		err = armpmu->request_pmu_irq(irq, &handle_irq);
+#endif
 		if (err) {
+#if defined(CONFIG_ARCH_MSM8X60)
+			disable_percpu_irq(irq);
+			free_percpu(armpmu_percpu_pdata);
+#endif
 			pr_warning("unable to request IRQ%d for ARM perf "
 				"counters\n", irq);
 			break;
@@ -451,8 +475,14 @@ armpmu_reserve_hardware(void)
 	if (err) {
 		for (i = i - 1; i >= 0; --i) {
 			irq = platform_get_irq(pmu_device, i);
-
+			if (irq >= 0)
+#if defined(CONFIG_ARCH_MSM8X60)
+				disable_percpu_irq(irq);
+				free_percpu_irq(irq, NULL);
+				free_percpu(armpmu_percpu_pdata);
+#else
 			armpmu->free_pmu_irq(irq);
+#endif
 		}
 		release_pmu(pmu_device);
 		pmu_device = NULL;
@@ -468,7 +498,15 @@ armpmu_release_hardware(void)
 
 	for (i = pmu_device->num_resources - 1; i >= 0; --i) {
 		irq = platform_get_irq(pmu_device, i);
+		if (irq >= 0) {
+#if defined(CONFIG_ARCH_MSM8X60)
+			disable_percpu_irq(irq);
+			free_percpu_irq(irq, NULL);
+			free_percpu(armpmu_percpu_pdata);
+#else
 		armpmu->free_pmu_irq(irq);
+#endif
+		}
 	}
 	armpmu->stop();
 

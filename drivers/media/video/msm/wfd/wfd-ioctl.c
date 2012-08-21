@@ -35,12 +35,12 @@
 #include "vsg-subdev.h"
 
 #define WFD_VERSION KERNEL_VERSION(0, 0, 1)
-#define WFD_DEVICE_NUMBER 38
+#define WFD_NUM_DEVICES 2
+#define WFD_DEVICE_NUMBER_BASE 38
+#define WFD_DEVICE_SECURE (WFD_DEVICE_NUMBER_BASE + 1)
 #define DEFAULT_WFD_WIDTH 640
 #define DEFAULT_WFD_HEIGHT 480
-#define VSG_SCRATCH_BUFFERS 1
-#define MDP_WRITEBACK_BUFFERS 3
-#define VENC_INPUT_BUFFERS (VSG_SCRATCH_BUFFERS + MDP_WRITEBACK_BUFFERS)
+#define VENC_INPUT_BUFFERS 4
 
 struct wfd_device {
 	struct platform_device *pdev;
@@ -49,6 +49,7 @@ struct wfd_device {
 	struct v4l2_subdev mdp_sdev;
 	struct v4l2_subdev enc_sdev;
 	struct v4l2_subdev vsg_sdev;
+	bool secure_device;
 };
 
 struct mem_info {
@@ -122,7 +123,6 @@ int wfd_allocate_input_buffers(struct wfd_device *wfd_dev,
 	int rc;
 	unsigned long flags;
 	struct mdp_buf_info mdp_buf = {0};
-	struct vsg_buf_info vsg_buf = {};
 	spin_lock_irqsave(&inst->inst_lock, flags);
 	if (inst->input_bufs_allocated) {
 		spin_unlock_irqrestore(&inst->inst_lock, flags);
@@ -149,25 +149,13 @@ int wfd_allocate_input_buffers(struct wfd_device *wfd_dev,
 		mdp_buf.cookie = mregion;
 		mdp_buf.kvaddr = (u32) mregion->kvaddr;
 		mdp_buf.paddr = (u32) mregion->paddr;
-		vsg_buf.mdp_buf_info = mdp_buf;
 
-		if (i < MDP_WRITEBACK_BUFFERS) {
-			rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
-					MDP_Q_BUFFER, (void *)&mdp_buf);
-			if (rc) {
-				WFD_MSG_ERR("Unable to queue the"
-						" buffer to mdp\n");
-				break;
-			}
-		} else /*if (i < VSG_SCRATCH_BUFFERS*/ {
-			rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
-					VSG_SET_SCRATCH_BUFFER,
-					(void *)&vsg_buf);
-			if (rc) {
-				WFD_MSG_ERR("Unable to set scratch"
-						" buffer to vsg\n");
-				break;
-			}
+		rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
+				MDP_Q_BUFFER, (void *)&mdp_buf);
+		if (rc) {
+			WFD_MSG_ERR("Unable to queue the"
+					" buffer to mdp\n");
+			break;
 		}
 	}
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
@@ -388,6 +376,8 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 	struct wfd_inst *inst = (struct wfd_inst *)priv_data->private_data;
 	int rc = 0;
 
+	WFD_MSG_ERR("Stream on called\n");
+	WFD_MSG_DBG("enc start\n");
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
 			ENCODE_START, (void *)inst->venc_inst);
 	if (rc) {
@@ -395,6 +385,7 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 		goto subdev_start_fail;
 	}
 
+	WFD_MSG_DBG("vsg start\n");
 	rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
 			VSG_START, NULL);
 	if (rc) {
@@ -408,6 +399,7 @@ int wfd_vidbuf_start_streaming(struct vb2_queue *q)
 		rc = PTR_ERR(inst->mdp_task);
 		goto subdev_start_fail;
 	}
+	WFD_MSG_DBG("mdp start\n");
 	rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
 			 MDP_START, (void *)inst->mdp_inst);
 	if (rc)
@@ -423,17 +415,20 @@ int wfd_vidbuf_stop_streaming(struct vb2_queue *q)
 		(struct wfd_device *)video_drvdata(priv_data);
 	struct wfd_inst *inst = (struct wfd_inst *)priv_data->private_data;
 	int rc = 0;
+	WFD_MSG_DBG("mdp stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->mdp_sdev, core, ioctl,
 			 MDP_STOP, (void *)inst->mdp_inst);
 	if (rc)
 		WFD_MSG_ERR("Failed to stop MDP\n");
 
+	WFD_MSG_DBG("vsg stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->vsg_sdev, core, ioctl,
 			 VSG_STOP, NULL);
 	if (rc)
 		WFD_MSG_ERR("Failed to stop VSG\n");
 
 	kthread_stop(inst->mdp_task);
+	WFD_MSG_DBG("enc stop\n");
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl,
 			ENCODE_STOP, (void *)inst->venc_inst);
 	if (rc)
@@ -1057,6 +1052,7 @@ static int wfd_open(struct file *filp)
 	enc_mops.op_buffer_done = venc_op_buffer_done;
 	enc_mops.ip_buffer_done = venc_ip_buffer_done;
 	enc_mops.cbdata = filp;
+	enc_mops.secure = wfd_dev->secure_device;
 	rc = v4l2_subdev_call(&wfd_dev->enc_sdev, core, ioctl, OPEN,
 				(void *)&enc_mops);
 	if (rc || !enc_mops.cookie) {
@@ -1133,19 +1129,11 @@ void release_video_device(struct video_device *pvdev)
 {
 
 }
-static int __devinit __wfd_probe(struct platform_device *pdev)
+
+static int wfd_dev_setup(struct wfd_device *wfd_dev, int dev_num,
+		struct platform_device *pdev)
 {
 	int rc = 0;
-	struct wfd_device *wfd_dev;
-	WFD_MSG_DBG("__wfd_probe: E\n");
-	wfd_dev = kzalloc(sizeof(*wfd_dev), GFP_KERNEL);
-	if (!wfd_dev) {
-		WFD_MSG_ERR("Could not allocate memory for "
-				"wfd device\n");
-		rc = -ENOMEM;
-		goto err_v4l2_registration;
-	}
-	pdev->dev.platform_data = (void *) wfd_dev;
 	rc = v4l2_device_register(&pdev->dev, &wfd_dev->v4l2_dev);
 	if (rc) {
 		WFD_MSG_ERR("Failed to register the video device\n");
@@ -1162,7 +1150,7 @@ static int __devinit __wfd_probe(struct platform_device *pdev)
 	wfd_dev->pvdev->ioctl_ops = &g_wfd_ioctl_ops;
 
 	rc = video_register_device(wfd_dev->pvdev, VFL_TYPE_GRABBER,
-			WFD_DEVICE_NUMBER);
+			dev_num);
 	if (rc) {
 		WFD_MSG_ERR("Failed to register the device\n");
 		goto err_video_register_device;
@@ -1172,7 +1160,7 @@ static int __devinit __wfd_probe(struct platform_device *pdev)
 	v4l2_subdev_init(&wfd_dev->mdp_sdev, &mdp_subdev_ops);
 	strncpy(wfd_dev->mdp_sdev.name, "wfd-mdp", V4L2_SUBDEV_NAME_SIZE);
 	rc = v4l2_device_register_subdev(&wfd_dev->v4l2_dev,
-						&wfd_dev->mdp_sdev);
+			&wfd_dev->mdp_sdev);
 	if (rc) {
 		WFD_MSG_ERR("Failed to register mdp subdevice: %d\n", rc);
 		goto err_mdp_register_subdev;
@@ -1181,7 +1169,7 @@ static int __devinit __wfd_probe(struct platform_device *pdev)
 	v4l2_subdev_init(&wfd_dev->enc_sdev, &enc_subdev_ops);
 	strncpy(wfd_dev->enc_sdev.name, "wfd-venc", V4L2_SUBDEV_NAME_SIZE);
 	rc = v4l2_device_register_subdev(&wfd_dev->v4l2_dev,
-						&wfd_dev->enc_sdev);
+			&wfd_dev->enc_sdev);
 	if (rc) {
 		WFD_MSG_ERR("Failed to register encoder subdevice: %d\n", rc);
 		goto err_venc_register_subdev;
@@ -1195,7 +1183,7 @@ static int __devinit __wfd_probe(struct platform_device *pdev)
 	v4l2_subdev_init(&wfd_dev->vsg_sdev, &vsg_subdev_ops);
 	strncpy(wfd_dev->vsg_sdev.name, "wfd-vsg", V4L2_SUBDEV_NAME_SIZE);
 	rc = v4l2_device_register_subdev(&wfd_dev->v4l2_dev,
-						&wfd_dev->vsg_sdev);
+			&wfd_dev->vsg_sdev);
 	if (rc) {
 		WFD_MSG_ERR("Failed to register vsg subdevice: %d\n", rc);
 		goto err_venc_init;
@@ -1215,6 +1203,57 @@ err_video_register_device:
 err_video_device_alloc:
 	v4l2_device_unregister(&wfd_dev->v4l2_dev);
 err_v4l2_registration:
+	return rc;
+}
+static int __devinit __wfd_probe(struct platform_device *pdev)
+{
+	int rc = 0, c = 0;
+	struct wfd_device *wfd_dev; /* Should be taken as an array*/
+
+	WFD_MSG_DBG("__wfd_probe: E\n");
+	wfd_dev = kzalloc(sizeof(*wfd_dev)*WFD_NUM_DEVICES, GFP_KERNEL);
+	if (!wfd_dev) {
+		WFD_MSG_ERR("Could not allocate memory for "
+				"wfd device\n");
+		rc = -ENOMEM;
+		goto err_v4l2_probe;
+	}
+	pdev->dev.platform_data = (void *) wfd_dev;
+
+	for (c = 0; c < WFD_NUM_DEVICES; ++c) {
+		rc = wfd_dev_setup(&wfd_dev[c],
+			WFD_DEVICE_NUMBER_BASE + c, pdev);
+
+		if (rc) {
+			/* Clear out old devices */
+			for (--c; c >= 0; --c) {
+				v4l2_device_unregister_subdev(
+						&wfd_dev[c].vsg_sdev);
+				v4l2_device_unregister_subdev(
+						&wfd_dev[c].enc_sdev);
+				v4l2_device_unregister_subdev(
+						&wfd_dev[c].mdp_sdev);
+				video_unregister_device(wfd_dev[c].pvdev);
+				video_device_release(wfd_dev[c].pvdev);
+				v4l2_device_unregister(&wfd_dev[c].v4l2_dev);
+			}
+
+			goto err_v4l2_probe;
+		}
+
+		/* Other device specific stuff */
+		switch (WFD_DEVICE_NUMBER_BASE + c) {
+		case WFD_DEVICE_SECURE:
+			wfd_dev[c].secure_device = true;
+			break;
+		default:
+			break;
+		}
+
+	}
+	WFD_MSG_DBG("__wfd_probe: X\n");
+	return rc;
+err_v4l2_probe:
 	kfree(wfd_dev);
 	return rc;
 }
@@ -1222,6 +1261,8 @@ err_v4l2_registration:
 static int __devexit __wfd_remove(struct platform_device *pdev)
 {
 	struct wfd_device *wfd_dev;
+	int c = 0;
+
 	wfd_dev = (struct wfd_device *)pdev->dev.platform_data;
 
 	WFD_MSG_DBG("Inside wfd_remove\n");
@@ -1230,10 +1271,15 @@ static int __devexit __wfd_remove(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	v4l2_device_unregister_subdev(&wfd_dev->mdp_sdev);
-	video_unregister_device(wfd_dev->pvdev);
-	video_device_release(wfd_dev->pvdev);
-	v4l2_device_unregister(&wfd_dev->v4l2_dev);
+	for (c = 0; c < WFD_NUM_DEVICES; ++c) {
+		v4l2_device_unregister_subdev(&wfd_dev[c].vsg_sdev);
+		v4l2_device_unregister_subdev(&wfd_dev[c].enc_sdev);
+		v4l2_device_unregister_subdev(&wfd_dev[c].mdp_sdev);
+		video_unregister_device(wfd_dev[c].pvdev);
+		video_device_release(wfd_dev[c].pvdev);
+		v4l2_device_unregister(&wfd_dev[c].v4l2_dev);
+	}
+
 	kfree(wfd_dev);
 	return 0;
 }

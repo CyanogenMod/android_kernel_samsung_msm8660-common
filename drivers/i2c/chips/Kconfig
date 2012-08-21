@@ -1,0 +1,99 @@
+#
+# Miscellaneous I2C chip drivers configuration
+#
+# *** DEPRECATED! Do not add new entries! See Makefile ***
+#
+
+menu "Miscellaneous I2C Chip support"
+
+config SENSORS_MT9T013
+	tristate "MT9T013 Camera Driver"
+	depends on I2C
+	default n
+	help
+	 MT9T013 Camera Driver implemented by HTC.
+
+config OPTICAL_GP2A
+	depends on I2C
+	tristate "GP2A driver"
+	default n
+	help
+	  This option enables proximity & light sensors using gp2a driver.
+
+config OPTICAL_GP2AP020A00F
+	depends on I2C
+	tristate "GP2AP020A00F driver"
+	default n
+	help
+	  This option enables proximity & light sensors using gp2ap020a00f driver.  	  
+
+config OPTICAL_TAOS
+	depends on I2C
+	tristate "TAOS driver"
+	default n
+	help
+	  This option enables proximity & light sensors using taos driver.
+	  
+config SENSORS_YDA165
+	bool "YDA165 Audio Amp Driver"
+	depends on I2C
+	default y
+	help
+	 YDA165 Audio AMP
+
+config WM8994_AMP
+        bool "WM8994 Audio Amp Driver"
+        depends on I2C
+        default y
+        help
+         WM8994 Audio AMP
+
+config USB_SWITCH_FSA9480
+	tristate "FSA9480 Micro USB Switch IC Driver"
+	depends on I2C
+	default n
+	help
+	 FSA9480 Micro USB Switch IC Driver
+
+config GYRO_K3G
+	tristate "K3G driver for s5pc210"
+	default n
+	help
+	  This option enables gyro sensors using K3G driver.
+
+config SENSORS_K3DH
+	tristate "K3DH acceleration sensor support"
+	depends on I2C
+        default n
+	help
+	  Driver for STMicroelectronic K3DH accelerometer.
+
+config SENSORS_AK8975
+	tristate "AK8975 compass support"
+	default n
+	depends on I2C
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8975.
+
+config SENSORS_YAS529_MAGNETIC
+	tristate "Yamaha YAS529 Geomagnetic Sensor"
+	default n
+	depends on I2C
+
+config INPUT_YAS529_POSITION
+	int "YAS529 Mounting Position on Board"
+	depends on SENSORS_YAS529_MAGNETIC
+	default n
+	help
+	  Chip mounting position (pin 1).
+	    0: top, upper-left
+	    1: top, upper-right
+	    2: top, lower-right
+	    3: top, lower-left
+	    4: bottom, upper-left
+	    5: bottom, upper-right
+	    6: bottom, lower-right
+	    7: bottom, lower-left
+	    
+endmenu

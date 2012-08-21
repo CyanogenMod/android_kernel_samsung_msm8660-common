@@ -33,6 +33,9 @@
 #include <mach/subsystem_restart.h>
 
 #include "smd_private.h"
+#ifdef CONFIG_SEC_DEBUG
+#include <mach/sec_debug.h>
+#endif
 
 struct subsys_soc_restart_order {
 	const char * const *subsystem_list;
@@ -153,11 +156,11 @@ static int restart_level_set(const char *val, struct kernel_param *kp)
 	case RESET_SOC:
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
-		pr_info("Phase %d behavior activated.\n", restart_level);
+		pr_info("Subsystem Restart: Phase %d behavior activated.\n", restart_level);
 	break;
 
 	case RESET_SUBSYS_MIXED:
-		pr_info("Phase 2+ behavior activated.\n");
+		pr_info("Subsystem Restart: Phase 2+ behavior activated.\n");
 	break;
 
 	default:
@@ -497,8 +500,7 @@ int subsystem_restart(const char *subsys_name)
 		break;
 
 	case RESET_SOC:
-		panic("subsys-restart: Resetting the SoC - %s crashed.",
-			subsys->name);
+		panic(subsys_name);
 		break;
 
 	default:
@@ -545,6 +547,11 @@ static int ssr_panic_handler(struct notifier_block *this,
 {
 	struct subsys_data *subsys;
 
+#if defined(CONFIG_SEC_DEBUG)
+	if(sec_debug_is_enabled()) // Skip ssr_panic_handler when the device is going to upload mode.
+		return NOTIFY_DONE;
+#endif
+	
 	list_for_each_entry(subsys, &subsystem_list, list)
 		if (subsys->crash_shutdown)
 			subsys->crash_shutdown(subsys);
@@ -594,6 +601,11 @@ static int __init subsys_restart_init(void)
 {
 	int ret = 0;
 
+#if defined(CONFIG_SEC_DEBUG)
+	if(!sec_debug_is_enabled()) // if debug_level is low, silrent reset is activated.
+		restart_level = RESET_SUBSYS_COUPLED;
+	else
+#endif
 	restart_level = RESET_SOC;
 
 	ret = ssr_init_soc_restart_orders();

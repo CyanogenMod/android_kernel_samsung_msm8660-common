@@ -23,6 +23,7 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/msm_adc.h>
+#include <linux/i2c.h>
 
 #define REG_MPP_BASE			0x50
 #define REG_IRQ_BASE			0x1BB
@@ -690,6 +691,64 @@ bail:
 	return rc;
 }
 
+#if 1 /* TEST SBA - CN00733593*/ 
+
+static struct pm8058_chip *pmic_chip;
+
+#define SSBI_REG_ADDR_LVS0A_TEST 0x12E 
+int pm8058_lvs0_ocp_disable(void) 
+{ 
+int rc; 
+u8 test, smpl; 
+
+if (pmic_chip == NULL) 
+return -ENODEV; 
+
+/* Set LVS0 to OCP disabled. */ 
+rc = pm8058_readb(pmic_chip->dev, SSBI_REG_ADDR_LVS0A_TEST, &test); 
+if (rc) { 
+pr_err("%s: FAIL ssbi_read(0x%x): rc=%d\n", __func__, 
+SSBI_REG_ADDR_LVS0A_TEST, rc); 
+goto get_out; 
+} 
+test |= 0x10; 
+rc = pm8058_writeb(pmic_chip->dev, SSBI_REG_ADDR_LVS0A_TEST, &test); 
+if (rc) 
+pr_err("%s: FAIL ssbi_write(0x%x)=0x%x: rc=%d\n", __func__, 
+SSBI_REG_ADDR_LVS0A_TEST, test, rc); 
+
+get_out: 
+return rc; 
+} 
+EXPORT_SYMBOL(pm8058_lvs0_ocp_disable); 
+
+int pm8058_lvs0_get_ocp(void) 
+{ 
+int rc; 
+u8 test, smpl; 
+
+if (pmic_chip == NULL) 
+return -3; 
+
+/* Set LVS0 to OCP disabled. */ 
+rc = pm8058_readb(pmic_chip->dev, SSBI_REG_ADDR_LVS0A_TEST, &test); 
+if (rc) { 
+pr_err("%s: FAIL ssbi_read(0x%x): rc=%d\n", __func__, 
+SSBI_REG_ADDR_LVS0A_TEST, rc); 
+return -2; 
+} 
+pr_err("%s: LVS0 status : 0x%x\n", __func__,test); 
+if (test & 0x80) 
+{
+	pr_err("%s: LVS0 OCP was occurred!!\n", __func__); 
+	return -1;
+}
+
+return 0; 
+} 
+EXPORT_SYMBOL(pm8058_lvs0_get_ocp); 
+#endif 
+
 static int __devinit pm8058_probe(struct platform_device *pdev)
 {
 	int rc;
@@ -734,6 +793,15 @@ static int __devinit pm8058_probe(struct platform_device *pdev)
 		pr_err("%s: failed to config shutdown on hard reset: %d\n",
 								__func__, rc);
 
+  #if defined(CONFIG_TARGET_LOCALE_USA)
+  /* TEST SBA - CN00733593*/ 
+  #ifndef CONFIG_USA_MODEL_SGH_I957
+  pmic_chip=pmic;
+	pm8058_lvs0_ocp_disable();
+	#endif
+	
+	#endif
+	
 	return 0;
 
 err:

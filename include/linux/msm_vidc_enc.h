@@ -446,14 +446,12 @@ struct venc_ioctl_msg{
 #define VEN_IOCTL_SET_METABUFFER_MODE \
 	_IOW(VEN_IOCTLBASE_ENC, 47, struct venc_ioctl_msg)
 
-
 /*IOCTL params:SET: InputData - unsigned int, OutputData - NULL.*/
 #define VEN_IOCTL_SET_EXTRADATA \
 	_IOW(VEN_IOCTLBASE_ENC, 48, struct venc_ioctl_msg)
 /*IOCTL params:GET: InputData - NULL, OutputData - unsigned int.*/
 #define VEN_IOCTL_GET_EXTRADATA \
 	_IOR(VEN_IOCTLBASE_ENC, 49, struct venc_ioctl_msg)
-
 struct venc_switch{
 	unsigned char	status;
 };

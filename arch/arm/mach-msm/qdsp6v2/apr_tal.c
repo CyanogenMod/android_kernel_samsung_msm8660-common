@@ -167,6 +167,7 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 		if (rc == 0) {
 			pr_err("apr_tal:open timeout\n");
 			mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
+			apr_tal_close(&apr_svc_ch[dl][dest][svc]);
 			return NULL;
 		}
 		pr_debug("apr_tal:Wakeup done\n");

@@ -148,3 +148,10 @@ config USB_OTG_BLACKLIST_HUB
 	  and software costs by not supporting external hubs.  So
 	  are "Embedded Hosts" that don't offer OTG support.
 
+config USB_SEC_WHITELIST
+	bool "SEC USB host target list"
+	depends on USB
+	help
+	  If you say Y here, then usb host will detect listed device.
+          refer "sec_whitelist" file.
+

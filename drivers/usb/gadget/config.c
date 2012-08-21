@@ -190,3 +190,110 @@ usb_find_endpoint(
 	}
 	return NULL;
 }
+
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+/**
+ * usb_find_descriptor - find a copy of an descriptor header
+ * @src: original vector of descriptors
+ * @copy: copy of @src
+ * @match: descriptor found in @src
+ *
+ * This returns the copy of the @match descriptor made for @copy.  Its
+ * intended use is to help remembering the interface descriptor to use
+ * when changing a interface.
+ */
+struct usb_descriptor_header *
+usb_find_descriptor_header(
+	struct usb_descriptor_header **src,
+	struct usb_descriptor_header **copy,
+	struct usb_descriptor_header *match
+)
+{
+	while (*src) {
+		if (*src == (void *) match)
+			return (void *)*copy;
+		src++;
+		copy++;
+	}
+	return NULL;
+}
+
+int usb_change_interface_num(
+	struct usb_descriptor_header **src,
+	struct usb_descriptor_header **copy,
+	struct usb_interface_descriptor *match,
+	int num)
+{
+	struct usb_descriptor_header *find_desc = NULL;
+
+	find_desc = usb_find_descriptor_header(
+		src, copy, (struct usb_descriptor_header *)match);
+	if (find_desc) {
+		((struct usb_interface_descriptor *)find_desc)
+		    ->bInterfaceNumber = num;
+		return 1;
+	}
+	return 0;
+}
+
+int usb_change_iad_num(
+	struct usb_descriptor_header **src,
+	struct usb_descriptor_header **copy,
+	struct usb_interface_assoc_descriptor *match,
+	int num)
+{
+	struct usb_descriptor_header *find_desc = NULL;
+
+	find_desc = usb_find_descriptor_header(
+		src, copy, (struct usb_descriptor_header *)match);
+	if (find_desc) {
+		((struct usb_interface_assoc_descriptor *)find_desc)
+		    ->bFirstInterface = num;
+		return 1;
+	}
+	return 0;
+}
+
+int usb_change_cdc_union_num(
+	struct usb_descriptor_header **src,
+	struct usb_descriptor_header **copy,
+	struct usb_cdc_union_desc *match,
+	int num,
+	int master)
+{
+	struct usb_descriptor_header *find_desc = NULL;
+
+	find_desc = usb_find_descriptor_header(
+		src, copy, (struct usb_descriptor_header *)match);
+	if (find_desc) {
+		if (master) {
+			((struct usb_cdc_union_desc *)find_desc)
+			    ->bMasterInterface0 = num;
+		} else {
+			((struct usb_cdc_union_desc *)find_desc)
+			    ->bSlaveInterface0 = num;
+		}
+		return 1;
+	}
+	return 0;
+}
+
+int usb_change_cdc_call_mgmt_num(
+	struct usb_descriptor_header **src,
+	struct usb_descriptor_header **copy,
+	struct usb_cdc_call_mgmt_descriptor *match,
+	int num)
+{
+	struct usb_descriptor_header *find_desc = NULL;
+
+	find_desc = usb_find_descriptor_header(
+		src, copy, (struct usb_descriptor_header *)match);
+	if (find_desc) {
+		((struct usb_cdc_call_mgmt_descriptor *)find_desc)
+		    ->bDataInterface = num;
+		return 1;
+	}
+	return 0;
+}
+#endif
+

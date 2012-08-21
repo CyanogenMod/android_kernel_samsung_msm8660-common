@@ -557,6 +557,8 @@ static int __init smd_tty_init(void)
 			 */
 			legacy_ds |= cpu_is_msm8x60() &&
 					(socinfo_get_platform_subtype() == 0x0);
+//			legacy_ds |= cpu_is_msm8x60() && (socinfo_get_platform_subtype() == 0x1);
+//			legacy_ds |= cpu_is_msm8x60();
 
 			if (!legacy_ds)
 				continue;

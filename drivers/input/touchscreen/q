@@ -1,0 +1,2848 @@
+25c25
+< #include <linux/i2c/mxt540e.h>
+---
+> #include <linux/i2c/mxt540e_q1.h>
+28a29,39
+> #if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)  || defined (CONFIG_JPN_MODEL_SC_05D)
+> #include "mXT540e__APP_V1-3-AA_.h"
+> #else
+> #include "mXT540e__APP_V1-2-AA_.h"
+> #endif
+> 
+> 
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) ||defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> #include <linux/input/mt.h>
+> #endif
+> 
+43a55,56
+> #define VECTOR_MSG_MASK			0x08
+> #define AMP_MSG_MASK			0x04
+44a58
+> #define UNGRIP_MSG_MASK			0x01
+56,62c70,72
+< #define MXT540E_FW_NAME	    "mXT540E.fw"
+< 
+< #define MXT540E_FWRESET_TIME		500	/* msec */
+< #define MXT540E_RESET_TIME		300	/* msec */
+< 
+< #define MXT540E_BOOT_VALUE		0xa5
+< #define MXT540E_BACKUP_VALUE		0x55
+---
+> #define MXT540E_FW_NAME         "mXT540E.fw"
+> #define MXT540E_BOOT_VALUE      0xa5
+> #define MXT540E_BACKUP_VALUE    0x55
+65,71c75,81
+< #define MXT540E_WAITING_BOOTLOAD_CMD	0xc0	/* valid 7 6 bit only */
+< #define MXT540E_WAITING_FRAME_DATA	0x80	/* valid 7 6 bit only */
+< #define MXT540E_FRAME_CRC_CHECK	0x02
+< #define MXT540E_FRAME_CRC_FAIL		0x03
+< #define MXT540E_FRAME_CRC_PASS		0x04
+< #define MXT540E_APP_CRC_FAIL		0x40	/* valid 7 8 bit only */
+< #define MXT540E_BOOT_STATUS_MASK	0x3f
+---
+> #define MXT540E_WAITING_BOOTLOAD_CMD    0xc0	/* valid 7 6 bit only */
+> #define MXT540E_WAITING_FRAME_DATA      0x80	/* valid 7 6 bit only */
+> #define MXT540E_FRAME_CRC_CHECK         0x02
+> #define MXT540E_FRAME_CRC_FAIL          0x03
+> #define MXT540E_FRAME_CRC_PASS          0x04
+> #define MXT540E_APP_CRC_FAIL            0x40	/* valid 7 8 bit only */
+> #define MXT540E_BOOT_STATUS_MASK        0x3f
+87a98,115
+> #define CLEAR_MEDIAN_FILTER_ERROR
+> 
+> 
+> /* Cut out ghost ... Xtopher */
+> #define MAX_GHOSTCHECK_FINGER 		10
+> #define MAX_GHOSTTOUCH_COUNT		400		// 4s, 125Hz
+> #define MAX_COUNT_TOUCHSYSREBOOT	4
+> #define MAX_GHOSTTOUCH_BY_PATTERNTRACKING		3
+> #define PATTERN_TRACKING_DISTANCE 3
+> 
+> 
+> #undef ITDEV //hmink 
+> #ifdef ITDEV
+> static int driver_paused;//itdev
+> static int debug_enabled;//itdev
+> #endif
+> 
+> 
+104a133,155
+> typedef struct
+> {
+>     u8 object_type;     /*!< Object type. */
+>     u8 instance;        /*!< Instance number. */
+> } report_id_map_t;
+> 
+> u8 max_report_id;
+> report_id_map_t *rid_map;
+> static bool rid_map_alloc;
+> 
+> 
+> #ifdef CLEAR_MEDIAN_FILTER_ERROR
+> typedef enum
+> {
+> 	ERR_RTN_CONDITION_T9,
+> 	ERR_RTN_CONDITION_T48,
+> 	ERR_RTN_CONDITION_IDLE,
+> 	ERR_RTN_CONDITION_MAX
+> }ERR_RTN_CONTIOIN;
+> 
+> ERR_RTN_CONTIOIN gErrCondition = ERR_RTN_CONDITION_IDLE;
+> #endif
+> 
+128a180,181
+> 	u8 actvsyncsperx_batt;
+> 	u8 actvsyncsperx_charging;
+135a189,190
+> 	struct delayed_work  resume_check_dwork;
+> 	struct delayed_work  cal_check_dwork;
+140a196,199
+> #ifdef ITDEV
+> 	u16 last_read_addr;
+> 	u16 msg_proc_addr;
+> #endif
+145a205
+> extern int sec_debug_level(void);
+149c209,218
+< static bool g_debug_switch;
+---
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)|| defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> #if defined (SEC_TSP_POSITION_DEBUG_XTOPHER)
+> static bool g_debug_switch = true;
+> #else
+> static bool g_debug_switch = false;
+> #endif
+> #else
+> static bool g_debug_switch = false;
+> #endif
+> static u8 tsp_version_disp;
+153c222,265
+< //static bool lock_status;
+---
+> #ifdef TOUCH_CPU_LOCK
+> static bool touch_cpu_lock_status;
+> #endif
+> static int check_resume_err;
+> static int check_resume_err_count;
+> static int check_calibrate;
+> static int config_dwork_flag;
+> int16_t sumsize;
+> 
+> 
+> /* Below is used for clearing ghost touch or for checking to system reboot.  by Xtopher */
+> static int cghost_clear = 0;  /* ghost touch clear count  by Xtopher */
+> static int ftouch_reboot = 0; 
+> static int tcount_finger[MAX_GHOSTCHECK_FINGER] = {0,0,0,0,0,0,0,0,0,0};
+> static int touchbx[MAX_GHOSTCHECK_FINGER] = {0,0,0,0,0,0,0,0,0,0};
+> static int touchby[MAX_GHOSTCHECK_FINGER] = {0,0,0,0,0,0,0,0,0,0};
+> static int ghosttouchcount = 0;
+> static int tsp_reboot_count = 0;
+> static int cFailbyPattenTracking = 0;
+> static void report_input_data(struct mxt540e_data *data);
+> static void Mxt540e_force_released(void);
+> //static void TSP_forced_release_for_call(void);
+> static int tsp_pattern_tracking(int fingerindex, s16 x, s16 y);
+> static void TSP_forced_reboot(void);
+> static int is_drawingmode = 0;
+> 
+> 
+> /* median filter test */
+> #define	MedianError_Max_Batt		5
+> #define	MedianError_Max_Ta			10
+> u8 Medianfilter_Err_cnt_Batt;	
+> u8 Medianfilter_Err_cnt_Ta;
+> u8 MedianFirst_Flag;
+> u8 Median_Error_Table_TA[4]={33,20,15,0};
+> u8 Median_Error_Table_Batt[4] = {20,10,30,10};
+> u8 table_cnt =0 ;
+> u8 MedianError_cnt;
+> 
+> 
+> #if defined(CONFIG_USA_MODEL_SGH_I717)
+> static unsigned int gIgnoreReport_flag;
+> static unsigned int gForceCalibration_flag;
+> #endif
+> 
+157a270
+> 	int retry = 5;	
+174a288,300
+> 
+> 	if (ret < 0) {
+> 		while (retry--) {
+> 			printk(KERN_DEBUG"[TSP] read_mem retry %d\n", retry);
+> 
+> 			msleep(5);
+> 			ret = i2c_transfer(data->client->adapter, msg, 2);
+> 			if (ret == 2 || retry <= 0)
+> 				break;
+> 		}
+> 	}		
+> 
+> 	
+183a310
+> 	int retry = 5;	
+190a318,328
+> 	if (ret < 0) {
+> 		while (retry--) {
+> 			printk(KERN_DEBUG"[TSP] write_mem retry %d\n", retry);
+> 
+> 			msleep(5);
+> 			ret = i2c_master_send(data->client, tmp, sizeof(tmp));
+> 			if ((ret >= 0) || (retry <= 0))
+> 				break;
+> 		}
+> 	}		
+> 
+213,214c351
+< static int get_object_info(struct mxt540e_data *data, u8 object_type, u16 *size,
+< 				u16 *address)
+---
+> static int get_object_info(struct mxt540e_data *data, u8 object_type, u16 *size, u16 *address)
+225d361
+< 
+240a377,411
+> static int check_instance(struct mxt540e_data *data, u8 object_type)
+> {
+> 	int i;
+> 
+> 	for (i = 0; i < data->objects_len; i++) {
+> 		if (data->objects[i].object_type == object_type) {
+> 			return (data->objects[i].instances);
+> 		}
+> 	}
+> 	return 0;
+> }
+> 
+> static int init_write_config(struct mxt540e_data *data, u8 type, const u8 *cfg)
+> {
+> 	int ret;
+> 	u16 address = 0;
+> 	u16 size = 0;
+> 	u8 *temp;
+> 
+> 	ret = get_object_info(data, type, &size, &address);
+> 
+> 	if((size == 0) || (address == 0)) return 0;
+> 
+> 	ret = write_mem(data, address, size, cfg);
+> 	if (check_instance(data, type)) {
+> 		printk(KERN_DEBUG"[TSP] exist instance1 object (%d)\n", type);
+> 		temp = kmalloc(size * sizeof(u8), GFP_KERNEL);
+> 		memset(temp, 0, size);
+> 		ret |= write_mem(data, address+size, size, temp);
+> 		if (ret < 0)
+> 			printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 		kfree(temp);
+> 	}
+> 	return ret;
+> }
+286c457,458
+< 	disable_irq(data->client->irq);
+---
+> 	if (mxt540e_enabled) {
+> 		disable_irq(data->client->irq);
+288,292c460,474
+< 	for (id = 0 ; id < MAX_USING_FINGER_NUM ; ++id) {
+< 		if ( data->fingers[id].state == MXT540E_STATE_INACTIVE )
+< 			continue;
+< 		schedule_delayed_work(&data->config_dwork, HZ*5);
+< 		printk("[TSP] touch pressed!! %s didn't execute!!\n", __func__);
+---
+> 		for (id = 0 ; id < MAX_USING_FINGER_NUM ; ++id) {
+> 			if ( data->fingers[id].state == MXT540E_STATE_INACTIVE )
+> 				continue;
+> 			schedule_delayed_work(&data->config_dwork, HZ*5);
+> 			printk("[TSP] touch pressed!! %s didn't execute!!\n", __func__);
+> 			enable_irq(data->client->irq);
+> 			return;
+> 		}
+> 
+> 		get_object_info(data, GEN_ACQUISITIONCONFIG_T8, &size, &obj_address);
+> 		error = write_mem(data, obj_address+8, 1, &data->atchfrccalthr_e);
+> 		if (error < 0) printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 		error = write_mem(data, obj_address+9, 1, &data->atchfrccalratio_e);	
+> 		if (error < 0) printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 		printk(KERN_DEBUG"[TSP] %s execute!!\n", __func__);
+294d475
+< 		return;
+295a477,479
+> 	config_dwork_flag = 0;
+> 	return;
+> }
+297,302c481,501
+< 	get_object_info(data, GEN_ACQUISITIONCONFIG_T8, &size, &obj_address);
+< 	error = write_mem(data, obj_address+8, 1, &data->atchfrccalthr_e);
+< 	if (error < 0) printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+< 	error = write_mem(data, obj_address+9, 1, &data->atchfrccalratio_e);	
+< 	if (error < 0) printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+< 	enable_irq(data->client->irq);
+---
+> static void resume_check_dworker(struct work_struct *work)
+> {
+> 	check_resume_err = 0;
+> 	check_resume_err_count = 0;
+> }
+> 
+> static void cal_check_dworker(struct work_struct *work)
+> {
+> 	struct mxt540e_data *data =
+> 		container_of(work, struct mxt540e_data, cal_check_dwork.work);
+> 	int error;
+> 	u16 size;
+> 	u8 value;
+> 	u16 obj_address = 0;
+> 	if (mxt540e_enabled) {
+> 		check_calibrate = 0;
+> 		get_object_info(data, GEN_POWERCONFIG_T7, &size, &obj_address);
+> 		value = 25;
+> 		error = write_mem(data, obj_address+2, 1, &value);
+> 		if (error < 0) printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 	}
+313,314c512
+< 	if (!ret)
+< 	{
+---
+> 	if (!ret) {
+315a514,522
+> 		if (check_resume_err == 2) {
+> 			check_resume_err = 1;
+> 			schedule_delayed_work(&copy_data->resume_check_dwork,
+> 							msecs_to_jiffies(2500));
+> 		} else if (check_resume_err == 1) {
+> 			cancel_delayed_work(&copy_data->resume_check_dwork);
+> 			schedule_delayed_work(&copy_data->resume_check_dwork,
+> 							msecs_to_jiffies(2500));
+> 		}
+316a524,526
+> #if defined(CONFIG_USA_MODEL_SGH_I717)
+> 	gForceCalibration_flag = 1;
+> #endif
+326d535
+< 
+333c542,552
+< 	get_object_info(data, GEN_ACQUISITIONCONFIG_T8, &size, &obj_address);
+---
+> 
+> 	error = 0;
+> 	obj_address = 0;
+> /* medina filter error */
+> 
+> 	Medianfilter_Err_cnt_Ta = 0;
+> 	Medianfilter_Err_cnt_Batt = 0;
+> 	MedianFirst_Flag = 1;
+> 	table_cnt = 0;
+> 	MedianError_cnt = 20;
+> 
+335,336c554,556
+< 		value = data->chrgtime_charging;
+< 		error = write_mem(data, obj_address, 1, &value);
+---
+> 		get_object_info(data, SPT_CTECONFIG_T46, &size, &obj_address);
+> 		value = data->actvsyncsperx_charging;
+> 		error |= write_mem(data, obj_address+3, 1, &value);
+339d558
+< 		value = data->calcfg_charging_e | 0x20;
+341d559
+< 		error |= write_mem(data, obj_address+2, 1, &value);
+343,344c561,574
+< 		value = data->chrgtime_batt;
+< 		error = write_mem(data, obj_address, 1, &value);
+---
+> 		get_object_info(data, TOUCH_MULTITOUCHSCREEN_T9, &size, &obj_address);
+> 		
+> 		value = 192;	
+> 		error |= write_mem(data, obj_address+6, 1, &value);
+> 		value = 50;
+> 		error |= write_mem(data, obj_address+7, 1, &value);
+> 		value = 80;
+> 		error |= write_mem(data, obj_address+13, 1, &value);
+> 		get_object_info(data, SPT_GENERICDATA_T57, &size, &obj_address);
+> 		value = 25;
+> 		error |= write_mem(data, obj_address+1, 1, &value);
+> 		get_object_info(data, SPT_CTECONFIG_T46, &size, &obj_address);
+> 		value = data->actvsyncsperx_batt;
+> 		error |= write_mem(data, obj_address+3, 1, &value);
+347d576
+< 		value = data->calcfg_batt_e | 0x20;
+349d577
+< 		error |= write_mem(data, obj_address+2, 1, &value);
+351,352c579,580
+< 	if (error < 0) printk(KERN_ERR "[TSP] mxt TA/USB mxt_noise_suppression_config Error!!\n");
+< 	printk("[TSP] ta_status : %d", ta_status);
+---
+> 	if (error < 0)
+> 		printk(KERN_ERR"[TSP] %s Error!!\n", __func__);
+399a628,639
+> uint8_t reportid_to_type(struct mxt540e_data *data, u8 report_id, u8 *instance)
+> {
+> 	report_id_map_t *report_id_map;
+> 	report_id_map = rid_map;
+> 
+> 	if (report_id <= max_report_id) {
+> 		*instance = report_id_map[report_id].instance;
+> 		return (report_id_map[report_id].object_type);
+> 	} else
+> 		return 0;
+> }
+> 
+407c647
+< 	int i;
+---
+> 	int i, j;
+411a652
+> 	int current_report_id, start_report_id;
+428a670,671
+> 	tsp_version_disp = data->tsp_version;
+> 
+439a683,684
+> 	max_report_id = 0;
+> 
+441a687,688
+> 		max_report_id += object_table[i].num_report_ids *
+> 							(object_table[i].instances + 1);
+454a702,704
+> #ifdef ITDEV
+> 			data->msg_proc_addr = object_table[i].i2c_address;
+> #endif			
+460a711,737
+> 	if (rid_map_alloc) {
+> 		rid_map_alloc = false;
+> 		kfree(rid_map);
+> 	}
+> 	rid_map = kmalloc((sizeof(report_id_map_t) * max_report_id + 1),
+> 				GFP_KERNEL);
+> 	if (!rid_map) {
+> 		kfree(object_table);
+> 		return -ENOMEM;
+> 	}
+> 	rid_map_alloc = true;
+> 	rid_map[0].instance = 0;
+> 	rid_map[0].object_type = 0;
+> 	current_report_id = 1;
+> 
+> 	for (i = 0; i < data->objects_len; i++) {
+> 		if (object_table[i].num_report_ids != 0) {
+> 			for (j = 0; j <= object_table[i].instances; j++) {
+> 				for (start_report_id = current_report_id; current_report_id < 
+> 						(start_report_id + object_table[i].num_report_ids);
+> 						current_report_id++) {
+> 					rid_map[current_report_id].instance = j;
+> 					rid_map[current_report_id].object_type = object_table[i].object_type;
+> 				}
+> 			}
+> 		}
+> 	}
+504c781,783
+< static void report_input_data(struct mxt540e_data *data)
+---
+> extern void set_lcd_esd_ignore( bool src );
+> 
+> static void resume_cal_err_func(struct mxt540e_data *data)
+506a786
+> 	bool ta_status;
+507a788,791
+> set_lcd_esd_ignore(1);
+> 	printk("[TSP] %s\n", __func__);
+> 
+> 	data->power_off();
+511a796,901
+> 		data->fingers[i].z = 0;
+> 		data->fingers[i].state = MXT540E_STATE_RELEASE;
+> 		
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> 	if (data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 		input_mt_slot(data->input_dev, i);
+> 		input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, false);
+> 	} else {
+> 		input_mt_slot(data->input_dev, i);
+> 		input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
+> 		
+> 		input_report_abs(data->input_dev, ABS_MT_POSITION_X, data->fingers[i].x);
+> 		input_report_abs(data->input_dev, ABS_MT_POSITION_Y, data->fingers[i].y);
+> 		input_report_abs(data->input_dev, ABS_MT_PRESSURE, data->fingers[i].z);
+> 		input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, data->fingers[i].w);
+> 		
+> 		#if defined(CONFIG_SHAPE_TOUCH)
+> 		input_report_abs(data->input_dev, ABS_MT_COMPONENT, data->fingers[i].component);
+> 		input_report_abs(data->input_dev, ABS_MT_SUMSIZE, sumsize);
+> 		#endif
+> 	}
+> #else
+> 	input_report_abs(data->input_dev, ABS_MT_POSITION_X, data->fingers[i].x);
+> 	input_report_abs(data->input_dev, ABS_MT_POSITION_Y, data->fingers[i].y);
+> 	input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, data->fingers[i].z);
+> 	input_report_abs(data->input_dev, ABS_MT_WIDTH_MAJOR, data->fingers[i].w);
+> 	input_report_abs(data->input_dev, ABS_MT_TRACKING_ID, i);
+> 	#if defined(CONFIG_SHAPE_TOUCH)
+> 	input_report_abs(data->input_dev, ABS_MT_COMPONENT, data->fingers[i].component);
+> 	input_report_abs(data->input_dev, ABS_MT_SUMSIZE, sumsize);
+> 	#endif
+> 	input_mt_sync(data->input_dev);
+> #endif
+> 
+> #if 0
+> #if defined(CONFIG_SHAPE_TOUCH)
+> 		if (sec_debug_level() != 0)
+> 			printk(KERN_DEBUG "[TSP] id[%d],x=%d,y=%d,z=%d,w=%d,com=%d\n",
+> 				i , data->fingers[i].x, data->fingers[i].y, data->fingers[i].z,
+> 				data->fingers[i].w, data->fingers[i].component);
+> 		else
+> 			printk(KERN_DEBUG "[TSP] id[%d] status:%d\n", i, data->fingers[i].z);
+> #else
+> 		if (sec_debug_level() != 0)
+> 			printk(KERN_DEBUG "[TSP] id[%d],x=%d,y=%d,z=%d,w=%d\n",
+> 				i , data->fingers[i].x, data->fingers[i].y, data->fingers[i].z,
+> 				data->fingers[i].w);
+> 		else
+> 			printk(KERN_DEBUG "[TSP] id[%d] status:%d\n", i, data->fingers[i].z);
+> #endif
+> #else
+> 		if (data->fingers[i].z == 0)
+> 			printk(KERN_DEBUG "[TSP] released\n");
+> 		else
+> 			printk(KERN_DEBUG "[TSP] pressed\n");
+> #endif
+> 		count++;
+> 	}
+> 
+> 	if (count)
+> 		input_sync(data->input_dev);
+> 	msleep(50);
+> 	data->power_on();
+> 
+> 	if (data->read_ta_status) {
+> 		data->read_ta_status(&ta_status);
+> 		printk("[TSP] ta_status is %d\n", ta_status);
+> 		mxt540e_ta_probe(ta_status);
+> 	}
+> 	set_lcd_esd_ignore(0);
+> 	calibrate_chip();
+> 	cancel_delayed_work(&data->config_dwork);
+> 	schedule_delayed_work(&data->config_dwork, HZ*5);
+> }
+> 
+> static void clear_tcount(void)
+> {
+> 	int i;
+> 	for(i=0;i<MAX_GHOSTCHECK_FINGER;i++){
+> 		tcount_finger[i] = 0;
+> 		touchbx[i] = 0;
+> 		touchby[i] = 0;
+> 	}		
+> }
+> 
+> static int diff_two_point(s16 x, s16 y, s16 oldx, s16 oldy)
+> {
+> 	s16 diffx,diffy;
+> 	s16 distance;
+> 	
+> 	diffx = x-oldx;
+> 	diffy = y-oldy;
+> 	distance = abs(diffx) + abs(diffy);
+> 
+> 	if(distance < PATTERN_TRACKING_DISTANCE) return 1;
+> 	else return 0;
+> }
+> 
+> 
+> static void report_input_data_torelease(struct mxt540e_data *data)
+> {
+> 	int i;
+> 	int count = 0;
+> 	int report_count = 0;
+> 	int press_count = 0;
+> 	int move_count = 0;
+512a903,919
+> 	for (i = 0; i < data->num_fingers; i++) {
+> 		if (data->fingers[i].state == MXT540E_STATE_INACTIVE)
+> 			continue;
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> 		if (data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 			input_mt_slot(data->input_dev, i);
+> 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, false);
+> 		} else {
+> 			input_mt_slot(data->input_dev, i);
+> 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
+> 			
+> 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, data->fingers[i].x);
+> 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, data->fingers[i].y);
+> 			input_report_abs(data->input_dev, ABS_MT_PRESSURE, data->fingers[i].z);
+> 			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, data->fingers[i].w);
+> 			}
+> #else
+519,524d925
+< #if defined(CONFIG_SHAPE_TOUCH)
+< 		// input_report_abs(data->input_dev, ABS_MT_COMPONENT, data->fingers[i].component);
+< 		input_report_abs(data->input_dev, 0x3b, data->fingers[i].component);
+< 		/* printk(KERN_ERR"the component data is %d\n",data->fingers[i].component); */
+< #endif
+< 
+525a927,928
+> #endif		
+> 		report_count++;
+527,532c930,938
+< 		if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+< 			printk(KERN_DEBUG "[TSP] id[%d],x=%d,y=%d,z=%d,w=%d\n",
+< 				i , data->fingers[i].x, data->fingers[i].y, data->fingers[i].z, data->fingers[i].w);
+< 		}
+< 		if (data->fingers[i].state == MXT540E_STATE_RELEASE) {
+< 			data->fingers[i].state = MXT540E_STATE_INACTIVE;
+---
+> 		// debug-log all   press/move/release    
+> 		if (g_debug_switch){
+> 			#if defined(CONFIG_USA_MODEL_SGH_I717)
+> 			if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 				printk(KERN_ERR "[TSP] ID-%d, %4d,%4d  UD:%d \n", i, data->fingers[i].x, data->fingers[i].y, data->fingers[i].state);
+> 			}
+> 			#else
+> 			printk(KERN_ERR "[TSP] ID-%d, %4d,%4d  UD:%d \n", i, data->fingers[i].x, data->fingers[i].y, data->fingers[i].state);
+> 			#endif
+534,536c940,944
+< 		else {
+< 			data->fingers[i].state = MXT540E_STATE_MOVE;
+< 			count++;
+---
+> 		else
+> 		{
+> 			if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 				printk(KERN_ERR "[TSP-R] ID-%d, UD:%d \n", i, data->fingers[i].state);
+> 			}
+537a946
+> 
+539d947
+< 	input_sync(data->input_dev);
+541,542c949,950
+< 	if (count) touch_is_pressed = 1;
+< 	else touch_is_pressed = 0;
+---
+> 	if (report_count > 0)
+> 		input_sync(data->input_dev);
+544d951
+< 	data->finger_mask = 0;
+547c954,960
+< static irqreturn_t mxt540e_irq_thread(int irq, void *ptr)
+---
+> 
+> 
+> /* Forced reboot sequence.  
+>     Don't use arbitraily. 
+>     if you meet special case that this routine has to be used, ask Xtopher's advice.
+> */
+> static void TSP_forced_reboot(void)
+549,556c962,977
+< 	struct mxt540e_data *data = ptr;
+< 	int id;
+< 	u8 msg[data->msg_object_size];
+< 	u8 touch_message_flag = 0;
+< 	u16 obj_address = 0;
+< 	u16 size;
+< 	u8 value;
+< 	int error;
+---
+>     struct mxt540e_data *data = copy_data;
+> 
+> 	int i;
+> 	bool ta_status=0;
+> 
+> 	if(ftouch_reboot == 1) return;
+> 	ftouch_reboot  = 1;
+> 	printk(KERN_ERR "[TSP] Reboot-Touch by Pattern Tracking S\n");
+> 	cghost_clear = 0;
+> 
+> 	cancel_delayed_work(&data->config_dwork);
+> 	set_lcd_esd_ignore(1);
+> 
+> 	/* Below is reboot sequence   */
+> 	//disable_irq(copy_data->client->irq);		
+> 	copy_data->power_off();
+558,561c979,991
+< 	do {
+< 		touch_message_flag = 0;
+< 		if (read_mem(data, data->msg_proc, sizeof(msg), msg))
+< 			return IRQ_HANDLED;
+---
+> #if 0
+> 	for (i = 0; i < copy_data->num_fingers; i++) {
+> 		if (copy_data->fingers[i].z == -1)
+> 			continue;
+> 	
+> 		//touch_is_pressed_arr[i] = 0;
+> 		copy_data->fingers[i].z = 0;
+> 	}
+> 	report_input_data(copy_data);
+> #else
+> 	for (i = 0; i < data->num_fingers; i++) {
+> 		if (data->fingers[i].state == MXT540E_STATE_INACTIVE)
+> 			continue;
+563,580c993,1035
+< 		if (msg[0] == 0x1) {
+< 			if (msg[1] == 0x00) /* normal mode */
+< 			{
+< 				printk("[TSP] normal mode\n");
+< 			}
+< 			if ((msg[1]&0x04) == 0x04) /* I2C checksum error */
+< 			{
+< 				printk("[TSP] I2C checksum error\n");
+< 			}
+< 			if ((msg[1]&0x10) == 0x08) /* config error */
+< 			{
+< 				printk("[TSP] config error\n");
+< 			}
+< 			if ((msg[1]&0x10) == 0x10) /* calibration */
+< 			{
+< 				printk("[TSP] calibration is on going\n");
+< 			}
+< 			if ((msg[1]&0x20) == 0x20) /* signal error */
+---
+> 		data->fingers[i].z = -1; // 0;
+> 		data->fingers[i].state = MXT540E_STATE_RELEASE;
+> 	}
+> 	report_input_data_torelease(data);
+> #endif
+> 
+> 	msleep(100);
+> 	copy_data->power_on();
+> 	msleep(50);
+> 	set_lcd_esd_ignore(0);
+> 
+> 	//enable_irq(copy_data->client->irq);
+> 	mxt540e_enabled = 1;
+> 	
+> 	if(copy_data->read_ta_status) {
+> 		copy_data->read_ta_status(&ta_status);
+> 		printk(KERN_ERR "[TSP] ta_status is %d", ta_status);
+> 		mxt540e_ta_probe(ta_status);
+> 	}
+> 
+> 	check_resume_err = 2;
+> 	calibrate_chip();
+> 	check_calibrate = 3;
+> 	schedule_delayed_work(&data->config_dwork, HZ*5);
+> 	config_dwork_flag = 3;
+> 	
+> 	ftouch_reboot  = 0;
+> 	printk(KERN_ERR "[TSP] Reboot-Touch by Pattern Tracking E\n");
+> 
+> }
+> 
+> /* To do forced calibration when ghost touch occured at the same point
+>     for several second.   Xtopher */
+> static int tsp_pattern_tracking(int fingerindex, s16 x, s16 y)
+> {
+> 	int i;
+> 	int ghosttouch  = 0;
+> 
+> 	for( i = 0; i< MAX_GHOSTCHECK_FINGER; i++)
+> 	{
+> 		if( i == fingerindex){
+> 			//if((touchbx[i] == x)&&(touchby[i] == y))
+> 			if(diff_two_point(x,y, touchbx[i], touchby[i]))
+582c1037
+< 				printk("[TSP] signal error\n");
+---
+> 				tcount_finger[i] = tcount_finger[i]+1;
+584c1039
+< 			if ((msg[1]&0x40) == 0x40) /* overflow */
+---
+> 			else
+586c1041
+< 				printk("[TSP] overflow detected\n");
+---
+> 				tcount_finger[i] = 0;
+588,590c1043,1062
+< 			if ((msg[1]&0x80) == 0x80) /* reset */
+< 			{
+< 				printk("[TSP] reset is ongoing\n");
+---
+> 
+> 			touchbx[i] = x;
+> 			touchby[i] = y;
+> 
+> 			if(tcount_finger[i]> MAX_GHOSTTOUCH_COUNT){
+> 				ghosttouch = 1;
+> 				ghosttouchcount++;
+> 				printk(KERN_ERR "[TSP] SUNFLOWER (PATTERN TRACKING) %d\n",ghosttouchcount);
+> 				clear_tcount();
+> 
+> 				cFailbyPattenTracking++;
+> 				if(cFailbyPattenTracking > MAX_GHOSTTOUCH_BY_PATTERNTRACKING)
+> 				{
+> 					cFailbyPattenTracking = 0;
+> 					TSP_forced_reboot();
+> 				}
+> 				else
+> 				{
+> 					Mxt540e_force_released();
+> 				}
+592a1065,1067
+> 	}
+> 	return ghosttouch;
+> }
+594,596c1069,1343
+< 		if ( msg[0] == 14) {
+< 			if ((msg[1] & 0x01) == 0x00) { /* Palm release */
+< 				printk("[TSP] palm touch released\n");
+---
+> 
+> 
+> static void report_input_data(struct mxt540e_data *data)
+> {
+> 	int i;
+> 	int count = 0;
+> 	int report_count = 0;
+> 	int press_count = 0;
+> 	int move_count = 0;
+> 
+> 	for (i = 0; i < data->num_fingers; i++) {
+> 		if (data->fingers[i].state == MXT540E_STATE_INACTIVE)
+> 			continue;
+> 
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> 		if (data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 			input_mt_slot(data->input_dev, i);
+> 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, false);
+> 		} else {
+> 			input_mt_slot(data->input_dev, i);
+> 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, true);
+> 			
+> 			input_report_abs(data->input_dev, ABS_MT_POSITION_X, data->fingers[i].x);
+> 			input_report_abs(data->input_dev, ABS_MT_POSITION_Y, data->fingers[i].y);
+> 			input_report_abs(data->input_dev, ABS_MT_PRESSURE, data->fingers[i].z);
+> 			input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, data->fingers[i].w);
+> 			
+> 			#if defined(CONFIG_SHAPE_TOUCH)
+> 			input_report_abs(data->input_dev, ABS_MT_COMPONENT, data->fingers[i].component);
+> 			input_report_abs(data->input_dev, ABS_MT_SUMSIZE, sumsize);
+> 			#endif
+> 		}
+> #else
+> 		input_report_abs(data->input_dev, ABS_MT_POSITION_X, data->fingers[i].x);
+> 		input_report_abs(data->input_dev, ABS_MT_POSITION_Y, data->fingers[i].y);
+> 		input_report_abs(data->input_dev, ABS_MT_TOUCH_MAJOR, data->fingers[i].z);
+> 		input_report_abs(data->input_dev, ABS_MT_WIDTH_MAJOR, data->fingers[i].w);
+> 		input_report_abs(data->input_dev, ABS_MT_TRACKING_ID, i);
+> 
+> 		#if defined(CONFIG_SHAPE_TOUCH)
+> 		input_report_abs(data->input_dev, ABS_MT_COMPONENT, data->fingers[i].component);
+> 		input_report_abs(data->input_dev, ABS_MT_SUMSIZE, sumsize);
+> 		#endif
+> 		input_mt_sync(data->input_dev);
+> #endif
+> 
+> 		report_count++;
+> 		if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> #if 0
+> #if defined(CONFIG_SHAPE_TOUCH)
+> 			if (sec_debug_level() != 0)
+> 				printk(KERN_DEBUG "[TSP] id[%d],x=%d,y=%d,z=%d,w=%d,com=%d\n",
+> 					i , data->fingers[i].x, data->fingers[i].y, data->fingers[i].z,
+> 					data->fingers[i].w, data->fingers[i].component);
+> 			else
+> 				printk(KERN_DEBUG "[TSP] id[%d] status:%d\n", i, data->fingers[i].z);
+> #else
+> 			if (sec_debug_level() != 0)
+> 				printk(KERN_DEBUG "[TSP] id[%d],x=%d,y=%d,z=%d,w=%d\n",
+> 					i , data->fingers[i].x, data->fingers[i].y, data->fingers[i].z,
+> 					data->fingers[i].w);
+> 			else
+> 				printk(KERN_DEBUG "[TSP] id[%d] status:%d\n", i, data->fingers[i].z);
+> #endif
+> #else
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+> 		// use all debug-log below.
+> #else
+> 		if (data->fingers[i].z == 0)
+> 			printk(KERN_DEBUG "[TSP] released\n");
+> 		else
+> 			printk(KERN_DEBUG "[TSP] pressed\n");
+> #endif
+> #endif
+> 		}
+> 
+> 		// debug-log all   press/move/release    
+> 		if (g_debug_switch){
+> 			#if defined(CONFIG_USA_MODEL_SGH_I717)
+> 			if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 				printk(KERN_ERR "[TSP] ID-%d, %4d,%4d  UD:%d \n", i, data->fingers[i].x, data->fingers[i].y, data->fingers[i].state);
+> 			}
+> 			#else
+> 			printk(KERN_ERR "[TSP] ID-%d, %4d,%4d  UD:%d \n", i, data->fingers[i].x, data->fingers[i].y, data->fingers[i].state);
+> 			#endif
+> 		}
+> 		else
+> 		{
+> 			if (data->fingers[i].state == MXT540E_STATE_PRESS || data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 				printk(KERN_ERR "[TSP] ID-%d, UD:%d \n", i, data->fingers[i].state);
+> 			}
+> 		}
+> 
+> 		//tsp_pattern_tracking(i, data->fingers[i].x, data->fingers[i].y);
+> 
+> 
+> 		if (check_resume_err != 0) {
+> 			if (data->fingers[i].state == MXT540E_STATE_MOVE)
+> 				move_count++;
+> 			if (data->fingers[i].state == MXT540E_STATE_PRESS)
+> 				press_count++;
+> 		}
+> 
+> 		if (data->fingers[i].state == MXT540E_STATE_RELEASE) {
+> 			data->fingers[i].state = MXT540E_STATE_INACTIVE;
+> 		}
+> 		else {
+> 			data->fingers[i].state = MXT540E_STATE_MOVE;
+> 			count++;
+> 		}
+> 	}
+> #ifdef ITDEV
+> 	if (!driver_paused)//itdev
+> #else
+> 	if (report_count > 0)
+> #endif
+> 		input_sync(data->input_dev);
+> 
+> 	if (count) touch_is_pressed = 1;
+> 	else touch_is_pressed = 0;
+> 
+> 	if (count == 0) {
+> 		sumsize = 0;
+> #ifdef TOUCH_CPU_LOCK        
+> 		if (touch_cpu_lock_status) {
+> 			s5pv310_cpufreq_lock_free(DVFS_LOCK_ID_TSP);
+> 			touch_cpu_lock_status = 0;
+> 		}
+> #endif        
+> 	}
+> 	data->finger_mask = 0;
+> 
+> 	if (check_resume_err != 0) {
+> 		if ((press_count > 0) && (move_count > 0)) {
+> 			check_resume_err_count++;
+> 			if (check_resume_err_count > 4) {
+> 				check_resume_err_count = 0;
+> 				resume_cal_err_func(data);
+> 			}
+> 		}
+> 	}
+> 
+> 	if (check_calibrate == 1) {
+> 		if (touch_is_pressed)
+> 			cancel_delayed_work(&data->cal_check_dwork);
+> 		else
+> 			schedule_delayed_work(&data->cal_check_dwork, msecs_to_jiffies(1400));
+> 	}		
+> }
+> 
+> 
+> ERR_RTN_CONTIOIN Check_Err_Condition(void)
+> {
+> 	ERR_RTN_CONTIOIN rtn;
+> 
+> 		switch(gErrCondition)
+> 		{
+> 			case ERR_RTN_CONDITION_IDLE:
+> 				rtn = ERR_RTN_CONDITION_T9;
+> 				break;
+> 
+> //			case ERR_RTN_CONDITION_T9:
+> //				rtn = ERR_RTN_CONDITION_T48;
+> //				break;
+> 
+> //			case ERR_RTN_CONDITION_T48:
+> //				rtn = ERR_RTN_CONDITION_IDLE;
+> //				break;
+> 			default:
+> 			break;
+> 		}
+> 	return rtn;
+> }
+> 
+> 
+> static irqreturn_t mxt540e_irq_thread(int irq, void *ptr)
+> {
+> 	struct mxt540e_data *data = ptr;
+> 	int id;
+> 	u8 msg[data->msg_object_size];
+> 	u8 touch_message_flag = 0;
+> 	u16 obj_address = 0;
+> 	u16 size;
+> 	u8 value;
+> 	int error = 0;
+> 	u8 object_type, instance;
+> 	bool ta_status = 0;
+>     u8 pending_message_count = 0;    
+> 
+> 	do {
+> 		touch_message_flag = 0;
+> 		if (read_mem(data, data->msg_proc, sizeof(msg), msg)) {
+>             printk("[TSP] immediately return IRQ_HANDLED\n");   
+> 			return IRQ_HANDLED;
+> 		}
+> #ifdef ITDEV//itdev
+> 				if (debug_enabled) 
+> 					print_hex_dump(KERN_DEBUG, "MXT MSG:", DUMP_PREFIX_NONE, 16, 1, msg, sizeof(msg), false); 
+> #endif
+> 
+> 		object_type = reportid_to_type(data, msg[0] , &instance);
+> 		if (object_type == GEN_COMMANDPROCESSOR_T6) {
+> 			if (msg[1] == 0x00) /* normal mode */
+> 			{
+> 				printk("[TSP] normal mode\n");
+> #if defined(CONFIG_USA_MODEL_SGH_I717)				
+> 				if ((gForceCalibration_flag == 1)&& (gIgnoreReport_flag == 1)) {
+> 					gIgnoreReport_flag = 0;
+> 					printk(KERN_DEBUG"[TSP] Now! Enable Touch Report!!!\n");
+> 				}
+> #endif
+> 			
+> 			}
+> 			if ((msg[1]&0x04) == 0x04) /* I2C checksum error */
+> 			{
+> 				printk("[TSP] I2C checksum error\n");
+> 			}
+> 			if ((msg[1]&0x08) == 0x08) /* config error */
+> 			{
+> 				printk("[TSP] config error\n");
+> 			}
+> 			if ((msg[1]&0x10) == 0x10) /* calibration */
+> 			{
+> 				printk("[TSP] calibration is on going\n");
+> 				if (check_calibrate == 3)
+> 					check_calibrate = 0;
+> 				else if (check_calibrate == 1) {
+> 					cancel_delayed_work(&data->cal_check_dwork);
+> 					schedule_delayed_work(&data->cal_check_dwork,
+> 							msecs_to_jiffies(1400));
+> 				} else {
+> 					check_calibrate = 1;
+> 					value = 6;
+> 					get_object_info(data, GEN_POWERCONFIG_T7, &size, &obj_address);
+> 					error = write_mem(data, obj_address+2, 1, &value);
+> 					if (error < 0)
+> 						printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 					schedule_delayed_work(&data->cal_check_dwork,
+> 							msecs_to_jiffies(1400));
+> 				}
+> 
+> 				if (config_dwork_flag == 3)
+> 					config_dwork_flag = 1;
+> 				else if (config_dwork_flag == 1) {
+> 					cancel_delayed_work(&data->config_dwork);
+> 					schedule_delayed_work(&data->config_dwork, HZ*5);
+> 				} else {
+> 					config_dwork_flag = 1;
+> 					get_object_info(data, GEN_ACQUISITIONCONFIG_T8, &size, &obj_address);
+> 					value = 8;
+> 					error = write_mem(data, obj_address+8, 1, &value);
+> 					value = 180;
+> 					error |= write_mem(data, obj_address+9, 1, &value);
+> 					if (error < 0)
+> 						printk(KERN_ERR "[TSP] %s, %d Error!!\n", __func__, __LINE__);
+> 					schedule_delayed_work(&data->config_dwork, HZ*5);
+> 				}
+> 			}
+> 			if ((msg[1]&0x20) == 0x20) /* signal error */
+> 			{
+> 				printk("[TSP] signal error\n");
+> 			}
+> 			if ((msg[1]&0x40) == 0x40) /* overflow */
+> 			{
+> 				printk("[TSP] overflow detected\n");
+> 			}
+> 			if ((msg[1]&0x80) == 0x80) /* reset */
+> 			{
+> 				printk("[TSP] reset is ongoing\n");
+> 			}
+> 		}
+> 
+> 		if (object_type == PROCI_TOUCHSUPPRESSION_T42) {
+> 			if ((msg[1] & 0x01) == 0x00) { /* Palm release */
+> 				printk("[TSP] palm touch released\n");
+605c1352,1356
+< 		if ( msg[0] == 18) {
+---
+> 		if (object_type == SPT_GENERICDATA_T57) {
+> 			sumsize =  msg[1] + (msg[2]<<8);
+> 		}
+> 
+> 		if (object_type == PROCG_NOISESUPPRESSION_T48) {
+607,615c1358,1530
+< 				printk("[TSP] Median filter Error\n");
+< 				get_object_info(data, PROCG_NOISESUPPRESSION_T48, &size, &obj_address);
+< 				value = data->calcfg_batt_e;
+< 				error = write_mem(data, obj_address+2, 1, &value);
+< 				msleep(5);
+< 				value |= 0x20;
+< 				error |= write_mem(data, obj_address+2, 1, &value);
+< 				if(error) printk(KERN_ERR "[TSP] failed to reenable CHRGON\n");
+< 			}
+---
+> 					printk("[TSP] Median filter Error\n");
+> 				if (data->read_ta_status) {
+> 					data->read_ta_status(&ta_status);
+> 					printk("[TSP] ta_status is %d\n", ta_status);
+> 					if (ta_status) {
+> 						get_object_info(data, PROCG_NOISESUPPRESSION_T48, &size, &obj_address);
+> #if 1 /* median filter error */
+> 
+> 						if(Medianfilter_Err_cnt_Ta>=MedianError_cnt){		
+> 							
+> 							Medianfilter_Err_cnt_Ta = 0;
+> 							if(table_cnt>3){
+> 								table_cnt = 0;
+> 								MedianError_cnt = 20;
+> 							}
+> 							else{
+> 								table_cnt++;
+> 								MedianError_cnt = 2;
+> 							}
+> 							
+> 							value = Median_Error_Table_TA[table_cnt];
+> 							error = write_mem(data, obj_address+3, 1, &value);		// Base Freq
+> 							printk("[TSP]  median base_Freq_ta %d\n", Median_Error_Table_TA[table_cnt]);
+> 						}
+> 						else{
+> 							Medianfilter_Err_cnt_Ta++;
+> 							printk("[TSP]  median error_cnt_ta %d\n", Medianfilter_Err_cnt_Ta);
+> 						}
+> 						if(MedianFirst_Flag){									// When first MedianfillterError, Setup
+> 							MedianFirst_Flag = 0;
+> 							value = Median_Error_Table_TA[0];		// 33
+> 							error = write_mem(data, obj_address+3, 1, &value);		// Base Freq
+> 						}
+> #else
+> 						value = 33;
+> 						error = write_mem(data, obj_address+3, 1, &value);
+> #endif
+> 						value = 1;
+> 						error |= write_mem(data, obj_address+8, 1, &value);
+> 						value = 2;
+> 						error |= write_mem(data, obj_address+9, 1, &value);
+> 						value = 100;
+> 						error |= write_mem(data, obj_address+17, 1, &value);
+> 						value = 20;
+> 						error |= write_mem(data, obj_address+22, 1, &value);
+> 						value = 2;
+> 						error |= write_mem(data, obj_address+23, 1, &value);
+> 						value = 46;
+> 						error |= write_mem(data, obj_address+25, 1, &value);
+> 						value = 80;
+> 						error |= write_mem(data, obj_address+34, 1, &value);
+> 						value = 35;
+> 						error |= write_mem(data, obj_address+35, 1, &value);
+> 						value = 15;
+> 						error |= write_mem(data, obj_address+37, 1, &value);
+> 						value = 5;
+> 						error |= write_mem(data, obj_address+38, 1, &value);
+> 						value = 65;
+> 						error |= write_mem(data, obj_address+39, 1, &value);
+> 						value = 30;
+> 						error |= write_mem(data, obj_address+41, 1, &value);
+> 						value = 50;
+> 						error |= write_mem(data, obj_address+42, 1, &value);
+> 						value = 7;
+> 						error |= write_mem(data, obj_address+45, 1, &value);
+> 						value = 7;
+> 						error |= write_mem(data, obj_address+46, 1, &value);
+> 						value = 40;
+> 						error |= write_mem(data, obj_address+50, 1, &value);
+> 						value = 32;
+> 						error |= write_mem(data, obj_address+51, 1, &value);
+> 						value = 15;
+> 						error |= write_mem(data, obj_address+52, 1, &value);
+> 						get_object_info(data, SPT_CTECONFIG_T46, &size, &obj_address);
+> 						value = 32;
+> 						error |= write_mem(data, obj_address+3, 1, &value);
+> 						get_object_info(data, SPT_GENERICDATA_T57, &size, &obj_address);
+> 						value = 22;
+> 						error |= write_mem(data, obj_address+1, 1, &value);
+> 					} else {
+> #if !defined(CONFIG_USA_MODEL_SGH_I717)
+> 						get_object_info(data, TOUCH_MULTITOUCHSCREEN_T9, &size, &obj_address);
+> 						value = 160;
+> 						error = write_mem(data, obj_address+6, 1, &value);
+> 						value = 45;
+> 						error |= write_mem(data, obj_address+7, 1, &value);
+> 						value = 80;
+> 						error |= write_mem(data, obj_address+13, 1, &value);
+> 						value = 3;
+> 						error |= write_mem(data, obj_address+22, 1, &value);
+> 						value = 2;
+> 						error |= write_mem(data, obj_address+24, 1, &value);
+> #endif
+> 						get_object_info(data, PROCG_NOISESUPPRESSION_T48, &size, &obj_address);
+> 						value = 242;
+> 						error |= write_mem(data, obj_address+2, 1, &value);
+> #if 1 /* median filter error */
+> 
+> 						if(Medianfilter_Err_cnt_Batt>=MedianError_cnt){		
+> 							Medianfilter_Err_cnt_Batt = 0;
+> 
+> 							if(table_cnt>3){
+> 								table_cnt = 0;
+> 								MedianError_cnt = 20;
+> 							}
+> 							else{
+> 								table_cnt++;
+> 								MedianError_cnt = 2;
+> 							}
+> 							
+> 							value = Median_Error_Table_Batt[table_cnt];
+> 							error = write_mem(data, obj_address+3, 1, &value);		// Base Freq
+> 							printk("[TSP]  median base_Freq_Batt %d\n", value);
+> 							
+> 						}
+> 						else{
+> 							Medianfilter_Err_cnt_Batt++;
+> 							printk("[TSP]  median error_cnt_Batt %d\n", Medianfilter_Err_cnt_Batt);
+> 						}
+> 						
+> 						if(MedianFirst_Flag){									// When first MedianfillterError, Setup
+> 							MedianFirst_Flag = 0;
+> 							value = Median_Error_Table_Batt[0];					// 20
+> 							error = write_mem(data, obj_address+3, 1, &value);		// Base Freq
+> 						}
+> #else
+> 						value = 20;
+> 						error |= write_mem(data, obj_address+3, 1, &value);
+> #endif
+> 						value = 100;
+> 						error |= write_mem(data, obj_address+17, 1, &value);
+> 						value = 25;
+> 						error |= write_mem(data, obj_address+22, 1, &value);
+> 						value = 46;
+> 						error |= write_mem(data, obj_address+25, 1, &value);
+> 						#if defined (CONFIG_USA_MODEL_SGH_I717)
+> 						value = 128;
+> 						#else
+> 						value = 112;
+> 						#endif
+> 						error |= write_mem(data, obj_address+34, 1, &value);
+> 						value = 35;
+> 						error |= write_mem(data, obj_address+35, 1, &value);
+> 						value = 0;
+> 						error |= write_mem(data, obj_address+39, 1, &value);
+> 						value = 40;
+> 						error |= write_mem(data, obj_address+42, 1, &value);
+> 						get_object_info(data, SPT_CTECONFIG_T46, &size, &obj_address);
+> 						#if defined (CONFIG_USA_MODEL_SGH_I717)
+> 						value = 24;
+> 						#else
+> 						value = 32;
+> 						#endif
+> 						error |= write_mem(data, obj_address+3, 1, &value);
+> 						get_object_info(data, SPT_GENERICDATA_T57, &size, &obj_address);
+> 						value = 15;
+> 						error |= write_mem(data, obj_address+1, 1, &value);
+> 					}
+> 					if (error)
+> 						printk(KERN_ERR"[TSP] fail median filter err setting\n");
+> 					else
+> 						printk(KERN_DEBUG"[TSP] success median filter err setting\n");
+> 				} else {
+> 					get_object_info(data, PROCG_NOISESUPPRESSION_T48, &size, &obj_address);
+> 					value = 0;
+> 					error = write_mem(data, obj_address+2, 1, &value);
+> 					msleep(15);
+> 					value = data->calcfg_batt_e;
+> 					error |= write_mem(data, obj_address+2, 1, &value);
+> 					if (error)
+> 						printk(KERN_ERR "[TSP] failed to reenable CHRGON\n");
+> 				}
+> 					}
+617,618d1531
+< 		
+< 		if (msg[0] > 1 && msg[0] < 12) {
+619a1533,1540
+> 
+> #if defined (CONFIG_USA_MODEL_SGH_I717)
+> 		if (gIgnoreReport_flag == 1) {
+> 			printk(KERN_DEBUG"[TSP] gIgnore touch\n");
+> 			return IRQ_HANDLED;
+> 		}
+> #endif
+> 		if (object_type == TOUCH_MULTITOUCHSCREEN_T9) {
+625c1546
+< 				}
+---
+>             }
+627,628c1548,1549
+< 			if (data->finger_mask & (1U << id))
+< 				report_input_data(data);
+---
+> //			if (data->finger_mask & (1U << id))
+> //				report_input_data(data);
+635,636c1556,1568
+< 			} else if ((msg[1] & DETECT_MSG_MASK) && (msg[1] &
+< 					(PRESS_MSG_MASK | MOVE_MSG_MASK))) {
+---
+> 			} else if ((msg[1] & DETECT_MSG_MASK) &&
+> 				(msg[1] & (PRESS_MSG_MASK | MOVE_MSG_MASK | VECTOR_MSG_MASK))) {
+> #ifdef TOUCH_CPU_LOCK				
+> 				if (touch_cpu_lock_status == 0) {
+> #ifdef CONFIG_S5PV310_HI_ARMCLK_THAN_1_2GHZ
+> 					s5pv310_cpufreq_lock(DVFS_LOCK_ID_TSP, CPU_L4);
+> #else
+> 					s5pv310_cpufreq_lock(DVFS_LOCK_ID_TSP, CPU_L3);
+> #endif
+> 					touch_cpu_lock_status = 1;
+> 				}
+> #endif                
+>               //printk(KERN_DEBUG "AFTER  [MID_TSP] msg[0] = (0x%x), msg[1] = (0x%x), id = (%d), finger_mask = (%d)\n", msg[0], msg[1], id, data->finger_mask );
+637a1570
+> 				data->fingers[id].component = msg[7];
+672d1604
+< 	} while (!gpio_get_value(data->gpio_read_done));
+676a1609,1612
+> 
+> 	} while (pending_message_count--);
+> 
+> 
+695a1632,1633
+> 	cancel_delayed_work(&data->resume_check_dwork);
+> 	cancel_delayed_work(&data->cal_check_dwork);
+714c1652
+< 
+---
+> #if 0
+716a1655
+> #endif
+726,730c1665
+< 	struct mxt540e_data *data = container_of(h, struct mxt540e_data,
+< 								early_suspend);
+< 	bool ta_status = 0;
+< 	mxt540e_enabled = 0;
+< 	touch_is_pressed = 0;
+---
+> 	struct mxt540e_data *data = container_of(h, struct mxt540e_data, early_suspend);
+732,735c1667,1672
+< 	if (data->read_ta_status) {
+< 		data->read_ta_status(&ta_status);
+< 		mxt540e_ta_probe(ta_status);
+< 	}
+---
+> //	set_lcd_esd_ignore(1);  // remove to use changed linux level
+> 	if (mxt540e_enabled) {
+> 		printk("[TSP] %s\n", __func__);
+> 		mxt540e_enabled = 0;
+> 		touch_is_pressed = 0;
+> 		is_drawingmode = 0;
+737,739d1673
+< 	if (ta_status) {
+< 		mxt540e_deepsleep(data);
+< 	}
+741,742c1675,1684
+< 	if (!deepsleep) disable_irq(data->client->irq);
+< 	mxt540e_internal_suspend(data);
+---
+> #if defined (CONFIG_USA_MODEL_SGH_I717)
+> 		gIgnoreReport_flag = 0;
+> 		gForceCalibration_flag = 0;
+> #endif
+> 
+> 		disable_irq(data->client->irq);
+> 		mxt540e_internal_suspend(data);
+> 	} else {
+> 		printk("[TSP] %s, but already off\n", __func__);
+> 	}
+747a1690,1693
+> 	u8 id[ID_BLOCK_SIZE];    
+> 	int ret = 0;    
+> 	int retry = 3;
+> 
+750,751c1696,1727
+< 	mxt540e_internal_resume(data);
+< 	if (!deepsleep) enable_irq(data->client->irq);
+---
+> 	if (mxt540e_enabled == 0) {
+> 		printk("[TSP] %s\n", __func__);
+> 		mxt540e_internal_resume(data);
+> 
+> 		mxt540e_enabled = 1;
+> 
+> #if defined (CONFIG_USA_MODEL_SGH_I717)
+> 		gIgnoreReport_flag = 1;
+> #endif        
+>         ret = read_mem(data, 0, sizeof(id), id);
+>         
+>         if (ret) {
+>             while (retry--) {
+>                 printk(KERN_DEBUG"[TSP] chip boot failed retry %d\n", retry);
+> 				set_lcd_esd_ignore(1);
+>                 data->power_off();
+>                 msleep(200);
+>                 data->power_on();
+> 				set_lcd_esd_ignore(0);
+>     
+>                 ret = read_mem(data, 0, sizeof(id), id);
+>                 if (ret == 0 || retry <= 0)
+>                     break;
+>             }
+>         }       
+> 
+> 		if (data->read_ta_status) {
+> 			data->read_ta_status(&ta_status);
+> 			printk("[TSP] ta_status is %d\n", ta_status);
+> 			mxt540e_ta_probe(ta_status);
+> 		}
+> 		if(deepsleep) deepsleep = 0;
+753,757c1729,1736
+< 	mxt540e_enabled = 1;
+< 	if (data->read_ta_status) {
+< 		data->read_ta_status(&ta_status);
+< 		printk("[TSP] ta_status is %d\n", ta_status);
+< 		if (!(deepsleep && ta_status)) mxt540e_ta_probe(ta_status);
+---
+> 		check_resume_err = 2;
+> 		calibrate_chip();
+> 		check_calibrate = 3;
+> 		schedule_delayed_work(&data->config_dwork, HZ*5);
+> 		config_dwork_flag = 3;
+> 		enable_irq(data->client->irq);
+> 	} else {
+> 		printk("[TSP] %s, but already on\n", __func__);
+759c1738
+< 	if(deepsleep) deepsleep = 0;
+---
+> //	set_lcd_esd_ignore(0); // remove to use changed linux level
+808c1787
+< 	report_input_data(data);
+---
+> 	report_input_data_torelease(data);
+879c1858,1862
+< static u8 firmware_latest =0x10; /* mxt540E : 0x10 */
+---
+> #if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
+> static u8 firmware_latest =0x13; /* mxt540E : 0x10 */
+> #else
+> static u8 firmware_latest =0x12; /* mxt540E : 0x10 */
+> #endif
+882a1866
+> 
+884c1868
+< 	botton_right, botton_left, center, top_right, top_left
+---
+> 	top_left, top_right, center, bottom_left, bottom_right
+886c1870,1872
+< unsigned char test_node[5] = {12, 20, 104, 188, 196};
+---
+> unsigned int test_node[5] = {443, 53, 253, 422, 32};
+> uint16_t qt_refrence_node[540] = { 0 };
+> uint16_t qt_delta_node[540] = { 0 };
+894,895d1879
+< 	u8 value;
+< 	u16 t37_address = 0;
+918c1902
+< void read_dbg_data(uint8_t dbg_mode , uint8_t node, uint16_t *dbg_data)
+---
+> void read_dbg_data(uint8_t dbg_mode , uint16_t node, uint16_t *dbg_data)
+924a1909,1913
+> 	if (!mxt540e_enabled) {
+> 		printk(KERN_ERR "[TSP ]read_dbg_data. mxt540e_enabled is 0\n");
+> 		return;
+> 	}
+> 
+973a1963,2170
+> #if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D) // For Kor's Factory test Mode 
+> #define MIN_VALUE 19744
+> #define MAX_VALUE 28864
+> 
+> #define COMP_VALUE 22304
+> 
+> int read_all_data(uint16_t dbg_mode)
+> {
+> 	u8 read_page, read_point;
+> 	u16 max_value = MIN_VALUE, min_value = MAX_VALUE;
+> 	u16 object_address = 0;
+> 	u8 data_buffer[2] = { 0 };
+> 	u8 node = 0;
+> 	int state = 0;
+> 	int num = 0;
+> 	int ret;
+> 	u16 size;
+> 
+> 	bool ta_state=false;
+> 	if(copy_data->read_ta_status) 
+> 		copy_data->read_ta_status(&ta_state);
+> 
+> 	/* Page Num Clear */
+> 	diagnostic_chip(MXT_CTE_MODE);
+> 	msleep(30);/* msleep(20);  */
+> 
+> 	diagnostic_chip(dbg_mode);
+> 	msleep(30);/* msleep(20);  */
+> 
+> 	ret = get_object_info(copy_data, DEBUG_DIAGNOSTIC_T37, &size, &object_address);
+> 	msleep(50); /* msleep(20);  */
+> 
+> 	for (read_page = 0 ; read_page < 9; read_page++) {
+> 		for (node = 0; node < 64; node++) {
+> 			read_point = (node * 2) + 2;
+> 			read_mem(copy_data, object_address+(u16)read_point, 2, data_buffer);
+> 			qt_refrence_node[num] = ((uint16_t)data_buffer[1]<<8)+ (uint16_t)data_buffer[0];
+>             
+> 			if(qt_refrence_node[num] == 0)	qt_refrence_node[num] = min_value;
+> 			if(ta_state)  /* (dual-x) all node */
+> 			{	
+> 				if( (read_page == 7) ||(read_page == 8) )
+> 					break;
+> 			}
+> 			else  /* all node  */
+> 			{	
+> 			}
+> 			
+> 			/* q1 use x=16 line, y=26 line */
+> 			if ((num%30 == 26) || (num%30 == 27) || (num%30 == 28) || (num%30 == 29)) {
+>                 //qt_refrence_node[num] = 21429;  // Temporary code 
+> 				num++;
+>                 
+> 				if (num == 480)
+> 					break;
+> 				else
+> 					continue;
+> 			}
+> 
+>             printk(KERN_ERR"[TSP] read_all_data :: qt_refrence_node[%3d] = %5d \n", num, qt_refrence_node[num]);
+>             
+> 			if ((qt_refrence_node[num] < MIN_VALUE) || (qt_refrence_node[num] > MAX_VALUE)) {
+> 				state = 1;
+>                 printk(KERN_ERR"[TSP] read_all_data :: over limitted :: qt_refrence_node[%3d] = %5d \n", num, qt_refrence_node[num]);
+> 			}
+> 
+> 			if (data_buffer[0] != 0) {
+> 				if(qt_refrence_node[num] > max_value)	max_value = qt_refrence_node[num];
+> 				if(qt_refrence_node[num] < min_value)	min_value = qt_refrence_node[num];
+> 			}
+> 			num++;
+> 			if (num == 480)
+> 				break;
+> 		}
+> 		diagnostic_chip(MXT_PAGE_UP);
+> 		msleep(35);
+> 		if (num == 480)
+> 			break;
+> 	}
+> 
+> 	if ((max_value - min_value) > 4500) {
+> 		printk(KERN_ERR "[TSP] read_all_data diff = %d, max_value = %d, min_value = %d\n", (max_value - min_value), max_value, min_value);
+> 		state = 1;
+> 	}
+> 	return state;
+> }
+> 
+> #else 
+> #define MIN_VALUE 19744
+> #define MAX_VALUE 28864
+> 
+> int read_all_data(uint16_t dbg_mode)
+> {
+> 	u8 read_page, read_point;
+> 	u16 max_value = MIN_VALUE, min_value = MAX_VALUE;
+> 	u16 object_address = 0;
+> 	u8 data_buffer[2] = { 0 };
+> 	u8 node = 0;
+> 	int state = 0;
+> 	int num = 0;
+> 	int ret;
+> 	u16 size;
+> 
+> 	/* Page Num Clear */
+> 	diagnostic_chip(MXT_CTE_MODE);
+> 	msleep(30);/* msleep(20);  */
+> 
+> 	diagnostic_chip(dbg_mode);
+> 	msleep(30);/* msleep(20);  */
+> 
+> 	ret = get_object_info(copy_data, DEBUG_DIAGNOSTIC_T37, &size, &object_address);
+> 	msleep(50); /* msleep(20);  */
+> 
+> 	for (read_page = 0 ; read_page < 9; read_page++) {
+> 		for (node = 0; node < 64; node++) {
+> 			read_point = (node * 2) + 2;
+> 			read_mem(copy_data, object_address+(u16)read_point, 2, data_buffer);
+> 			qt_refrence_node[num] = ((uint16_t)data_buffer[1]<<8)+ (uint16_t)data_buffer[0];
+>             
+> 			/* q1 use x=16 line, y=26 line */
+> 			if ((num%30 == 26) || (num%30 == 27) || (num%30 == 28) || (num%30 == 29)) {
+> 				num++;
+> 				if (num == 480)
+> 					break;
+> 				else
+> 					continue;
+> 			}
+>             
+> 			if ((qt_refrence_node[num] < MIN_VALUE) || (qt_refrence_node[num] > MAX_VALUE)) {
+> 				state = 1;
+> 				printk(KERN_ERR"[TSP] Mxt540E qt_refrence_node[%3d] = %5d \n", num, qt_refrence_node[num]);
+> 			}
+> 
+> 			if (data_buffer[0] != 0) {
+> 				if(qt_refrence_node[num] > max_value)	max_value = qt_refrence_node[num];
+> 				if(qt_refrence_node[num] < min_value)	min_value = qt_refrence_node[num];
+> 			}
+> 			num++;
+> 			if (num == 480)
+> 				break;
+>             
+> 			/* all node => 18 * 30 = 540 => (8page * 64)  + 28*/
+> 			if ((read_page == 8) && (node == 28))
+> 				break;
+> 		}
+> 		diagnostic_chip(MXT_PAGE_UP);
+> 		msleep(35);
+> 		if (num == 480)
+> 			break;
+> 	}
+> 
+> 	if ((max_value - min_value) > 4500) {
+> 		printk(KERN_ERR "[TSP] read_all_data diff = %d, max_value = %d, min_value = %d\n", (max_value - min_value), max_value, min_value);
+> 		state = 1;
+> 	}
+> 	return state;
+> }
+> #endif 
+> 
+> int read_all_delta_data(uint16_t dbg_mode)
+> {
+> 	u8 read_page, read_point;
+> 	u16 object_address = 0;
+> 	u8 data_buffer[2] = { 0 };
+> 	u8 node = 0;
+> 	int state = 0;
+> 	int num = 0;
+> 	int ret;
+> 	u16 size;
+> 
+> 	/* Page Num Clear */
+> 	diagnostic_chip(MXT_CTE_MODE);
+> 	msleep(30);
+> 	diagnostic_chip(dbg_mode);
+> 	msleep(30);
+> 
+> 	ret = get_object_info(copy_data, DEBUG_DIAGNOSTIC_T37, &size, &object_address);
+> /*jerry no need to leave it */
+> #if 0
+> 	for (i = 0; i < 5; i++) {
+> 		if (data_buffer[0] == dbg_mode)
+> 			break;
+> 
+> 		msleep(20);
+> 	}
+> #else
+> 	msleep(50); /* msleep(20);  */
+> #endif
+> 
+> 	for (read_page = 0 ; read_page < 9; read_page++) {
+> 		for (node = 0; node < 64; node++) {
+> 			read_point = (node * 2) + 2;
+> 			read_mem(copy_data, object_address+(u16)read_point, 2, data_buffer);
+> 				qt_delta_node[num] = ((uint16_t)data_buffer[1]<<8)+ (uint16_t)data_buffer[0];
+> 
+> 			num++;
+> 
+> 			/* all node => 18 * 30 = 540 => (8page * 64)  + 28*/
+> 			if ((read_page == 8) && (node == 28))
+> 				break;
+> 		}
+> 		diagnostic_chip(MXT_PAGE_UP);
+> 		msleep(35);
+> 	}
+> 
+> 	return state;
+> }
+> 
+977a2175
+> 	u8 temp;
+984a2183,2222
+> 	if(val & 0x20)
+> 	{
+> 
+> 		if (i2c_master_recv(client, &temp, 1) != 1) {
+> 			dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
+> 			return -EIO;
+> 		}
+> 
+> 		if (i2c_master_recv(client, &temp, 1) != 1) {
+> 			dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
+> 			return -EIO;
+> 		}
+> 
+> 		val &= ~0x20;
+> 	}
+> 
+> 	if((val & 0xF0)== MXT540E_APP_CRC_FAIL)
+> 	{
+> 		printk("[TOUCH] MXT540E_APP_CRC_FAIL\n");
+> 		if (i2c_master_recv(client, &val, 1) != 1) {
+> 			dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
+> 			return -EIO;
+> 		}
+> 
+> 		if(val & 0x20)
+> 		{
+> 			if (i2c_master_recv(client, &temp, 1) != 1) {
+> 				dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
+> 				return -EIO;
+> 			}
+> 
+> 			if (i2c_master_recv(client, &temp, 1) != 1) {
+> 				dev_err(&client->dev, "%s: i2c recv failed\n", __func__);
+> 				return -EIO;
+> 			}
+> 
+> 			val &= ~0x20;
+> 		}
+> 	}
+> 
+1035,1044c2273,2284
+< 	struct mxt540e_data *data = copy_data;
+< 	struct i2c_client *client = copy_data->client;
+< 	const struct firmware *fw = NULL;
+< 	unsigned int frame_size;
+< 	unsigned int pos = 0;
+< 	int ret;
+< 	u16 obj_address=0;
+< 	u16 size_one;
+< 	u8 value;
+< 	unsigned int object_register;
+---
+>     struct mxt540e_data *data = copy_data;
+>     struct i2c_client *client = copy_data->client;
+>     struct firmware *fw = NULL;
+>     unsigned int frame_size;
+>     unsigned int pos = 0;
+>     int ret = 0;
+>     u16 obj_address=0;
+>     u16 size_one;
+>     u8 value;
+>     unsigned int object_register;
+>     int check_frame_crc_error = 0;
+>     int check_wating_frame_data_error = 0;
+1046c2286
+< 	printk("[TSP] mxt540e_load_fw start!!!\n");
+---
+>     printk("[TSP] mxt540e_load_fw start!!!\n");
+1048c2288
+< 	ret = request_firmware(&fw, fn, &client->dev);
+---
+>     /* ret = request_firmware(&fw, fn, &client->dev);
+1053c2293,2307
+< 	}
+---
+> 	}*/
+> 	
+>     fw = kmalloc(sizeof(struct firmware), GFP_KERNEL);
+>     if(!fw) {
+>         printk("[TSP] mxt540e_load_fw kmalloc Failed !!!\n");
+>         return -ENOMEM;
+>     }
+>     
+> #if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)  || defined (CONFIG_JPN_MODEL_SC_05D)
+>     fw->size = ARRAY_SIZE(mXT540e__APP_V1_3_AA);
+>     fw->data = mXT540e__APP_V1_3_AA;
+> #else    
+>     fw->size = ARRAY_SIZE(mXT540e__APP_V1_2_AA);
+>     fw->data = mXT540e__APP_V1_2_AA;
+> #endif    
+1059,1060c2313
+< 	if (ret)
+< 	{
+---
+> 	if (ret)	{
+1061a2315,2316
+>         kfree(fw);
+>         fw = NULL;
+1066c2321
+< 	msleep(MXT540E_RESET_TIME);
+---
+> 	msleep(MXT540E_SW_RESET_TIME);
+1084,1085c2339,2349
+< 		if (ret)
+< 			goto out;
+---
+> 		if (ret) {
+> 			check_wating_frame_data_error++;
+> 			if (check_wating_frame_data_error > 10) {
+> 				printk(KERN_ERR"[TSP] firm update fail. wating_frame_data err\n");
+> 				goto out;
+> 			} else {
+> 				printk("[TSP]check_wating_frame_data_error = %d, retry\n",
+> 					check_wating_frame_data_error);
+> 				continue;
+> 			}
+> 		}
+1089,1091c2353
+< 		/* We should add 2 at frame size as the the firmware data is not
+< 		* included the CRC bytes.
+< 		*/
+---
+> 		/* We should add 2 at frame size as the the firmware data is not included the CRC bytes.	*/
+1099,1100c2361,2371
+< 		if (ret)
+< 			goto out;
+---
+> 		if (ret) {
+> 			check_frame_crc_error++;
+> 			if (check_frame_crc_error > 10) {
+> 				printk(KERN_ERR"[TSP] firm update fail. frame_crc err\n");
+> 				goto out;
+> 			} else {
+> 				printk("[TSP]check_frame_crc_error = %d, retry\n",
+> 					check_frame_crc_error);
+> 				continue;
+> 			}
+> 		}
+1105a2377,2378
+> 
+> 		msleep(1);
+1109c2382,2384
+< 	release_firmware(fw);
+---
+>     kfree(fw);
+>     fw = NULL;
+>     release_firmware(fw);
+1117c2392,2393
+< 	return ret;
+---
+>     printk("[TSP] mxt540e_load_fw end !!!\n");
+>     return ret;
+1120c2396
+< static ssize_t set_refer0_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> static int mxt540e_load_fw_bootmode(struct device *dev, const char *fn)
+1122a2399,2483
+> 	struct i2c_client *client = copy_data->client;
+> 	struct firmware *fw = NULL;
+> 	unsigned int frame_size;
+> 	unsigned int pos = 0;
+> 	int ret;
+> 	int check_frame_crc_error = 0;
+> 	int check_wating_frame_data_error = 0;
+> 
+> 	printk("[TSP] mxt540e_load_fw_bootmode start!!!\n");
+> 
+> 	fw = kmalloc(sizeof(struct firmware), GFP_KERNEL);
+>     if(!fw) {
+>         printk("[TSP] mxt540e_load_fw_bootmode kmalloc Failed !!!\n");
+>         return -ENOMEM;
+>     }
+>     
+> #if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)  || defined (CONFIG_JPN_MODEL_SC_05D)
+>     fw->size = ARRAY_SIZE(mXT540e__APP_V1_3_AA);
+>     fw->data = mXT540e__APP_V1_3_AA;
+> #else    
+>     fw->size = ARRAY_SIZE(mXT540e__APP_V1_2_AA);
+>     fw->data = mXT540e__APP_V1_2_AA;
+> #endif    
+> 
+> 	/* Unlock bootloader */
+> 	mxt540e_unlock_bootloader(client);
+> 
+> 	while (pos < fw->size) {
+> 		ret = mxt540e_check_bootloader(client, MXT540E_WAITING_FRAME_DATA);
+> 		if (ret) {
+> 			check_wating_frame_data_error++;
+> 			if (check_wating_frame_data_error > 10) {
+> 				printk(KERN_ERR"[TSP] firm update fail. wating_frame_data err\n");
+> 				goto out;
+> 			} else {
+> 				printk("[TSP]check_wating_frame_data_error = %d, retry\n", check_wating_frame_data_error);
+> 				continue;
+> 			}
+> 		}
+> 
+> 		frame_size = ((*(fw->data + pos) << 8) | *(fw->data + pos + 1));
+> 
+> 		/* We should add 2 at frame size as the the firmware data is not included the CRC bytes.	*/
+> 		frame_size += 2;
+> 
+> 		/* Write one frame to device */
+> 		mxt540e_fw_write(client, fw->data + pos, frame_size);
+> 
+> 		ret = mxt540e_check_bootloader(client, MXT540E_FRAME_CRC_PASS);
+> 		if (ret) {
+> 			check_frame_crc_error++;
+> 			if (check_frame_crc_error > 10) {
+> 				printk(KERN_ERR"[TSP] firm update fail. frame_crc err\n");
+> 				goto out;
+> 			} else {
+> 				printk("[TSP]check_frame_crc_error = %d, retry\n", check_frame_crc_error);
+> 				continue;
+> 			}
+> 		}
+> 
+> 		pos += frame_size;
+> 
+> 		dev_dbg(dev, "Updated %d bytes / %zd bytes\n", pos, fw->size);
+> 		printk("[TSP] Updated %d bytes / %zd bytes\n", pos, fw->size);
+> 
+> 		msleep(1);
+> 	}
+> 
+> out:
+>     kfree(fw);
+>     fw = NULL;
+>     release_firmware(fw);
+> 
+>     /* Change to slave address of application */
+>     if (client->addr == MXT540E_BOOT_LOW)
+>         client->addr = MXT540E_APP_LOW;
+>     else
+>         client->addr = MXT540E_APP_HIGH;
+> 
+>     printk("[TSP] mxt540e_load_fw_bootmode end!!!\n");
+>     return ret;
+> }
+> 
+> static ssize_t set_refer0_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+1125d2485
+< 	mxt_reference -= 16384;
+1131d2490
+< 	struct mxt540e_data *data = copy_data;
+1134d2492
+< 	mxt_reference -= 16384;
+1140d2497
+< 	struct mxt540e_data *data = copy_data;
+1143d2499
+< 	mxt_reference -= 16384;
+1149d2504
+< 	struct mxt540e_data *data = copy_data;
+1152d2506
+< 	mxt_reference -= 16384;
+1158d2511
+< 	struct mxt540e_data *data = copy_data;
+1161d2513
+< 	mxt_reference -= 16384;
+1174,1175c2526,2655
+< 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+< 	else return sprintf(buf, "%u\n", mxt_delta);
+---
+> 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+> 	else return sprintf(buf, "%u\n", mxt_delta);
+> }
+> 
+> static ssize_t set_delta1_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	uint16_t mxt_delta=0;
+> 	read_dbg_data(MXT_DELTA_MODE, test_node[1], &mxt_delta);
+> 	if (mxt_delta < 32767)
+> 		return sprintf(buf, "%u\n", mxt_delta);
+> 	else
+> 		mxt_delta = 65535 - mxt_delta;
+> 
+> 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+> 	else return sprintf(buf, "%u\n", mxt_delta);
+> }
+> 
+> static ssize_t set_delta2_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	uint16_t mxt_delta=0;
+> 	read_dbg_data(MXT_DELTA_MODE, test_node[2], &mxt_delta);
+> 	if (mxt_delta < 32767)
+> 		return sprintf(buf, "%u\n", mxt_delta);
+> 	else
+> 		mxt_delta = 65535 - mxt_delta;
+> 
+> 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+> 	else return sprintf(buf, "%u\n", mxt_delta);
+> }
+> 
+> static ssize_t set_delta3_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	uint16_t mxt_delta=0;
+> 	read_dbg_data(MXT_DELTA_MODE, test_node[3], &mxt_delta);
+> 	if (mxt_delta < 32767)
+> 		return sprintf(buf, "%u\n", mxt_delta);
+> 	else
+> 		mxt_delta = 65535 - mxt_delta;
+> 
+> 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+> 	else return sprintf(buf, "%u\n", mxt_delta);
+> }
+> 
+> static ssize_t set_delta4_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	uint16_t mxt_delta=0;
+> 	read_dbg_data(MXT_DELTA_MODE, test_node[4], &mxt_delta);
+> 	if (mxt_delta < 32767)
+> 		return sprintf(buf, "%u\n", mxt_delta);
+> 	else
+> 		mxt_delta = 65535 - mxt_delta;
+> 
+> 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+> 	else return sprintf(buf, "%u\n", mxt_delta);
+> }
+> 
+> static ssize_t set_threshold_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	return sprintf(buf, "%u\n", threshold);
+> }
+> 
+> static ssize_t set_all_refer_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	int status = 0;
+> 
+> 	status = read_all_data(MXT_REFERENCE_MODE);
+> 
+> 	return sprintf(buf, "%u\n", status);
+> }
+> 
+> 
+> ssize_t set_tsp_for_drawing_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+> {
+> 	u16 obj_address = 0;
+> 	u16 size_one;
+> 	int ret;
+> 	u8 value;
+> 	int jump_limit = 0;
+> 	u8 val = 0;
+> 	unsigned int register_address = 0;
+> 
+> 	if (*buf == '1' && (!is_drawingmode)) {
+> 		is_drawingmode = 1;
+> 		jump_limit = 0;
+> 		printk(KERN_ERR "[TSP] Set TSP drawing IN\n");
+> 
+> 		ret = get_object_info(copy_data, TOUCH_MULTITOUCHSCREEN_T9, &size_one, &obj_address);
+> 		register_address = 30;				
+> 		value = (u8)jump_limit;
+> 		size_one = 1;
+> 		write_mem(copy_data, obj_address+(u16)register_address, size_one, &value);
+> 		read_mem(copy_data, obj_address+(u16)register_address, (u8)size_one, &val);
+> 		printk(KERN_ERR "T%d Byte%d is %d\n", 9, register_address, val);
+> 	} else if (*buf == '0' && (is_drawingmode)) {
+> 		is_drawingmode = 0;
+> 		jump_limit  = 18;
+> 		printk(KERN_ERR "[TSP] Set TSP drawing OUT\n");
+> 
+> 		ret = get_object_info(copy_data, TOUCH_MULTITOUCHSCREEN_T9, &size_one, &obj_address);
+> 		register_address = 30;				
+> 		value = (u8)jump_limit;
+> 		size_one = 1;
+> 		write_mem(copy_data, obj_address+(u16)register_address, size_one, &value);
+> 		read_mem(copy_data, obj_address+(u16)register_address, (u8)size_one, &val);
+> 		printk(KERN_ERR "T%d Byte%d is %d\n", 9, register_address, val);
+> 	}
+> 
+> 	return 1;
+> }
+> 
+> 
+> static int index_reference;
+> 
+> static int atoi(char *str)
+> {
+> 	int result = 0;
+> 	int count = 0;
+> 	if( str == NULL )
+> 		return -1;
+> 	while( str[count] != NULL && str[count] >= '0' && str[count] <= '9' )
+> 	{
+> 		result = result * 10 + str[count] - '0';
+> 		++count;
+> 	}
+> 	return result;
+> }
+> 
+> ssize_t disp_all_refdata_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+>     return sprintf(buf, "%u\n",  qt_refrence_node[index_reference]);
+1178c2658
+< static ssize_t set_delta1_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> ssize_t disp_all_refdata_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+1180,1185c2660,2662
+< 	uint16_t mxt_delta=0;
+< 	read_dbg_data(MXT_DELTA_MODE, test_node[1], &mxt_delta);
+< 	if (mxt_delta < 32767)
+< 		return sprintf(buf, "%u\n", mxt_delta);
+< 	else
+< 		mxt_delta = 65535 - mxt_delta;
+---
+> 	index_reference = atoi(buf);
+> 	return size;
+> }
+1187,1188c2664,2668
+< 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+< 	else return sprintf(buf, "%u\n", mxt_delta);
+---
+> static ssize_t set_all_delta_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	int status = 0;
+> 	status = read_all_delta_data(MXT_DELTA_MODE);
+> 	return sprintf(buf, "%u\n", status);
+1191c2671,2673
+< static ssize_t set_delta2_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> static int index_delta = 0;
+> 
+> ssize_t disp_all_deltadata_show(struct device *dev, struct device_attribute *attr, char *buf) // Jun : Diff from qt602...
+1193,1196c2675,2676
+< 	uint16_t mxt_delta=0;
+< 	read_dbg_data(MXT_DELTA_MODE, test_node[2], &mxt_delta);
+< 	if (mxt_delta < 32767)
+< 		return sprintf(buf, "%u\n", mxt_delta);
+---
+> 	if (qt_delta_node[index_delta] < 32767)
+> 		return sprintf(buf, "%u\n", qt_delta_node[index_delta]);
+1198c2678
+< 		mxt_delta = 65535 - mxt_delta;
+---
+> 		qt_delta_node[index_delta] = 65535 - qt_delta_node[index_delta];
+1200,1201c2680
+< 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+< 	else return sprintf(buf, "%u\n", mxt_delta);
+---
+> 	return sprintf(buf, "-%u\n", qt_delta_node[index_delta]);
+1204c2683,2684
+< static ssize_t set_delta3_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> ssize_t disp_all_deltadata_store(struct device *dev, struct device_attribute *attr,
+> 								   const char *buf, size_t size)
+1206,1211c2686,2693
+< 	uint16_t mxt_delta=0;
+< 	read_dbg_data(MXT_DELTA_MODE, test_node[3], &mxt_delta);
+< 	if (mxt_delta < 32767)
+< 		return sprintf(buf, "%u\n", mxt_delta);
+< 	else
+< 		mxt_delta = 65535 - mxt_delta;
+---
+> 	index_delta = atoi(buf);
+> 	return size;
+> }
+> 
+> static ssize_t set_firm_version_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 
+> 	return sprintf(buf, "%#02x\n", tsp_version_disp);
+1213,1214d2694
+< 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+< 	else return sprintf(buf, "%u\n", mxt_delta);
+1217c2697
+< static ssize_t set_delta4_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> static ssize_t set_module_off_show(struct device *dev, struct device_attribute *attr, char *buf)
+1219,1224c2699,2700
+< 	uint16_t mxt_delta=0;
+< 	read_dbg_data(MXT_DELTA_MODE, test_node[4], &mxt_delta);
+< 	if (mxt_delta < 32767)
+< 		return sprintf(buf, "%u\n", mxt_delta);
+< 	else
+< 		mxt_delta = 65535 - mxt_delta;
+---
+> 	struct mxt540e_data *data = copy_data;
+> 	int count;
+1226,1227c2702,2710
+< 	if(mxt_delta) return sprintf(buf, "-%u\n", mxt_delta);
+< 	else return sprintf(buf, "%u\n", mxt_delta);
+---
+> 	mxt540e_enabled = 0;
+> 	touch_is_pressed = 0;
+> 
+> 	disable_irq(data->client->irq);
+> 	mxt540e_internal_suspend(data);
+> 
+> 	count = sprintf(buf, "tspoff\n");
+> 
+> 	return count;
+1230c2713
+< static ssize_t set_threshold_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+---
+> static ssize_t set_module_on_show(struct device *dev, struct device_attribute *attr, char *buf)
+1232c2715,2734
+< 	return sprintf(buf, "%u\n", threshold);
+---
+> 	struct mxt540e_data *data = copy_data;
+> 	int count;
+> 
+> 	bool ta_status = 0;
+> 
+> 	mxt540e_internal_resume(data);
+> 	enable_irq(data->client->irq);
+> 
+> 	mxt540e_enabled = 1;
+> 
+> 	if (data->read_ta_status) {
+> 		data->read_ta_status(&ta_status);
+> 		printk(KERN_ERR "[TSP] ta_status is %d", ta_status);
+> 		mxt540e_ta_probe(ta_status);
+> 	}
+> 	calibrate_chip();
+> 
+> 	count = sprintf(buf, "tspon\n");
+> 
+> 	return count;
+1239a2742
+>     
+1241c2744
+< 		printk(KERN_ERR"Invalid values\n");
+---
+> 		printk(KERN_ERR "[TSP] Invalid values\n");
+1248c2751
+< 	if (*buf != 'F' && data->tsp_version >= firmware_latest && data->tsp_build >= build_latest) {
+---
+> 	if (*buf != 'F' && data->tsp_version >= firmware_latest && data->tsp_build != build_latest) {
+1268c2771
+< 		msleep(MXT540E_FWRESET_TIME);
+---
+> 		msleep(MXT540E_SW_RESET_TIME);
+1289c2792
+< 	msleep(MXT540E_RESET_TIME);
+---
+> 	msleep(MXT540E_SW_RESET_TIME);
+1316,1317c2819
+< static ssize_t key_threshold_store(struct device *dev, struct device_attribute *attr,
+< 								   const char *buf, size_t size)
+---
+> static ssize_t key_threshold_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+1343,1344d2844
+< 	struct mxt540e_data *data = dev_get_drvdata(dev);
+< 
+1355,1374c2855,3194
+< static DEVICE_ATTR(set_refer0, S_IRUGO, set_refer0_mode_show, NULL);
+< static DEVICE_ATTR(set_delta0, S_IRUGO, set_delta0_mode_show, NULL);
+< static DEVICE_ATTR(set_refer1, S_IRUGO, set_refer1_mode_show, NULL);
+< static DEVICE_ATTR(set_delta1, S_IRUGO, set_delta1_mode_show, NULL);
+< static DEVICE_ATTR(set_refer2, S_IRUGO, set_refer2_mode_show, NULL);
+< static DEVICE_ATTR(set_delta2, S_IRUGO, set_delta2_mode_show, NULL);
+< static DEVICE_ATTR(set_refer3, S_IRUGO, set_refer3_mode_show, NULL);
+< static DEVICE_ATTR(set_delta3, S_IRUGO, set_delta3_mode_show, NULL);
+< static DEVICE_ATTR(set_refer4, S_IRUGO, set_refer4_mode_show, NULL);
+< static DEVICE_ATTR(set_delta4, S_IRUGO, set_delta4_mode_show, NULL);
+< static DEVICE_ATTR(set_threshold, S_IRUGO, set_threshold_mode_show, NULL);
+< 
+< static DEVICE_ATTR(tsp_firm_update, S_IWUSR | S_IWGRP, NULL, set_mxt_firm_update_store);		/* firmware update */
+< static DEVICE_ATTR(tsp_firm_update_status, S_IRUGO, set_mxt_firm_status_show, NULL);	/* firmware update status return */
+< static DEVICE_ATTR(tsp_threshold, S_IRUGO | S_IWUSR | S_IWGRP, key_threshold_show, key_threshold_store);	/* touch threshold return, store */
+< static DEVICE_ATTR(tsp_firm_version_phone, S_IRUGO, set_mxt_firm_version_show, NULL);/* PHONE*/	/* firmware version resturn in phone driver version */
+< static DEVICE_ATTR(tsp_firm_version_panel, S_IRUGO, set_mxt_firm_version_read_show, NULL);/*PART*/	/* firmware version resturn in TSP panel version */
+< static DEVICE_ATTR(object_show, S_IWUSR | S_IWGRP, NULL, mxt540e_object_show);
+< static DEVICE_ATTR(object_write, S_IWUSR | S_IWGRP, NULL, mxt540e_object_setting);
+< static DEVICE_ATTR(dbg_switch, S_IWUSR | S_IWGRP, NULL, mxt540e_debug_setting);
+---
+> static ssize_t set_mxt_config_version_read_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	return sprintf(buf, "1007\n");
+> }
+> 
+> static ssize_t mxt_touchtype_show(struct device *dev, struct device_attribute *attr, char *buf)
+> {
+> 	char temp[15];
+> 
+> 	sprintf(temp, "TSP : MXT540E\n");
+> 	strcat(buf, temp);
+> 
+> 	return strlen(buf);
+> }
+> 
+> #ifdef ITDEV //itdev
+> 
+> /* Functions for mem_access interface */
+> struct bin_attribute mem_access_attr;
+> 
+> static int mxt_read_block(struct i2c_client *client,
+> 		   u16 addr,
+> 		   u16 length,
+> 		   u8 *value)
+> {
+> 	struct i2c_adapter *adapter = client->adapter;
+> 	struct i2c_msg msg[2];
+> 	__le16	le_addr;
+> 	struct mxt540e_data *mxt;
+> 
+> 	mxt = i2c_get_clientdata(client);
+> 
+> 	if (mxt != NULL) {
+> 		if ((mxt->last_read_addr == addr) &&
+> 			(addr == mxt->msg_proc_addr)) {
+> 			if  (i2c_master_recv(client, value, length) == length)
+> 			{
+> #ifdef ITDEV
+>                 if (debug_enabled)//itdev
+>                     print_hex_dump(KERN_DEBUG, "MXT RX:", DUMP_PREFIX_NONE, 16, 1, value, length, false);//itdev
+> #endif 					
+> 				return 0;
+> 			}	
+> 			else
+> 				return -EIO;
+> 		} else {
+> 			mxt->last_read_addr = addr;
+> 		}
+> 	}
+> 
+> 	le_addr = cpu_to_le16(addr);
+> 	msg[0].addr  = client->addr;
+> 	msg[0].flags = 0x00;
+> 	msg[0].len   = 2;
+> 	msg[0].buf   = (u8 *) &le_addr;
+> 
+> 	msg[1].addr  = client->addr;
+> 	msg[1].flags = I2C_M_RD;
+> 	msg[1].len   = length;
+> 	msg[1].buf   = (u8 *) value;
+> 	if  (i2c_transfer(adapter, msg, 2) == 2)
+> 	{	
+> #ifdef ITDEV
+>         if (debug_enabled) {//itdev
+>             print_hex_dump(KERN_DEBUG, "MXT TX:", DUMP_PREFIX_NONE, 16, 1, msg[0].buf, msg[0].len, false);//itdev
+>             print_hex_dump(KERN_DEBUG, "MXT RX:", DUMP_PREFIX_NONE, 16, 1, msg[1].buf, msg[1].len, false);//itdev
+>         }	
+> #endif        			
+> 		return 0;
+> 	}	
+> 	else
+> 		return -EIO;
+> 
+> }
+> 
+> /* Writes a block of bytes (max 256) to given address in mXT chip. */
+> 
+> int mxt_write_block(struct i2c_client *client,
+> 		    u16 addr,
+> 		    u16 length,
+> 		    u8 *value)
+> {
+> 	int i;
+> 	struct {
+> 		__le16	le_addr;
+> 		u8	data[256];
+> 
+> 	} i2c_block_transfer;
+> 
+> 	struct mxt540e_data *mxt;
+> 
+> 	if (length > 256)
+> 		return -EINVAL;
+> 
+> 	mxt = i2c_get_clientdata(client);
+> 	if (mxt != NULL)
+> 		mxt->last_read_addr = -1;
+> 
+> 
+> 
+> 	for (i = 0; i < length; i++)
+> 		i2c_block_transfer.data[i] = *value++;
+> 
+> 
+> 	i2c_block_transfer.le_addr = cpu_to_le16(addr);
+> 
+> 	i = i2c_master_send(client, (u8 *) &i2c_block_transfer, length + 2);
+> 
+> 	if (i == (length + 2))
+> 	{
+> #ifdef ITDEV
+>         if (debug_enabled)//itdev
+>             print_hex_dump(KERN_DEBUG, "MXT TX:", DUMP_PREFIX_NONE, 16, 1, &i2c_block_transfer, length+2, false);//itdev	
+> #endif
+> 		return length;
+> 	}	
+> 	else
+> 		return -EIO;
+> }
+> 
+> 
+> static ssize_t mem_access_read(struct file *filp, struct kobject *kobj,
+>                                struct bin_attribute *bin_attr,
+>                                char *buf, loff_t off, size_t count)
+> {
+>   int ret = 0;
+>   struct i2c_client *client;
+> 
+>   pr_info("mem_access_read p=%p off=%lli c=%zi\n", buf, off, count);
+> 
+>   if (off >= 32768)
+>     return -EIO;
+> 
+>   if (off + count > 32768)
+>     count = 32768 - off;
+> 
+>   if (count > 256)
+>     count = 256;
+> 
+>   if (count > 0)
+>   {
+>     client = to_i2c_client(container_of(kobj, struct device, kobj));
+>     ret = mxt_read_block(client, off, count, buf);
+>   }
+> 
+>   return ret >= 0 ? count : ret;
+> }
+> 
+> static ssize_t mem_access_write(struct file *filp, struct kobject *kobj,
+>                                   struct bin_attribute *bin_attr,
+>                                   char *buf, loff_t off, size_t count)
+> {
+>   int ret = 0;
+>   struct i2c_client *client;
+> 
+>   pr_info("mem_access_write p=%p off=%lli c=%zi\n", buf, off, count);
+> 
+>   if (off >= 32768)
+>     return -EIO;
+> 
+>   if (off + count > 32768)
+>     count = 32768 - off;
+> 
+>   if (count > 256)
+>     count = 256;
+> 
+>   if (count > 0) {
+>     client = to_i2c_client(container_of(kobj, struct device, kobj));
+>     ret = mxt_write_block(client, off, count, buf);
+>   }
+> 
+>   return ret >= 0 ? count : 0;
+> }
+> 
+> static ssize_t pause_show(struct device *dev,
+>     struct device_attribute *attr, char *buf)
+> {
+>     int count = 0;
+> 
+>     count += sprintf(buf + count, "%d", driver_paused);
+>     count += sprintf(buf + count, "\n");
+> 
+>     return count;
+> }
+> 
+> static ssize_t pause_store(struct device *dev,
+>     struct device_attribute *attr, const char *buf, size_t count)
+> {
+>     int i;
+>     if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+>         driver_paused = i;
+> 
+>         printk("%s\n", i ? "paused" : "unpaused");
+>     } else {
+>         printk("pause_driver write error\n");
+>     }
+> 
+>     return count;
+> }
+> 
+> static ssize_t debug_enable_show(struct device *dev,
+>     struct device_attribute *attr, char *buf)
+> {
+>     int count = 0;
+> 
+>     count += sprintf(buf + count, "%d", debug_enabled);
+>     count += sprintf(buf + count, "\n");
+> 
+>     return count;
+> }
+> 
+> static ssize_t debug_enable_store(struct device *dev,
+>     struct device_attribute *attr, const char *buf, size_t count)
+> {
+>     int i;
+>     if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+>         debug_enabled = i;
+> 
+>         printk("%s\n", i ? "debug enabled" : "debug disabled");
+>     } else {
+>         printk("debug_enabled write error\n");
+>     }
+> 
+>     return count;
+> }
+> 
+> static ssize_t command_calibrate_store(struct device *dev,
+>                     struct device_attribute *attr,
+>                     const char *buf, size_t count)
+> {
+>     struct i2c_client *client;
+>     struct mxt540e_data   *mxt;
+>     int ret;
+> 
+> #if 0
+>     client = to_i2c_client(dev);
+>     mxt = i2c_get_clientdata(client);
+> 
+>     ret = mxt_write_byte(client,
+>         MXT_BASE_ADDR(MXT_GEN_COMMANDPROCESSOR_T6)
+>         + MXT_ADR_T6_CALIBRATE,
+>            0x1);
+> #else
+> 	ret= calibrate_chip();
+> #endif          
+> 
+>     return (ret < 0) ? ret : count;
+> }
+> 
+> static ssize_t command_reset_store(struct device *dev,
+>                     struct device_attribute *attr,
+>                     const char *buf, size_t count)
+> {
+>     struct i2c_client *client;
+>     struct mxt540e_data   *mxt;
+>     int ret;
+> 
+>     client = to_i2c_client(dev);
+>     mxt = i2c_get_clientdata(client);
+> 
+> #if 0
+>     ret = reset_chip(mxt, RESET_TO_NORMAL);
+> #else
+> 	ret = mxt540e_reset(mxt);
+> #endif
+>     return (ret < 0) ? ret : count;
+> }
+> 
+> static ssize_t command_backup_store(struct device *dev,
+>                     struct device_attribute *attr,
+>                     const char *buf, size_t count)
+> {
+>  	struct i2c_client *client;
+>     struct mxt540e_data   *mxt;
+>     int ret;
+> 
+>     client = to_i2c_client(dev);
+>     mxt = i2c_get_clientdata(client);
+> 
+> #if 0
+>     ret = backup_to_nv(mxt);
+> #else
+> 	ret = mxt540e_backup(mxt);
+> #endif
+> 
+>     return (ret < 0) ? ret : count;
+> }
+> 
+> #endif //itdev
+> 
+> static DEVICE_ATTR(set_refer0, S_IRUGO | S_IWUSR | S_IWGRP, set_refer0_mode_show, NULL);
+> static DEVICE_ATTR(set_delta0, S_IRUGO | S_IWUSR | S_IWGRP, set_delta0_mode_show, NULL);
+> static DEVICE_ATTR(set_refer1, S_IRUGO | S_IWUSR | S_IWGRP, set_refer1_mode_show, NULL);
+> static DEVICE_ATTR(set_delta1, S_IRUGO | S_IWUSR | S_IWGRP, set_delta1_mode_show, NULL);
+> static DEVICE_ATTR(set_refer2, S_IRUGO | S_IWUSR | S_IWGRP, set_refer2_mode_show, NULL);
+> static DEVICE_ATTR(set_delta2, S_IRUGO | S_IWUSR | S_IWGRP, set_delta2_mode_show, NULL);
+> static DEVICE_ATTR(set_refer3, S_IRUGO | S_IWUSR | S_IWGRP, set_refer3_mode_show, NULL);
+> static DEVICE_ATTR(set_delta3, S_IRUGO | S_IWUSR | S_IWGRP, set_delta3_mode_show, NULL);
+> static DEVICE_ATTR(set_refer4, S_IRUGO | S_IWUSR | S_IWGRP, set_refer4_mode_show, NULL);
+> static DEVICE_ATTR(set_delta4, S_IRUGO | S_IWUSR | S_IWGRP, set_delta4_mode_show, NULL);
+> static DEVICE_ATTR(set_all_refer,      S_IRUGO | S_IWUSR | S_IWGRP, set_all_refer_mode_show, NULL);
+> static DEVICE_ATTR(disp_all_refdata,   S_IRUGO | S_IWUSR | S_IWGRP, disp_all_refdata_show, disp_all_refdata_store);
+> static DEVICE_ATTR(set_all_delta,      S_IRUGO | S_IWUSR | S_IWGRP, set_all_delta_mode_show, NULL);
+> static DEVICE_ATTR(disp_all_deltadata, S_IRUGO | S_IWUSR | S_IWGRP, disp_all_deltadata_show, disp_all_deltadata_store);
+> 
+> static DEVICE_ATTR(set_threshold,    S_IRUGO | S_IWUSR | S_IWGRP, set_threshold_mode_show, NULL);
+> static DEVICE_ATTR(set_firm_version, S_IRUGO | S_IWUSR | S_IWGRP, set_firm_version_show, NULL);
+> static DEVICE_ATTR(set_module_off,   S_IRUGO | S_IWUSR | S_IWGRP, set_module_off_show, NULL);
+> static DEVICE_ATTR(set_module_on,    S_IRUGO | S_IWUSR | S_IWGRP, set_module_on_show, NULL);
+> 
+> static DEVICE_ATTR(tsp_firm_update,        S_IRUGO | S_IWUSR | S_IWGRP, NULL, set_mxt_firm_update_store);		  /* firmware update */
+> static DEVICE_ATTR(tsp_firm_update_status, S_IRUGO | S_IWUSR | S_IWGRP, set_mxt_firm_status_show, NULL);	      /* firmware update status return */
+> static DEVICE_ATTR(tsp_threshold,          S_IRUGO | S_IWUSR | S_IWGRP, key_threshold_show, key_threshold_store); /* touch threshold return, store */
+> static DEVICE_ATTR(tsp_firm_version_phone, S_IRUGO | S_IWUSR | S_IWGRP, set_mxt_firm_version_show, NULL);         /* PHONE*/	/* firmware version resturn in phone driver version */
+> static DEVICE_ATTR(tsp_firm_version_panel, S_IRUGO | S_IWUSR | S_IWGRP, set_mxt_firm_version_read_show, NULL);    /*PART*/	/* firmware version resturn in TSP panel version */
+> static DEVICE_ATTR(tsp_config_version,     S_IRUGO | S_IWUSR | S_IWGRP, set_mxt_config_version_read_show, NULL);    /*PART*/	/* firmware version resturn in TSP panel version */
+> 
+> static DEVICE_ATTR(mxt_touchtype, S_IRUGO | S_IWUSR | S_IWGRP,	mxt_touchtype_show, NULL);
+> static DEVICE_ATTR(object_show,   S_IRUGO | S_IWUSR | S_IWGRP, NULL, mxt540e_object_show);
+> static DEVICE_ATTR(object_write,  S_IRUGO | S_IWUSR | S_IWGRP, NULL, mxt540e_object_setting);
+> static DEVICE_ATTR(dbg_switch,    S_IRUGO | S_IWUSR | S_IWGRP, NULL, mxt540e_debug_setting);
+> 
+> static DEVICE_ATTR(set_tsp_for_drawing, S_IRUGO | S_IWUSR | S_IWGRP, NULL, set_tsp_for_drawing_store);
+> 
+> #ifdef ITDEV
+> /* Sysfs files for libmaxtouch interface */
+> static DEVICE_ATTR(pause_driver, 0666, pause_show, pause_store);//itdev
+> static DEVICE_ATTR(debug_enable, 0666, debug_enable_show, debug_enable_store);//itdev
+> static DEVICE_ATTR(command_calibrate, 0666, NULL, command_calibrate_store);//itdev
+> static DEVICE_ATTR(command_reset, 0666, NULL, command_reset_store);//itdev
+> static DEVICE_ATTR(command_backup, 0666, NULL, command_backup_store);//itdev
+> 
+> static struct attribute *libmaxtouch_attributes[] = {
+> 	&dev_attr_pause_driver.attr,//itdev
+> 	&dev_attr_debug_enable.attr,//itdev
+>     &dev_attr_command_calibrate.attr,//itdev
+>     &dev_attr_command_reset.attr,//itdev
+>     &dev_attr_command_backup.attr,//itdev
+> 	NULL,
+> };
+1375a3196,3199
+> static struct attribute_group libmaxtouch_attr_group = {
+>     .attrs = libmaxtouch_attributes,
+> };
+> #endif
+1396a3221
+> 	int retry = 5;
+1397a3223,3224
+> tsp_reinit:;
+> 	input_dev = NULL;
+1399c3226,3227
+< 
+---
+>     	printk("[TSP] mxt540e_probe START\n");
+>      
+1431a3260
+> #if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+1432a3262,3263
+> 	set_bit(MT_TOOL_FINGER, input_dev->keybit);
+> 	set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+1434,1443c3265
+< 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->min_x,
+< 			pdata->max_x, 0, 0);
+< 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->min_y,
+< 			pdata->max_y, 0, 0);
+< 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, pdata->min_z,
+< 			pdata->max_z, 0, 0);
+< 	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, pdata->min_w,
+< 			pdata->max_w, 0, 0);
+< 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0,
+< 			data->num_fingers - 1, 0, 0);
+---
+> 	input_mt_init_slots(input_dev, MAX_USING_FINGER_NUM);
+1444a3267,3278
+> 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->min_x, pdata->max_x, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->min_y, pdata->max_y, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_PRESSURE, pdata->min_z, pdata->max_z, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, pdata->min_w, pdata->max_w, 0, 0);
+> #else	    
+>  	set_bit(EV_ABS, input_dev->evbit);
+> 	input_set_abs_params(input_dev, ABS_MT_POSITION_X, pdata->min_x, pdata->max_x, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y, pdata->min_y, pdata->max_y, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR, pdata->min_z, pdata->max_z, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, pdata->min_w, pdata->max_w, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_TRACKING_ID, 0, data->num_fingers - 1, 0, 0);
+> #endif
+1446,1447c3280,3281
+< 	// input_set_abs_params(input_dev, ABS_MT_COMPONENT, 0, 255, 0, 0);
+<     input_set_abs_params(input_dev, 0x3b, 0, 255, 0, 0);
+---
+> 	input_set_abs_params(input_dev, ABS_MT_COMPONENT, 0, 255, 0, 0);
+> 	input_set_abs_params(input_dev, ABS_MT_SUMSIZE, 0, 16*26, 0, 0);
+1449c3283,3284
+< 	ret = input_register_device(input_dev);
+---
+> 
+>  	ret = input_register_device(input_dev);
+1456d3290
+< 
+1458,1459c3292
+< 
+< 	ret = mxt540e_init_touch_driver(data);
+---
+> 	msleep(130);
+1462a3296,3312
+> 	if (client->addr == MXT540E_APP_LOW)
+> 		client->addr = MXT540E_BOOT_LOW;
+> 	else
+> 		client->addr = MXT540E_BOOT_HIGH;
+> 
+> 	ret = mxt540e_check_bootloader(client, MXT540E_WAITING_BOOTLOAD_CMD);
+> 	if (ret >= 0) {
+> 		printk("[TSP] boot mode. firm update excute\n");
+> 		mxt540e_load_fw_bootmode(NULL, MXT540E_FW_NAME);
+> 		msleep(MXT540E_SW_RESET_TIME);
+> 	} else {
+> 		if (client->addr == MXT540E_BOOT_LOW)
+> 			client->addr = MXT540E_APP_LOW;
+> 		else
+> 			client->addr = MXT540E_APP_HIGH;
+> 	}
+> 
+1465c3315,3331
+< 	if (ret) {
+---
+> 	while(retry--){
+> 	ret = mxt540e_init_touch_driver(data);
+> 
+> 		if( ret == 0 || retry <= 0)
+> 			break;
+> 
+> 		printk(KERN_DEBUG "[TSP] chip initialization failed. retry(%d)\n", retry);
+> 
+> 		set_lcd_esd_ignore(1);
+> 		data->power_off();
+> 		msleep(50);
+> 		data->power_on();
+> 		msleep(80);
+> 		set_lcd_esd_ignore(0);		
+> 	}
+> 
+>  	if (ret) {
+1470c3336
+< 	if (data->family_id == 0xA1)  {	/* tsp_family_id - 0xA1 : MXT-540E */
+---
+>  	if (data->family_id == 0xA1)  {	/* tsp_family_id - 0xA1 : MXT-540E */
+1481a3348,3349
+> 		data->actvsyncsperx_batt = pdata->actvsyncsperx_batt;
+> 		data->actvsyncsperx_charging = pdata->actvsyncsperx_charging;
+1484c3352,3353
+< 		if (!(data->tsp_version >= firmware_latest && data->tsp_build >= build_latest)) {
+---
+> 		if( (data->tsp_version < firmware_latest) || (data->tsp_build != build_latest))
+> 		{
+1486,1488c3355,3359
+< 			if (mxt540e_load_fw(NULL, MXT540E_FW_NAME)) goto err_config;
+< 			else {
+< 				msleep(MXT540E_FWRESET_TIME);
+---
+> 			if (mxt540e_load_fw(NULL, MXT540E_FW_NAME)) {
+> 				printk(KERN_ERR"[TSP] firm update fail\n");
+> 				goto err_config;
+> 			} else {
+> 				msleep(MXT540E_SW_RESET_TIME);
+1492a3364,3365
+> 		INIT_DELAYED_WORK(&data->resume_check_dwork, resume_check_dworker);
+> 		INIT_DELAYED_WORK(&data->cal_check_dwork, cal_check_dworker);
+1500c3373
+< 		ret = write_config(data, tsp_config[i][0],
+---
+> 		ret = init_write_config(data, tsp_config[i][0],
+1520c3393
+< 	ret = mxt540e_backup(data);
+---
+>  	ret = mxt540e_backup(data);
+1529c3402,3411
+< 	msleep(MXT540E_RESET_TIME);
+---
+> 	msleep(MXT540E_SW_RESET_TIME);
+> 
+> 	mxt540e_enabled = 1;
+> 
+> 	if (data->read_ta_status) {
+> 		data->read_ta_status(&ta_status);
+> 		printk("[TSP] ta_status is %d\n", ta_status);
+> 		mxt540e_ta_probe(ta_status);
+> 	}
+> 	check_resume_err = 2;
+1530a3413
+> 	schedule_delayed_work(&data->config_dwork, HZ*30);
+1545a3429,3448
+> #ifdef ITDEV //itdev
+> 		ret = sysfs_create_group(&client->dev.kobj, &libmaxtouch_attr_group);
+> 		if (ret) {
+> 			pr_err("Failed to create libmaxtouch sysfs group\n");
+> 			goto err_irq;
+> 		}
+> 		
+> 		sysfs_bin_attr_init(&mem_access_attr);
+> 		mem_access_attr.attr.name = "mem_access";
+> 		mem_access_attr.attr.mode = S_IRUGO | S_IWUGO;
+> 		mem_access_attr.read = mem_access_read;
+> 		mem_access_attr.write = mem_access_write;
+> 		mem_access_attr.size = 65535;
+> 	
+> 	   if (sysfs_create_bin_file(&client->dev.kobj, &mem_access_attr) < 0) {
+> 		   pr_err("Failed to create device file(%s)!\n", mem_access_attr.attr.name);
+> 		   goto err_irq;
+> 		}
+> #endif
+> 
+1565a3469,3479
+> 	if (device_create_file(sec_touchscreen, &dev_attr_tsp_config_version) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_tsp_config_version.attr.name);
+> 
+> 	if (device_create_file(sec_touchscreen, &dev_attr_mxt_touchtype) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_mxt_touchtype.attr.name);
+> 
+> 	if (device_create_file(sec_touchscreen, &dev_attr_set_tsp_for_drawing) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_tsp_for_drawing.attr.name);
+> 
+> 
+> 
+1569c3483
+< 		printk(KERN_ERR "Failed to create device(mxt540e_noise_test)!\n");
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device(mxt540e_noise_test)!\n");
+1572c3486
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_refer0.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_refer0.attr.name);
+1575c3489
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_delta0.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_delta0.attr.name);
+1578c3492
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_refer1.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_refer1.attr.name);
+1581c3495
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_delta1.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_delta1.attr.name);
+1584c3498
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_refer2.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_refer2.attr.name);
+1587c3501
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_delta2.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_delta2.attr.name);
+1590c3504
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_refer3.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_refer3.attr.name);
+1593c3507
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_delta3.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_delta3.attr.name);
+1596c3510
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_refer4.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_refer4.attr.name);
+1599c3513,3525
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_delta4.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_delta4.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_set_all_refer) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_all_refer.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_disp_all_refdata)< 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_disp_all_refdata.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_set_all_delta) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_all_delta.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_disp_all_deltadata)< 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_disp_all_deltadata.attr.name);
+1602c3528,3531
+< 		printk(KERN_ERR "Failed to create device file(%s)!\n", dev_attr_set_threshold.attr.name);
+---
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_threshold.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_set_firm_version) < 0)
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_firm_version.attr.name);
+1603a3533,3538
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_set_module_off) < 0)  
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_module_off.attr.name);
+> 
+> 	if (device_create_file(mxt540e_noise_test, &dev_attr_set_module_on) < 0)    
+> 		printk(KERN_ERR "[TSP] Failed to create device file(%s)!\n", dev_attr_set_module_on.attr.name);
+>    
+1605c3540,3541
+< 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+---
+> 	//	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
+> 	data->early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB+1;
+1610,1619d3545
+< 	schedule_delayed_work(&data->config_dwork, HZ*30);
+< 
+< 	mxt540e_enabled = 1;
+< 
+< 	if (data->read_ta_status) {
+< 		data->read_ta_status(&ta_status);
+< 		printk("[TSP] ta_status is %d\n", ta_status);
+< 		mxt540e_ta_probe(ta_status);
+< 	}
+< 
+1634c3560
+< 	kfree(data);
+---
+> 		kfree(data);
+1677a3604,3607
+> #ifdef CONFIG_BATTERY_SEC
+> extern unsigned int is_lpcharging_state(void);
+> #endif
+> 
+1679a3610,3615
+> #ifdef CONFIG_BATTERY_SEC
+> 	if (is_lpcharging_state()) {
+> 		pr_info("%s : LPM Charging Mode! return ENODEV!\n", __func__);
+> 		return 0;
+> 	}
+> #endif

@@ -27,6 +27,12 @@
 #include <linux/spinlock.h>
 #include <linux/rq_stats.h>
 
+#ifdef CONFIG_SEC_DVFS_DUAL
+#include <linux/cpufreq.h>
+#include <linux/cpu.h>
+//#define DUALBOOST_DEFERED_QUEUE
+#endif
+
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
 #define DEFAULT_DEF_TIMER_JIFFIES 5
@@ -43,6 +49,103 @@ static void def_work_fn(struct work_struct *work)
 	sysfs_notify(rq_info.kobj, NULL, "def_timer_ms");
 }
 
+#ifdef CONFIG_SEC_DVFS_DUAL
+static int stall_mpdecision = 0;
+
+#ifdef CONFIG_SEC_DVFS_DUAL_LOCK
+static DEFINE_MUTEX(cpu_hotplug_driver_mutex);
+
+void cpu_hotplug_driver_lock(void)
+{
+	mutex_lock(&cpu_hotplug_driver_mutex);
+}
+
+void cpu_hotplug_driver_unlock(void)
+{
+	mutex_unlock(&cpu_hotplug_driver_mutex);
+}
+#endif
+
+static void dvfs_hotplug_callback(struct work_struct *unused)
+{
+	cpu_hotplug_driver_lock();
+	if (cpu_is_offline(NON_BOOT_CPU))
+	{
+		ssize_t ret;
+		struct sys_device *cpu_sys_dev;
+	
+		ret = cpu_up(NON_BOOT_CPU); // it takes 60ms
+		if (!ret)
+		{
+			cpu_sys_dev = get_cpu_sysdev(NON_BOOT_CPU);
+			if (cpu_sys_dev)
+			{
+				kobject_uevent(&cpu_sys_dev->kobj, KOBJ_ONLINE);
+				stall_mpdecision = 1;
+			}
+		}
+	}
+	cpu_hotplug_driver_unlock();
+}
+static DECLARE_WORK(dvfs_hotplug_work, dvfs_hotplug_callback);
+static int is_dual_locked = 0;
+
+void dual_boost(unsigned int boost_on)
+{
+	if (boost_on)
+	{	
+		if (is_dual_locked != 0)
+			return;
+
+#ifndef DUALBOOST_DEFERED_QUEUE
+		cpu_hotplug_driver_lock();
+		if (cpu_is_offline(NON_BOOT_CPU))
+		{
+			ssize_t ret;
+			struct sys_device *cpu_sys_dev;
+		
+			ret = cpu_up(NON_BOOT_CPU); // it takes 60ms
+			if (!ret)
+			{
+				cpu_sys_dev = get_cpu_sysdev(NON_BOOT_CPU);
+				if (cpu_sys_dev)
+				{
+					kobject_uevent(&cpu_sys_dev->kobj, KOBJ_ONLINE);
+					stall_mpdecision = 1;
+				}
+			}
+		}
+		cpu_hotplug_driver_unlock();
+#else	
+		if (cpu_is_offline(NON_BOOT_CPU))
+			schedule_work_on(BOOT_CPU, &dvfs_hotplug_work);
+#endif
+		is_dual_locked = 1;
+	}
+	else
+	{
+		if (stall_mpdecision == 1)
+		{
+			struct sys_device *cpu_sys_dev;
+
+#ifdef DUALBOOST_DEFERED_QUEUE
+			flush_work(&dvfs_hotplug_work);
+#endif
+			cpu_hotplug_driver_lock();	
+			cpu_sys_dev = get_cpu_sysdev(NON_BOOT_CPU);
+			if (cpu_sys_dev)
+			{
+				kobject_uevent(&cpu_sys_dev->kobj, KOBJ_ONLINE);
+				stall_mpdecision = 0;
+			}
+			cpu_hotplug_driver_unlock();
+		}
+		
+		is_dual_locked = 0;
+	}
+}
+#endif
+
 static ssize_t show_run_queue_avg(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -54,6 +157,11 @@ static ssize_t show_run_queue_avg(struct kobject *kobj,
 	val = rq_info.rq_avg;
 	rq_info.rq_avg = 0;
 	spin_unlock_irqrestore(&rq_lock, flags);
+
+#ifdef CONFIG_SEC_DVFS_DUAL
+	if (is_dual_locked == 1)
+		val = val + 1000;
+#endif
 
 	return snprintf(buf, PAGE_SIZE, "%d.%d\n", val/10, val%10);
 }
@@ -163,7 +271,7 @@ static int init_rq_attribs(void)
 	rq_info.attr_group = kzalloc(sizeof(struct attribute_group),
 						GFP_KERNEL);
 	if (!rq_info.attr_group)
-		goto rel3;
+		goto rel2;
 	rq_info.attr_group->attrs = attribs;
 
 	/* Create /sys/devices/system/cpu/cpu0/rq-stats/... */

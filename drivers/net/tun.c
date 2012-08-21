@@ -1637,8 +1637,9 @@ static int __init tun_init(void)
 	int ret = 0;
 
 	pr_info("%s, %s\n", DRV_DESCRIPTION, DRV_VERSION);
+#if !defined(CONFIG_USA_MODEL_SGH_I727R)
 	pr_info("%s\n", DRV_COPYRIGHT);
-
+#endif
 	ret = rtnl_link_register(&tun_link_ops);
 	if (ret) {
 		pr_err("Can't register link_ops\n");

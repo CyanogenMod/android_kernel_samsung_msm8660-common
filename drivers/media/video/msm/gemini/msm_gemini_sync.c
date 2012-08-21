@@ -288,7 +288,7 @@ int msm_gemini_we_pingpong_irq(struct msm_gemini_device *pgmn_dev,
 	if (buf_out) {
 		rc = msm_gemini_core_we_buf_update(buf_out);
 		kfree(buf_out);
-	} else {
+	} else if (buf_in){
 		msm_gemini_core_we_buf_reset(buf_in);
 		GMN_DBG("%s:%d] no output buffer\n", __func__, __LINE__);
 		rc = -2;

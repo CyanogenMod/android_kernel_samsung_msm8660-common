@@ -22,6 +22,10 @@
 #ifdef __KERNEL__
 
 #include <linux/rwsem.h>
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include <linux/host_notify.h>
+#endif
+
 
 #define MAX_TOPO_LEVEL		6
 
@@ -167,6 +171,15 @@ struct usb_hcd {
 
 #define	HC_IS_RUNNING(state) ((state) & __ACTIVE)
 #define	HC_IS_SUSPENDED(state) ((state) & __SUSPEND)
+
+#ifdef CONFIG_USB_HOST_NOTIFY
+	struct host_notify_dev ndev;
+	int host_notify;
+#endif
+	
+#ifdef CONFIG_USB_SEC_WHITELIST
+	int sec_whlist_table_num;
+#endif
 
 	/* more shared queuing code would be good; it should support
 	 * smarter scheduling, handle transaction translators, etc;

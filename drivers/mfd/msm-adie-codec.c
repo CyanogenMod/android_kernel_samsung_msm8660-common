@@ -125,8 +125,10 @@ u32 adie_codec_freq_supported(struct adie_codec_dev_profile *profile,
 		if (cur_adie_ops->codec_freq_supported != NULL)
 			rc = cur_adie_ops->codec_freq_supported(profile,
 							requested_freq);
-	} else
+	} else {
+		pr_info("%s : cur_adie_ops is NULL\n", __func__);
 		rc = -ENODEV;
+	}
 
 	return rc;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,6 +17,7 @@
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
+#include <linux/workqueue.h>
 #include <asm/uaccess.h>
 #include <asm/atomic.h>
 #include <mach/qdsp6v2/audio_dev_ctl.h>
@@ -31,6 +32,9 @@
 
 
 static DEFINE_MUTEX(session_lock);
+static struct workqueue_struct *msm_reset_device_work_queue;
+static void reset_device_work(struct work_struct *work);
+static DECLARE_WORK(msm_reset_device_work, reset_device_work);
 
 struct audio_dev_ctrl_state {
 	struct msm_snddev_info *devs[AUDIO_DEV_CTL_MAX_DEV];
@@ -119,6 +123,18 @@ int msm_reset_all_device(void)
 }
 EXPORT_SYMBOL(msm_reset_all_device);
 
+static void reset_device_work(struct work_struct *work)
+{
+	msm_reset_all_device();
+}
+
+int reset_device(void)
+{
+	queue_work(msm_reset_device_work_queue, &msm_reset_device_work);
+	return 0;
+}
+EXPORT_SYMBOL(reset_device);
+
 int msm_set_copp_id(int session_id, int copp_id)
 {
 	int rc = 0;
@@ -130,7 +146,7 @@ int msm_set_copp_id(int session_id, int copp_id)
 		return -EINVAL;
 
 	index = afe_get_port_index(copp_id);
-	if (index < 0 || index > AFE_MAX_PORTS)
+	if (index < 0 || index > AFE_MAX_PORTS-1)
 		return -EINVAL;
 	pr_debug("%s: session[%d] copp_id[%d] index[%d]\n", __func__,
 			session_id, copp_id, index);
@@ -1206,6 +1222,10 @@ static long audio_dev_ctrl_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
 	int rc = 0;
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	void __user *argp = (void __user *)arg;
+	int amr_state = 0;
+#endif
 	struct audio_dev_ctrl_state *dev_ctrl = file->private_data;
 
 	mutex_lock(&session_lock);
@@ -1236,6 +1256,22 @@ static long audio_dev_ctrl_ioctl(struct file *file,
 		break;
 
 	}
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	case AUDIO_SET_AMR_WB:
+			if(copy_from_user(&amr_state, argp, sizeof(amr_state)))
+				return -EFAULT;
+			if(amr_state<0 || amr_state>1)
+				return -EFAULT;	
+			printk("[IJ] %s amr_state = %d\n", __func__, amr_state);
+			if(amr_state == VPCM_PATH_NARROWBAND)
+				rc = vpcm_start_modem_voice();
+			else if(amr_state ==VPCM_PATH_WIDEBAND)
+				rc = vpcm_stop_modem_voice();
+			if(rc<0)
+				printk("%s: AUDIO_SET_AMR_WB %d error %d\n", __func__, amr_state, rc);
+		break;
+#endif
 
 	case AUDIO_DISABLE_SND_DEVICE: {
 		struct msm_snddev_info *dev_info;
@@ -1686,7 +1722,9 @@ static int __init audio_dev_ctrl_init(void)
 	init_waitqueue_head(&audio_dev_ctrl.wait);
 
 	event.cb = NULL;
-
+	msm_reset_device_work_queue = create_workqueue("reset_device");
+	if (msm_reset_device_work_queue == NULL)
+		return -ENOMEM;
 	atomic_set(&audio_dev_ctrl.opened, 0);
 	audio_dev_ctrl.num_dev = 0;
 	audio_dev_ctrl.voice_tx_dev = NULL;
@@ -1704,6 +1742,7 @@ static int __init audio_dev_ctrl_init(void)
 
 static void __exit audio_dev_ctrl_exit(void)
 {
+	destroy_workqueue(msm_reset_device_work_queue);
 }
 module_init(audio_dev_ctrl_init);
 module_exit(audio_dev_ctrl_exit);

@@ -215,12 +215,35 @@ static int __init loglevel(char *str)
 
 early_param("loglevel", loglevel);
 
+#ifdef CONFIG_SAMSUNG_8X60_TABLET
+#ifdef CONFIG_SEC_DEBUG
+extern unsigned int sec_dbg_level;
+static int __init sec_debug_level(char *str)
+{
+	get_option(&str, &sec_dbg_level);
+	return 0;
+}
+early_param("level", sec_debug_level);
+#endif
+#endif
+
 /*
  * Unknown boot options get handed to init, unless they look like
  * unused parameters (modprobe will find them in /proc/cmdline).
  */
 static int __init unknown_bootoption(char *param, char *val)
 {
+#if defined CONFIG_TARGET_SERIES_CELOX
+    // Enlarge vmalloc space to fix vmalloc fail.
+    if ( (strcmp(param, "vmalloc") == 0) 
+        && (*val<'5') ) // setted under 500MB
+    {
+        *val='6';
+        *(val+1)='0';
+        *(val+2)='0';
+    }
+#endif
+
 	/* Change NUL term back to "=", to make "param" the whole string. */
 	if (val) {
 		/* param=val or param="val"? */
@@ -347,6 +370,7 @@ static __initdata DECLARE_COMPLETION(kthreadd_done);
 static noinline void __init_refok rest_init(void)
 {
 	int pid;
+	const struct sched_param param = { .sched_priority = 1 };
 
 	rcu_scheduler_starting();
 	/*
@@ -360,6 +384,7 @@ static noinline void __init_refok rest_init(void)
 	rcu_read_lock();
 	kthreadd_task = find_task_by_pid_ns(pid, &init_pid_ns);
 	rcu_read_unlock();
+	sched_setscheduler_nocheck(kthreadd_task, SCHED_FIFO, &param);
 	complete(&kthreadd_done);
 
 	/*
@@ -375,10 +400,54 @@ static noinline void __init_refok rest_init(void)
 	cpu_idle();
 }
 
+#if defined(CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+int no_console = 0;
+#endif
+
+#ifdef CONFIG_SAMSUNG_8X60_TABLET
+int charging_mode_from_boot =0;
+int charging_mode_by_TA=0;
+#endif /* CONFIG_SAMSUNG_8X60_TABLET */
+
+#ifdef CONFIG_KOR_OPERATOR_LGU
+int no_uart_console = 0;
+EXPORT_SYMBOL(no_uart_console);
+#endif
+
 /* Check for early params. */
 static int __init do_early_param(char *param, char *val)
 {
 	const struct obs_kernel_param *p;
+
+#if defined CONFIG_TARGET_SERIES_CELOX
+    // Enlarge vmalloc space to fix vmalloc fail.
+    if ( (strcmp(param, "vmalloc") == 0) 
+        && (*val<'5') ) // setted under 500MB
+    {
+        *val='6';
+        *(val+1)='0';
+        *(val+2)='0';
+    }
+#endif
+
+#if defined(CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+	if ((strcmp(param, "console") == 0) && ((strcmp(val, "null") == 0) || (strcmp(val, "NULL") == 0))){
+		no_console = 1;
+	}
+#endif	
+
+#if defined(CONFIG_SAMSUNG_8X60_TABLET)
+	/* check power off charging */
+	if ((strcmp(param, "androidboot.bootchg") == 0)) {
+		if (strcmp(val, "true") == 0)
+			charging_mode_from_boot = 1;
+	}
+	/* check power off charging cable */
+	if ((strcmp(param, "androidboot.chgsrc") == 0)) {
+		if (strcmp(val, "TA") == 0)
+			charging_mode_by_TA = 1;
+	}
+#endif
 
 	for (p = __setup_start; p < __setup_end; p++) {
 		if ((p->early && strcmp(param, p->str) == 0) ||
@@ -391,6 +460,15 @@ static int __init do_early_param(char *param, char *val)
 		}
 	}
 	/* We accept everything at this stage. */
+
+#ifdef CONFIG_KOR_OPERATOR_LGU
+		/* check uart console is disabled */
+		if ((strcmp(param, "console") == 0)) {
+			if ((strcmp(val, "null") == 0) || (strcmp(val, "NULL") == 0))
+				no_uart_console = 1;
+		}
+#endif
+	
 	return 0;
 }
 

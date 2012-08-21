@@ -50,12 +50,21 @@ obj-y				+= lis3lv02d/
 obj-y				+= carma/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
-obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
+ifneq ($(SEC_PROJECT_REGION_OPERATOR),US_ATT)
+obj-$(CONFIG_SENSORS_AK8975)	+= ak8975.o
+obj-$(CONFIG_SENSORS_K3DH)	+= k3dh.o
+endif
 obj-$(CONFIG_TSIF) += msm_tsif.o
 msm_tsif-objs := tsif.o
 obj-$(CONFIG_TSIF_CHRDEV) += tsif_chrdev.o
 obj-$(CONFIG_TSPP) += tspp.o
+obj-$(CONFIG_SAMSUNG_JACK) += sec_jack.o
+obj-$(CONFIG_SAMSUNG_EARJACK) += sec_earjack.o
+ifeq ($(CONFIG_SAMSUNG_8X60_TABLET),y)
+obj-$(CONFIG_HAPTIC_ISA1200)		+= tablet_vibrator.o
+else
 obj-$(CONFIG_HAPTIC_ISA1200)		+= isa1200.o
+endif
 obj-$(CONFIG_PMIC8058_PWM) += pmic8058-pwm.o
 obj-$(CONFIG_PMIC8XXX_VIBRATOR) += pm8xxx-vibrator.o
 obj-$(CONFIG_PMIC8XXX_NFC) += pm8xxx-nfc.o
@@ -66,3 +75,16 @@ obj-$(CONFIG_PMIC8058_XOADC) += pmic8058-xoadc.o
 obj-$(CONFIG_TZCOM) += tzcom.o
 obj-$(CONFIG_QSEECOM) += qseecom.o
 obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
+ifeq ($(CONFIG_SAMSUNG_8X60_TABLET),y)
+obj-$(CONFIG_VIBETONZ)		+= vibtonz_tablet/
+else
+obj-$(CONFIG_VIBETONZ)		+= vibetonz/
+endif
+ifeq ($(CONFIG_USE_A2220_B),y)
+obj-$(CONFIG_VP_A2220) += a2220b.o
+else
+obj-$(CONFIG_VP_A2220) += a2220.o
+endif
+obj-$(CONFIG_STMPE811_ADC) += stmpe811.o
+obj-$(CONFIG_SEC_MISC) += sec_misc.o sec_level.o sec_param.o
+obj-$(CONFIG_TZCOM) += tzic.o
