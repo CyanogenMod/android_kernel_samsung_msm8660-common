@@ -118,6 +118,12 @@ extern struct platform_device msm_gsbi7_qup_i2c_device;
 extern struct platform_device msm_gsbi8_qup_i2c_device;
 extern struct platform_device msm_gsbi9_qup_i2c_device;
 extern struct platform_device msm_gsbi12_qup_i2c_device;
+#if defined (CONFIG_EPEN_WACOM_G5SP)
+extern struct platform_device msm_gsbi11_qup_i2c_device;
+#endif
+#if defined(CONFIG_PN544_NFC)
+extern struct platform_device msm_gsbi10_qup_i2c_device;
+#endif
 
 extern struct platform_device msm_slim_ctrl;
 extern struct platform_device msm_device_sps;
@@ -267,3 +273,12 @@ extern struct platform_device msm_tpiu_device;
 extern struct platform_device msm_funnel_device;
 extern struct platform_device msm_etm_device;
 #endif
+
+extern struct platform_device msm8960_cpu_idle_device;
+
+extern struct platform_device msm8960_msm_gov_device;
+
+extern struct platform_device msm_device_csic0;
+extern struct platform_device msm_device_csic1;
+extern struct platform_device msm_device_vfe;
+extern struct platform_device msm_device_vpe;

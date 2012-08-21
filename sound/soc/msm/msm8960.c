@@ -15,7 +15,6 @@
 #include <linux/gpio.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include <linux/platform_device.h>
-#include <linux/gpio.h>
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include <linux/slab.h>
 #include <sound/core.h>
@@ -26,12 +25,14 @@
 #include <sound/jack.h>
 #include <asm/mach-types.h>
 #include <mach/socinfo.h>
+#include <linux/mfd/wcd9310/core.h>
 #include "msm-pcm-routing.h"
 #include "../codecs/wcd9310.h"
 
 /* 8960 machine driver */
 
 #define PM8921_GPIO_BASE		NR_GPIO_IRQS
+#define PM8921_IRQ_BASE (NR_MSM_IRQS + NR_GPIO_IRQS)
 #define PM8921_GPIO_PM_TO_SYS(pm_gpio)  (pm_gpio - 1 + PM8921_GPIO_BASE)
 
 #define MSM8960_SPK_ON 1
@@ -58,6 +59,10 @@
 #define TABLA_MBHC_DEF_BUTTONS 8
 #define TABLA_MBHC_DEF_RLOADS 5
 
+#define JACK_DETECT_GPIO 38
+#define JACK_DETECT_INT PM8921_GPIO_IRQ(PM8921_IRQ_BASE, JACK_DETECT_GPIO)
+#define GPIO_DETECT_USED false
+
 static u32 top_spk_pamp_gpio  = PM8921_GPIO_PM_TO_SYS(18);
 static u32 bottom_spk_pamp_gpio = PM8921_GPIO_PM_TO_SYS(19);
 static int msm8960_spk_control;
@@ -77,7 +82,23 @@ static int msm8960_headset_gpios_configured;
 static struct snd_soc_jack hs_jack;
 static struct snd_soc_jack button_jack;
 
-static void *tabla_mbhc_cal;
+static int msm8960_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
+					bool dapm);
+
+static struct tabla_mbhc_config mbhc_cfg = {
+	.headset_jack = &hs_jack,
+	.button_jack = &button_jack,
+	.read_fw_bin = false,
+	.calibration = NULL,
+	.micbias = TABLA_MICBIAS2,
+	.mclk_cb_fn = msm8960_enable_codec_ext_clk,
+	.mclk_rate = TABLA_EXT_CLK_RATE,
+	.gpio = 0,
+	.gpio_irq = 0,
+	.gpio_level_insert = 1,
+};
+
+static struct mutex cdc_mclk_mutex;
 
 static void msm8960_enable_ext_spk_amp_gpio(u32 spk_amp_gpio)
 {
@@ -299,40 +320,48 @@ static int msm8960_spkramp_event(struct snd_soc_dapm_widget *w,
 	}
 	return 0;
 }
-int msm8960_enable_codec_ext_clk(
-		struct snd_soc_codec *codec, int enable)
+
+static int msm8960_enable_codec_ext_clk(struct snd_soc_codec *codec, int enable,
+					bool dapm)
 {
+	int r = 0;
 	pr_debug("%s: enable = %d\n", __func__, enable);
+
+	mutex_lock(&cdc_mclk_mutex);
 	if (enable) {
 		clk_users++;
 		pr_debug("%s: clk_users = %d\n", __func__, clk_users);
-		if (clk_users != 1)
-			return 0;
-
-		codec_clk = clk_get(NULL, "i2s_spkr_osr_clk");
-		if (codec_clk) {
-			clk_set_rate(codec_clk, TABLA_EXT_CLK_RATE);
-			clk_enable(codec_clk);
-			tabla_mclk_enable(codec, 1);
-		} else {
-			pr_err("%s: Error setting Tabla MCLK\n", __func__);
-			clk_users--;
-			return -EINVAL;
+		if (clk_users == 1) {
+			codec_clk = clk_get(NULL, "i2s_spkr_osr_clk");
+			if (codec_clk) {
+				clk_set_rate(codec_clk, TABLA_EXT_CLK_RATE);
+				clk_enable(codec_clk);
+				tabla_mclk_enable(codec, 1, dapm);
+			} else {
+				pr_err("%s: Error setting Tabla MCLK\n",
+				       __func__);
+				clk_users--;
+				r = -EINVAL;
+			}
 		}
 	} else {
-		pr_debug("%s: clk_users = %d\n", __func__, clk_users);
-		if (clk_users == 0)
-			return 0;
-		clk_users--;
-		if (!clk_users) {
-			pr_debug("%s: disabling MCLK. clk_users = %d\n",
+		if (clk_users > 0) {
+			clk_users--;
+			pr_debug("%s: clk_users = %d\n", __func__, clk_users);
+			if (clk_users == 0) {
+				pr_debug("%s: disabling MCLK. clk_users = %d\n",
 					 __func__, clk_users);
-			clk_disable(codec_clk);
-			clk_put(codec_clk);
-			tabla_mclk_enable(codec, 0);
+				clk_disable(codec_clk);
+				clk_put(codec_clk);
+				tabla_mclk_enable(codec, 0, dapm);
+			}
+		} else {
+			pr_err("%s: Error releasing Tabla MCLK\n", __func__);
+			r = -EINVAL;
 		}
 	}
-	return 0;
+	mutex_unlock(&cdc_mclk_mutex);
+	return r;
 }
 
 static int msm8960_mclk_event(struct snd_soc_dapm_widget *w,
@@ -342,9 +371,9 @@ static int msm8960_mclk_event(struct snd_soc_dapm_widget *w,
 
 	switch (event) {
 	case SND_SOC_DAPM_PRE_PMU:
-		return msm8960_enable_codec_ext_clk(w->codec, 1);
+		return msm8960_enable_codec_ext_clk(w->codec, 1, true);
 	case SND_SOC_DAPM_POST_PMD:
-		return msm8960_enable_codec_ext_clk(w->codec, 0);
+		return msm8960_enable_codec_ext_clk(w->codec, 0, true);
 	}
 	return 0;
 }
@@ -648,6 +677,13 @@ static int msm8960_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	int err;
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	struct pm_gpio jack_gpio_cfg = {
+		.direction = PM_GPIO_DIR_IN,
+		.pull = PM_GPIO_PULL_UP_1P5,
+		.function = PM_GPIO_FUNC_NORMAL,
+		.vin_sel = 2,
+		.inv_int_pol = 0,
+	};
 
 	pr_debug("%s()\n", __func__);
 
@@ -692,11 +728,22 @@ static int msm8960_audrx_init(struct snd_soc_pcm_runtime *rtd)
 		return err;
 	}
 
-	tabla_hs_detect(codec, &hs_jack, &button_jack, tabla_mbhc_cal,
-			TABLA_MICBIAS2, msm8960_enable_codec_ext_clk, 0,
-			TABLA_EXT_CLK_RATE);
+	if (GPIO_DETECT_USED) {
+		mbhc_cfg.gpio = PM8921_GPIO_PM_TO_SYS(JACK_DETECT_GPIO);
+		mbhc_cfg.gpio_irq = JACK_DETECT_INT;
+	}
 
-	return 0;
+	if (mbhc_cfg.gpio) {
+		err = pm8xxx_gpio_config(mbhc_cfg.gpio, &jack_gpio_cfg);
+		if (err) {
+			pr_err("%s: pm8xxx_gpio_config failed %d\n", __func__,
+			       err);
+			return err;
+		}
+	}
+	err = tabla_hs_detect(codec, &mbhc_cfg);
+
+	return err;
 }
 
 static struct snd_soc_dsp_link lpa_fe_media = {
@@ -923,7 +970,7 @@ static struct snd_soc_ops msm8960_auxpcm_be_ops = {
 };
 
 /* Digital audio interface glue - connects codec <---> CPU */
-static struct snd_soc_dai_link msm8960_dai[] = {
+static struct snd_soc_dai_link msm8960_dai_common[] = {
 	/* FrontEnd DAI Links */
 	{
 		.name = "MSM8960 Media1",
@@ -1043,32 +1090,6 @@ static struct snd_soc_dai_link msm8960_dai[] = {
 		.no_host_mode = SND_SOC_DAI_LINK_NO_HOST,
 		.no_codec = 1,
 		.ignore_suspend = 1,
-	},
-	/* Backend DAI Links */
-	{
-		.name = LPASS_BE_SLIMBUS_0_RX,
-		.stream_name = "Slimbus Playback",
-		.cpu_dai_name = "msm-dai-q6.16384",
-		.platform_name = "msm-pcm-routing",
-		.codec_name     = "tabla_codec",
-		.codec_dai_name	= "tabla_rx1",
-		.no_pcm = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
-		.init = &msm8960_audrx_init,
-		.be_hw_params_fixup = msm8960_slim_0_rx_be_hw_params_fixup,
-		.ops = &msm8960_be_ops,
-	},
-	{
-		.name = LPASS_BE_SLIMBUS_0_TX,
-		.stream_name = "Slimbus Capture",
-		.cpu_dai_name = "msm-dai-q6.16385",
-		.platform_name = "msm-pcm-routing",
-		.codec_name     = "tabla_codec",
-		.codec_dai_name	= "tabla_tx1",
-		.no_pcm = 1,
-		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
-		.be_hw_params_fixup = msm8960_slim_0_tx_be_hw_params_fixup,
-		.ops = &msm8960_be_ops,
 	},
 	/* Backend BT/FM DAI Links */
 	{
@@ -1217,13 +1238,88 @@ static struct snd_soc_dai_link msm8960_dai[] = {
 	},
 };
 
-struct snd_soc_card snd_soc_card_msm8960 = {
-	.name		= "msm8960-snd-card",
-	.dai_link	= msm8960_dai,
-	.num_links	= ARRAY_SIZE(msm8960_dai),
+static struct snd_soc_dai_link msm8960_dai_delta_tabla1x[] = {
+	/* Backend DAI Links */
+	{
+		.name = LPASS_BE_SLIMBUS_0_RX,
+		.stream_name = "Slimbus Playback",
+		.cpu_dai_name = "msm-dai-q6.16384",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "tabla1x_codec",
+		.codec_dai_name	= "tabla_rx1",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
+		.init = &msm8960_audrx_init,
+		.be_hw_params_fixup = msm8960_slim_0_rx_be_hw_params_fixup,
+		.ops = &msm8960_be_ops,
+	},
+	{
+		.name = LPASS_BE_SLIMBUS_0_TX,
+		.stream_name = "Slimbus Capture",
+		.cpu_dai_name = "msm-dai-q6.16385",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "tabla1x_codec",
+		.codec_dai_name	= "tabla_tx1",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
+		.be_hw_params_fixup = msm8960_slim_0_tx_be_hw_params_fixup,
+		.ops = &msm8960_be_ops,
+	},
+};
+
+
+static struct snd_soc_dai_link msm8960_dai_delta_tabla2x[] = {
+	/* Backend DAI Links */
+	{
+		.name = LPASS_BE_SLIMBUS_0_RX,
+		.stream_name = "Slimbus Playback",
+		.cpu_dai_name = "msm-dai-q6.16384",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "tabla_codec",
+		.codec_dai_name	= "tabla_rx1",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_RX,
+		.init = &msm8960_audrx_init,
+		.be_hw_params_fixup = msm8960_slim_0_rx_be_hw_params_fixup,
+		.ops = &msm8960_be_ops,
+	},
+	{
+		.name = LPASS_BE_SLIMBUS_0_TX,
+		.stream_name = "Slimbus Capture",
+		.cpu_dai_name = "msm-dai-q6.16385",
+		.platform_name = "msm-pcm-routing",
+		.codec_name     = "tabla_codec",
+		.codec_dai_name	= "tabla_tx1",
+		.no_pcm = 1,
+		.be_id = MSM_BACKEND_DAI_SLIMBUS_0_TX,
+		.be_hw_params_fixup = msm8960_slim_0_tx_be_hw_params_fixup,
+		.ops = &msm8960_be_ops,
+	},
+};
+
+static struct snd_soc_dai_link msm8960_tabla1x_dai[
+					 ARRAY_SIZE(msm8960_dai_common) +
+					 ARRAY_SIZE(msm8960_dai_delta_tabla1x)];
+
+
+static struct snd_soc_dai_link msm8960_dai[
+					 ARRAY_SIZE(msm8960_dai_common) +
+					 ARRAY_SIZE(msm8960_dai_delta_tabla2x)];
+
+static struct snd_soc_card snd_soc_tabla1x_card_msm8960 = {
+		.name		= "msm8960-tabla1x-snd-card",
+		.dai_link	= msm8960_tabla1x_dai,
+		.num_links	= ARRAY_SIZE(msm8960_tabla1x_dai),
+};
+
+static struct snd_soc_card snd_soc_card_msm8960 = {
+		.name		= "msm8960-snd-card",
+		.dai_link	= msm8960_dai,
+		.num_links	= ARRAY_SIZE(msm8960_dai),
 };
 
 static struct platform_device *msm8960_snd_device;
+static struct platform_device *msm8960_snd_tabla1x_device;
 
 static int msm8960_configure_headset_mic_gpios(void)
 {
@@ -1285,8 +1381,8 @@ static int __init msm8960_audio_init(void)
 		return -ENODEV ;
 	}
 
-	tabla_mbhc_cal = def_tabla_mbhc_cal();
-	if (!tabla_mbhc_cal) {
+	mbhc_cfg.calibration = def_tabla_mbhc_cal();
+	if (!mbhc_cfg.calibration) {
 		pr_err("Calibration data allocation failed\n");
 		return -ENOMEM;
 	}
@@ -1294,15 +1390,41 @@ static int __init msm8960_audio_init(void)
 	msm8960_snd_device = platform_device_alloc("soc-audio", 0);
 	if (!msm8960_snd_device) {
 		pr_err("Platform device allocation failed\n");
-		kfree(tabla_mbhc_cal);
+		kfree(mbhc_cfg.calibration);
 		return -ENOMEM;
 	}
+
+	memcpy(msm8960_dai, msm8960_dai_common, sizeof(msm8960_dai_common));
+	memcpy(msm8960_dai + ARRAY_SIZE(msm8960_dai_common),
+		msm8960_dai_delta_tabla2x, sizeof(msm8960_dai_delta_tabla2x));
 
 	platform_set_drvdata(msm8960_snd_device, &snd_soc_card_msm8960);
 	ret = platform_device_add(msm8960_snd_device);
 	if (ret) {
 		platform_device_put(msm8960_snd_device);
-		kfree(tabla_mbhc_cal);
+		kfree(mbhc_cfg.calibration);
+		return ret;
+	}
+
+	msm8960_snd_tabla1x_device = platform_device_alloc("soc-audio", 1);
+	if (!msm8960_snd_tabla1x_device) {
+		pr_err("Platform device allocation failed\n");
+		kfree(mbhc_cfg.calibration);
+		return -ENOMEM;
+	}
+
+	memcpy(msm8960_tabla1x_dai, msm8960_dai_common,
+		sizeof(msm8960_dai_common));
+	memcpy(msm8960_tabla1x_dai + ARRAY_SIZE(msm8960_dai_common),
+		msm8960_dai_delta_tabla1x, sizeof(msm8960_dai_delta_tabla1x));
+
+	platform_set_drvdata(msm8960_snd_tabla1x_device,
+		&snd_soc_tabla1x_card_msm8960);
+	ret = platform_device_add(msm8960_snd_tabla1x_device);
+	if (ret) {
+		platform_device_put(msm8960_snd_tabla1x_device);
+		kfree(mbhc_cfg.calibration);
+		return -ENOMEM;
 		return ret;
 	}
 
@@ -1312,6 +1434,7 @@ static int __init msm8960_audio_init(void)
 	} else
 		msm8960_headset_gpios_configured = 1;
 
+	mutex_init(&cdc_mclk_mutex);
 	return ret;
 
 }
@@ -1325,7 +1448,9 @@ static void __exit msm8960_audio_exit(void)
 	}
 	msm8960_free_headset_mic_gpios();
 	platform_device_unregister(msm8960_snd_device);
-	kfree(tabla_mbhc_cal);
+	platform_device_unregister(msm8960_snd_tabla1x_device);
+	kfree(mbhc_cfg.calibration);
+	mutex_destroy(&cdc_mclk_mutex);
 }
 module_exit(msm8960_audio_exit);
 

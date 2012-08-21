@@ -178,6 +178,11 @@ static struct uart_ops msm_hs_ops;
 #define UARTDM_TO_MSM(uart_port) \
 	container_of((uart_port), struct msm_hs_port, uport)
 
+struct uart_port *msm_hs_get_port_from_line(unsigned int line)
+{
+    return &q_uart_port[line].uport;
+}
+
 static ssize_t show_clock(struct device *dev, struct device_attribute *attr,
 			  char *buf)
 {
@@ -1708,7 +1713,8 @@ static int msm_hs_startup(struct uart_port *uport)
 	if (ret)
 		dev_err(uport->dev, "set active error:%d\n", ret);
 	pm_runtime_enable(uport->dev);
-
+	/* Temp. patch for Bluetooth hci timeout */
+	pm_runtime_get_sync(uport->dev);
 
 	return 0;
 }
@@ -1993,16 +1999,27 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	unsigned long flags;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
-	BUG_ON(msm_uport->rx.flush < FLUSH_STOP);
+
+        if(msm_uport->rx.flush < FLUSH_STOP)
+        {
+                printk(KERN_ERR "msm_hs_shutdown :  msm_uport->rx.flush(%d)\n",msm_uport->rx.flush);
+        }
+
 	tasklet_kill(&msm_uport->tx.tlet);
 	wait_event(msm_uport->rx.wait, msm_uport->rx.flush == FLUSH_SHUTDOWN);
 	tasklet_kill(&msm_uport->rx.tlet);
 	cancel_delayed_work_sync(&msm_uport->rx.flip_insert_work);
 
+	/* klaatu : moved free irq on top of shutdown because of deadlock issue (spinloc recursion) */
+	/* Free the interrupt */
+	free_irq(uport->irq, msm_uport);
+
 	clk_enable(msm_uport->clk);
 
 	pm_runtime_disable(uport->dev);
 	pm_runtime_set_suspended(uport->dev);
+	/* Temp. patch for Bluetooth hci timeout */
+	pm_runtime_put_sync(uport->dev);
 
 	spin_lock_irqsave(&uport->lock, flags);
 	/* Disable the transmitter */
@@ -2035,8 +2052,6 @@ static void msm_hs_shutdown(struct uart_port *uport)
 	if (use_low_power_wakeup(msm_uport))
 		irq_set_irq_wake(msm_uport->wakeup.irq, 0);
 
-	/* Free the interrupt */
-	free_irq(uport->irq, msm_uport);
 	if (use_low_power_wakeup(msm_uport))
 		free_irq(msm_uport->wakeup.irq, msm_uport);
 }

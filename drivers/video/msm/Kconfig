@@ -1,5 +1,6 @@
-
 source "drivers/video/msm/vidc/Kconfig"
+source "drivers/video/msm/mhl_v1/Kconfig"
+source "drivers/video/msm/mhl_v2/Kconfig"
 
 config FB_MSM
 	tristate "MSM Framebuffer support"
@@ -93,14 +94,28 @@ config FB_MSM_LCDC
 	bool
 	default n
 
+config CMC623_P5LTE
+	bool "Support for CMC623"
+	depends on FB && ARCH_MSM
+	default n
+
+config CMC624_P8LTE
+	bool "Support for CMC624"
+	depends on FB && ARCH_MSM
+	default n
+
 config FB_MSM_OVERLAY
 	depends on FB_MSM_MDP40 && ANDROID_PMEM
 	bool "MDP4 overlay support"
 	default n
 
+config FB_MSM_MDP_ADDITIONAL_BUS_SCALING
+	bool "MDP4 additional bus scaling"
+	default n
+
 config FB_MSM_DTV
 	depends on FB_MSM_OVERLAY
-	bool
+	bool "Support DTV"
 	default n
 
 config FB_MSM_EXTMDDI
@@ -180,6 +195,45 @@ config FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
 	  and up to WUXGA 1920x1200 18-bit
 	  using a dual LVDS link.
 
+config FB_MSM_MIPI_DSI_S6D6AA0_WXGA
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_DSI_S6E8AA0_HD720
+	bool
+	select FB_MSM_MIPI_DSI
+	select FB_MSM_MDP_ADDITIONAL_BUS_SCALING
+	default n
+
+config FB_MSM_MIPI_DSI_S6E8AA0_WXGA
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1
+	bool
+	select FB_MSM_MIPI_DSI
+	select FB_MSM_MIPI_DSI_ESD_REFRESH
+	select FB_MSM_MDP_ADDITIONAL_BUS_SCALING
+	default n
+
+config FB_MSM_MIPI_DSI_S6E8AB0_WXGA
+	bool
+	select FB_MSM_MIPI_DSI
+	select FB_MSM_MIPI_DSI_ESD_REFRESH
+	default n
+
+config FB_MSM_MIPI_DSI_ESD_REFRESH
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_MSM_MIPI_DSI_SAMSUNG
+	bool
+	select FB_MSM_MIPI_DSI
+	default n
+
 config FB_MSM_LCDC_ST15_WXGA
     bool
     select FB_MSM_LCDC_PANEL
@@ -191,6 +245,16 @@ config FB_MSM_LCDC_ST15_PANEL
     select FB_MSM_LCDC_ST15_WXGA
     ---help---
       Support for ST1.5 WXGA (1366x768) panel
+
+config FB_MSM_LCDC_LD9040_WVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_P5LTE_WXGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
 
 config FB_MSM_LCDC_PRISM_WVGA
 	bool
@@ -291,6 +355,26 @@ config FB_MSM_MIPI_CHIMEI_WXGA
 	  The panel is connected to the host
 	  via Toshiba DSI-to-LVDS bridge.
 
+config FB_MSM_MIPI_S6D6AA0_WXGA_PT
+	bool
+	select FB_MSM_MIPI_DSI_S6D6AA0_WXGA
+	default n
+
+config FB_MSM_MIPI_S6E8AA0_HD720_PT
+	bool
+	select FB_MSM_MIPI_DSI_S6E8AA0_HD720
+	default n
+
+config FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PT
+	bool
+	select FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1
+	default n
+
+config FB_MSM_MIPI_S6E8AB0_WXGA_PT
+	bool
+	select FB_MSM_MIPI_DSI_S6E8AB0_WXGA
+	default n
+
 config FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_TRULY
@@ -321,6 +405,20 @@ config FB_MSM_WRITEBACK_MSM_PANEL
 choice
 	prompt "LCD Panel"
 	default FB_MSM_MDDI_AUTO_DETECT
+
+config FB_MSM_LCDC_LD9040_WVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC LD9040 WVGA Panel"
+	select FB_MSM_LCDC_LD9040_WVGA
+	---help---
+	  Support for LCDC LD9040 WVGA (480x800) panel
+
+config FB_MSM_LCDC_P5LTE_WXGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "P5LTE WXGA Panel"
+	select FB_MSM_LCDC_P5LTE_WXGA
+	---help---
+	  Support for P5LTE WXGA panel
 
 config FB_MSM_LCDC_PRISM_WVGA_PANEL
 	depends on FB_MSM_LCDC_HW
@@ -520,6 +618,30 @@ config FB_MSM_MIPI_CHIMEI_WXGA_PANEL
 	bool "MIPI Chimei WXGA PT Panel"
 	select FB_MSM_MIPI_CHIMEI_WXGA
 
+config FB_MSM_MIPI_S6D6AA0_WXGA_PANEL
+	bool "MIPI S6D6AA0_WXGA Panel"
+	select FB_MSM_MIPI_S6D6AA0_WXGA_PT
+
+config FB_MSM_MIPI_S6E8AA0_HD720_PANEL
+	bool "MIPI S6E8AA0_HD720 Panel"
+	select FB_MSM_MIPI_S6E8AA0_HD720_PT
+	
+config FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL
+	bool "MIPI S6E8AA0)WXGA_Q1 Panel"
+	select FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PT
+
+config FB_MSM_MIPI_S6E8AB0_WXGA_PANEL
+	bool "MIPI S6E8AB0) WXGA Panel"
+	select FB_MSM_MIPI_S6E8AB0_WXGA_PT
+	
+config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT_PANEL
+	bool "MIPI NOVATEK CMD QHD PT Panel"
+	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
+
+config FB_MSM_MIPI_SAMSUNG_VIDEO_WVGA_PT_PANEL
+	bool "MIPI SMASUNG_WVGA Panel"
+	select FB_MSM_MIPI_SAMSUNG_VIDEO_WVGA	
+
 config FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT_PANEL
 	bool "MIPI Truly Video WVGA PT Panel"
 	select FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
@@ -535,6 +657,7 @@ config FB_MSM_EBI2_TMD_QVGA_EPSON_QCIF
 	  Support for EBI2 TMD QVGA (240x320) and Epson QCIF (176x220) panel
 
 config FB_MSM_HDMI_AS_PRIMARY
+	depends on FB_MSM_HDMI_COMMON
 	bool "Use HDMI as primary panel"
 	---help---
 	Support for using HDMI as primary
@@ -610,7 +733,6 @@ config FB_MSM_HDMI_ADV7520_PANEL_HDCP_SUPPORT
           Support for HDCP mode for ADV7520 HDMI 720p Panel
           Choose to enable HDCP
 
-
 config FB_MSM_HDMI_MSM_PANEL
 	depends on FB_MSM_MDP40
 	bool "MSM HDMI 1080p Panel"
@@ -648,7 +770,7 @@ config FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
 config FB_MSM_HDMI_MHL
 	depends on FB_MSM_HDMI_MSM_PANEL
 	bool 'HDMI to MHL support'
-	default n
+	default y
 	---help---
 	  Support the HDMI to MHL conversion.
 	  MHL (Mobile High-Definition Link) technology

@@ -206,6 +206,21 @@ config CPU_FREQ_GOV_CONSERVATIVE
 
 	  If in doubt, say N.
 
+config SEC_DVFS
+	bool "DVFS job"
+	default n
+	depends on CPU_FREQ
+
+config SEC_DVFS_UNI
+	bool "DVFS job for Uni Processer"
+	default n
+	depends on SEC_DVFS
+
+config SEC_LIMIT_LCD_OFF_CPU_MAX_FREQ
+	bool
+	default y
+	depends on CPU_FREQ_GOV_ONDEMAND
+
 menu "x86 CPU frequency scaling drivers"
 depends on X86
 source "drivers/cpufreq/Kconfig.x86"

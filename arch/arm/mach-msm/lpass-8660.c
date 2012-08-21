@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -34,12 +34,12 @@
 #define Q6SS_SOFT_INTR_WAKEUP		0x288A001C
 #define MODULE_NAME			"lpass_8x60"
 #define SCM_Q6_NMI_CMD			0x1
+void __iomem *q6_wakeup_intr;  /* CONFIG_SEC_DEBUG */
 
 /* Subsystem restart: QDSP6 data, functions */
 static void *q6_ramdump_dev;
 static void q6_fatal_fn(struct work_struct *);
 static DECLARE_WORK(q6_fatal_work, q6_fatal_fn);
-static void __iomem *q6_wakeup_intr;
 
 static void q6_fatal_fn(struct work_struct *work)
 {
@@ -51,17 +51,28 @@ static void q6_fatal_fn(struct work_struct *work)
 static void send_q6_nmi(void)
 {
 	/* Send NMI to QDSP6 via an SCM call. */
-	scm_call_atomic1(SCM_SVC_UTIL, SCM_Q6_NMI_CMD, 0x1);
+	uint32_t cmd = 0x1;
+	//void __iomem *q6_wakeup_intr;  /* CONFIG_SEC_DEBUG */
+
+	scm_call(SCM_SVC_UTIL, SCM_Q6_NMI_CMD,
+	&cmd, sizeof(cmd), NULL, 0);
 
 	/* Wakeup the Q6 */
+    /* CONFIG_SEC_DEBUG start*/
+	//q6_wakeup_intr = ioremap_nocache(Q6SS_SOFT_INTR_WAKEUP, 8);
 	if (q6_wakeup_intr)
 		writel_relaxed(0x2000, q6_wakeup_intr);
-	else
-		pr_warn("lpass-8660: Unable to send wakeup interrupt to Q6.\n");
+	//iounmap(q6_wakeup_intr);
+    /* CONFIG_SEC_DEBUG end*/
+	mb();
 
 	/* Q6 requires atleast 100ms to dump caches etc.*/
-	mdelay(100);
-
+	if (in_interrupt() | in_atomic()) { /* CONFIG_SEC_DEBUG */
+	    unsigned long __ms=(100); 
+	    while (__ms--) udelay(1000);
+	}else {
+		msleep(100);
+ 	}
 	pr_info("subsystem-fatal-8x60: Q6 NMI was sent.\n");
 }
 
@@ -130,7 +141,7 @@ static struct subsys_data subsys_8x60_q6 = {
 
 static void __exit lpass_fatal_exit(void)
 {
-	iounmap(q6_wakeup_intr);
+	iounmap(q6_wakeup_intr);  /* CONFIG_SEC_DEBUG */
 	free_irq(LPASS_Q6SS_WDOG_EXPIRED, NULL);
 }
 
@@ -146,18 +157,17 @@ static int __init lpass_fatal_init(void)
 			__func__);
 		goto out;
 	}
+	q6_wakeup_intr = ioremap_nocache(Q6SS_SOFT_INTR_WAKEUP, 8); /* CONFIG_SEC_DEBUG */
+	if (!q6_wakeup_intr)
+		pr_err("%s: Unable to request q6 wakeup interrupt\n", __func__);
 
 	q6_ramdump_dev = create_ramdump_device("lpass");
 
 	if (!q6_ramdump_dev) {
 		ret = -ENOMEM;
+		iounmap(q6_wakeup_intr);  /* CONFIG_SEC_DEBUG */
 		goto out;
 	}
-
-	q6_wakeup_intr = ioremap_nocache(Q6SS_SOFT_INTR_WAKEUP, 8);
-
-	if (!q6_wakeup_intr)
-		pr_warn("lpass-8660: Unable to ioremap q6 wakeup address.");
 
 	ret = ssr_register_subsystem(&subsys_8x60_q6);
 out:

@@ -13,7 +13,9 @@
 #ifndef __HDMI_MSM_H__
 #define __HDMI_MSM_H__
 
+#include <linux/switch.h>
 #include <mach/msm_iomap.h>
+#include <linux/wakelock.h>
 #include "external_common.h"
 /* #define PORT_DEBUG */
 
@@ -32,6 +34,9 @@ uint32 hdmi_inp(uint32 offset);
 #define HDMI_INP_ND(offset)		inpdw(MSM_HDMI_BASE+(offset))
 #define HDMI_INP(offset)		inpdw(MSM_HDMI_BASE+(offset))
 #endif
+
+// a software workaround for a potential HW problem with HDMI which exists on V1 and V2 8660 units
+#define WORKAROUND_FOR_HDMI_CURRENT_LEAKAGE_FIX
 
 
 /*
@@ -110,6 +115,17 @@ struct hdmi_msm_state_type {
 	void __iomem *hdmi_io;
 
 	struct external_common_state_type common;
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2) || defined(CONFIG_VIDEO_MHL_TABLET_V1)
+	struct switch_dev	hdmi_audio_ch;
+#endif
+	boolean	boot_completion;
+	struct wake_lock wake_lock;
+	boolean dock_state;
+	boolean boot_state;
+
+#ifndef QCT_SWITCH_STATE_CMD
+	struct switch_dev	hdmi_audio_switch;
+#endif
 };
 
 extern struct hdmi_msm_state_type *hdmi_msm_state;

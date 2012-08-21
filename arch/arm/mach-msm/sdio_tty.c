@@ -30,11 +30,6 @@
 #define MAX_SDIO_TTY_DEV_NAME_SIZE	25
 
 /* Configurations per channel device */
-/* CIQ */
-#define SDIO_TTY_CIQ_DEV		"sdio_tty_ciq_0"
-#define SDIO_TTY_CIQ_TEST_DEV		"sdio_tty_ciq_test_0"
-#define SDIO_TTY_CH_CIQ			"SDIO_CIQ"
-
 /* CSVT */
 #define SDIO_TTY_CSVT_DEV		"sdio_tty_csvt_0"
 #define SDIO_TTY_CSVT_TEST_DEV		"sdio_tty_csvt_test_0"
@@ -326,6 +321,7 @@ static void sdio_tty_notify(void *priv, unsigned event)
 	if (!sdio_tty_drv) {
 		pr_err(SDIO_TTY_MODULE_NAME ": %s: NULL sdio_tty_drv",
 			__func__);
+        return ;
 	}
 
 	if (sdio_tty_drv->sdio_tty_state != TTY_OPENED) {
@@ -406,6 +402,9 @@ static int sdio_tty_open(struct tty_struct *tty, struct file *file)
 		return -ENOMEM;
 	}
 
+	// tty_state set before sdio_open for CSVT data fail issue, kyungjin.moon 20120309
+	sdio_tty_drv->sdio_tty_state = TTY_OPENED;
+
 	if (!sdio_tty_drv->is_sdio_open) {
 		ret = sdio_open(sdio_tty_drv->sdio_ch_name, &sdio_tty_drv->ch,
 				sdio_tty_drv, sdio_tty_notify);
@@ -428,8 +427,6 @@ static int sdio_tty_open(struct tty_struct *tty, struct file *file)
 		queue_work(sdio_tty_drv->workq, &sdio_tty_drv->work_read);
 
 	}
-
-	sdio_tty_drv->sdio_tty_state = TTY_OPENED;
 
 	pr_info(SDIO_TTY_MODULE_NAME ": %s: TTY device(%s) opened\n",
 		__func__, sdio_tty_drv->tty_dev_name);
@@ -470,13 +467,13 @@ static void sdio_tty_close(struct tty_struct *tty, struct file *file)
 	if (--sdio_tty_drv->tty_open_count != 0)
 		return;
 
+	sdio_tty_drv->sdio_tty_state = TTY_CLOSED;
+
 	flush_workqueue(sdio_tty_drv->workq);
 	destroy_workqueue(sdio_tty_drv->workq);
 
 	kfree(sdio_tty_drv->read_buf);
 	sdio_tty_drv->read_buf = NULL;
-
-	sdio_tty_drv->sdio_tty_state = TTY_CLOSED;
 
 	pr_info(SDIO_TTY_MODULE_NAME ": %s: SDIO_TTY device(%s) closed\n",
 		__func__, sdio_tty_drv->tty_dev_name);
@@ -667,6 +664,13 @@ int sdio_tty_uninit_tty(void *sdio_tty_handle)
 
 static int sdio_tty_probe(struct platform_device *pdev)
 {
+	char *device_name = NULL;
+	char *channel_name = NULL;
+	int debug_msg_on = 0;
+	int ret = 0;
+	enum sdio_tty_devices device_id = 0;
+	
+#if 0
 	const struct platform_device_id *id = platform_get_device_id(pdev);
 	enum sdio_tty_devices device_id = id->driver_data;
 	char *device_name = NULL;
@@ -677,16 +681,6 @@ static int sdio_tty_probe(struct platform_device *pdev)
 	pr_debug(SDIO_TTY_MODULE_NAME ": %s for %s", __func__, pdev->name);
 
 	switch (device_id) {
-	case SDIO_CIQ:
-		device_name = SDIO_TTY_CIQ_DEV;
-		channel_name = SDIO_TTY_CH_CIQ;
-		debug_msg_on = ciq_debug_msg_on;
-		break;
-	case SDIO_CIQ_TEST_APP:
-		device_name = SDIO_TTY_CIQ_TEST_DEV;
-		channel_name = SDIO_TTY_CH_CIQ;
-		debug_msg_on = ciq_debug_msg_on;
-		break;
 	case SDIO_CSVT:
 		device_name = SDIO_TTY_CSVT_DEV;
 		channel_name = SDIO_TTY_CH_CSVT;
@@ -703,6 +697,21 @@ static int sdio_tty_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		break;
 	}
+#endif
+	if (!strcmp(pdev->name, SDIO_TTY_CH_CSVT))
+	{
+		device_name = SDIO_TTY_CSVT_DEV;
+		channel_name = SDIO_TTY_CH_CSVT;
+		debug_msg_on = csvt_debug_msg_on;
+		device_id = SDIO_CSVT;
+	}
+	else if (!strcmp(pdev->name, SDIO_TTY_CH_CIQ))
+	{
+		device_name = SDIO_TTY_CIQ_DEV;
+		channel_name = SDIO_TTY_CH_CIQ;
+		debug_msg_on = ciq_debug_msg_on;
+		device_id = SDIO_CIQ;
+	}
 
 	if (device_name) {
 		ret = sdio_tty_init_tty(device_name, channel_name,
@@ -717,12 +726,28 @@ static int sdio_tty_probe(struct platform_device *pdev)
 
 static int sdio_tty_remove(struct platform_device *pdev)
 {
+#if 0
 	const struct platform_device_id *id = platform_get_device_id(pdev);
-	enum sdio_tty_devices device_id = id->driver_data;
+#endif
+	enum sdio_tty_devices device_id = 0;
 	struct sdio_tty *sdio_tty_drv = NULL;
 	int i = 0;
 	int ret = 0;
 
+	if (!strcmp(pdev->name, SDIO_TTY_CH_CSVT))
+	{
+		device_id = SDIO_CSVT;
+	}
+	else if (!strcmp(pdev->name, SDIO_TTY_CH_CIQ))
+	{
+		device_id = SDIO_CIQ;
+	}
+	else
+	{
+		pr_err(SDIO_TTY_MODULE_NAME ": %s: error no device for %s ",__func__, pdev->name);
+		return -ENODEV;
+	}
+	
 	pr_debug(SDIO_TTY_MODULE_NAME ": %s for %s", __func__, pdev->name);
 
 	for (i = 0; i < MAX_SDIO_TTY_DEVS; i++) {
@@ -751,9 +776,9 @@ static int sdio_tty_remove(struct platform_device *pdev)
 static struct platform_driver sdio_tty_pdrv = {
 	.probe		= sdio_tty_probe,
 	.remove		= sdio_tty_remove,
-	.id_table	= sdio_tty_id_table,
+//	.id_table	= sdio_tty_id_table,
 	.driver		= {
-		.name	= "SDIO_TTY",
+		.name	= "SDIO_CSVT",
 		.owner	= THIS_MODULE,
 	},
 };

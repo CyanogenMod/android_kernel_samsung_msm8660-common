@@ -17,7 +17,6 @@
 #include <linux/err.h>
 
 #include <mach/clk.h>
-#include <mach/socinfo.h>
 
 #include "proc_comm.h"
 #include "clock.h"
@@ -91,16 +90,9 @@ static int _pc_clk_set_rate(struct clk *clk, unsigned long rate)
 
 static int _pc_clk_set_min_rate(struct clk *clk, unsigned long rate)
 {
-	int rc;
-	int id = to_pcom_clk(clk)->id;
-	bool ignore_error = (cpu_is_msm7x27() && id == P_EBI1_CLK &&
-				rate >= INT_MAX);
-	unsigned r = rate;
-	rc = msm_proc_comm(PCOM_CLKCTL_RPC_MIN_RATE, &id, &r);
+	int rc = msm_proc_comm(PCOM_CLKCTL_RPC_MIN_RATE, &id, &r);
 	if (rc < 0)
 		return rc;
-	else if (ignore_error)
-		return 0;
 	else
 		return (int)id < 0 ? -EINVAL : 0;
 }

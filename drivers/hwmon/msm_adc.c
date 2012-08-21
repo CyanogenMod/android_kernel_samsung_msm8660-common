@@ -98,7 +98,9 @@ static bool epm_fluid_enabled;
 /* Needed to support file_op interfaces */
 static struct msm_adc_drv *msm_adc_drv;
 
+#if defined (CONFIG_PMIC8058_XOADC_CAL)
 static bool conv_first_request;
+#endif
 
 static ssize_t msm_adc_show_curr(struct device *dev,
 				struct device_attribute *devattr, char *buf);
@@ -728,6 +730,7 @@ static int msm_adc_blocking_conversion(struct msm_adc_drv *msm_adc,
 	struct msm_adc_platform_data *pdata =
 					msm_adc_drv->pdev->dev.platform_data;
 	struct msm_adc_channels *channel = &pdata->channel[hwmon_chan];
+#if defined (CONFIG_PMIC8058_XOADC_CAL)
 	int ret = 0;
 
 	if (conv_first_request) {
@@ -738,7 +741,7 @@ static int msm_adc_blocking_conversion(struct msm_adc_drv *msm_adc,
 		}
 		conv_first_request = false;
 	}
-
+#endif
 	channel->adc_access_fn->adc_slot_request(channel->adc_dev_instance,
 									&slot);
 	if (slot) {
@@ -825,6 +828,7 @@ int32_t adc_channel_request_conv(void *h, struct completion *conv_complete_evt)
 					msm_adc_drv->pdev->dev.platform_data;
 	struct msm_adc_channels *channel = &pdata->channel[client->adc_chan];
 	struct adc_conv_slot *slot;
+#if defined (CONFIG_PMIC8058_XOADC_CAL)
 	int ret;
 
 	if (conv_first_request) {
@@ -835,7 +839,7 @@ int32_t adc_channel_request_conv(void *h, struct completion *conv_complete_evt)
 		}
 		conv_first_request = false;
 	}
-
+#endif
 	channel->adc_access_fn->adc_slot_request(channel->adc_dev_instance,
 									&slot);
 
@@ -1440,7 +1444,9 @@ static int msm_adc_probe(struct platform_device *pdev)
 		else
 			msm_rpc_adc_init(pdev);
 	}
+#if defined (CONFIG_PMIC8058_XOADC_CAL)
 	conv_first_request = true;
+#endif
 
 	pr_info("msm_adc successfully registered\n");
 

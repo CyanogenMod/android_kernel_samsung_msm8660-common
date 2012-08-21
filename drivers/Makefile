@@ -119,9 +119,10 @@ obj-$(CONFIG_BCMA)		+= bcma/
 obj-$(CONFIG_VHOST_NET)		+= vhost/
 obj-$(CONFIG_VLYNQ)		+= vlynq/
 obj-$(CONFIG_STAGING)		+= staging/
+obj-$(CONFIG_ACCESSORY)		+= accessory/
 obj-y				+= platform/
 obj-y				+= ieee802154/
 #common clk code
 obj-y				+= clk/
-
+obj-y				+= sensors/
 obj-$(CONFIG_HWSPINLOCK)	+= hwspinlock/

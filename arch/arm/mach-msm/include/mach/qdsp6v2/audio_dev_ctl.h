@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,7 +15,12 @@
 #include <mach/qdsp5v2/audio_def.h>
 #include <sound/q6afe.h>
 
+#ifdef CONFIG_SEC_AUDIO_DEVICE
+#define AUDIO_DEV_CTL_MAX_DEV 140
+#else
 #define AUDIO_DEV_CTL_MAX_DEV 64
+#endif
+
 #define DIR_TX	2
 #define DIR_RX	1
 
@@ -95,6 +100,8 @@ int msm_clear_copp_id(int session_id, int copp_id);
 int msm_clear_session_id(int session_id);
 
 int msm_reset_all_device(void);
+
+int reset_device(void);
 
 int msm_clear_all_session(void);
 

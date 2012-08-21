@@ -357,6 +357,7 @@ static int rmt_storage_event_open_cb(struct rmt_storage_event *event_args,
 	if (cid > MAX_NUM_CLIENTS) {
 		pr_err("%s: Max clients are reached\n", __func__);
 		cid = 0;
+		kfree(rs_client);
 		return cid;
 	}
 	__set_bit(cid, &rmc->cids);
@@ -1715,8 +1716,10 @@ static int __init rmt_storage_init(void)
 
 	rmc->workq = create_singlethread_workqueue("rmt_storage");
 	if (!rmc->workq)
-		return -ENOMEM;
-
+	{   
+		ret = -ENOMEM;
+		goto unreg_mdm_rpc; 
+	}
 #ifdef CONFIG_MSM_RMT_STORAGE_CLIENT_STATS
 	stats_dentry = debugfs_create_file("rmt_storage_stats", 0444, 0,
 					NULL, &debug_ops);

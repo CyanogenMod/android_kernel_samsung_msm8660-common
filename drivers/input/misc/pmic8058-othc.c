@@ -613,7 +613,8 @@ static irqreturn_t pm8058_no_sw(int irq, void *dev_id)
  */
 static irqreturn_t pm8058_nc_ir(int irq, void *dev_id)
 {
-	unsigned long flags, rc;
+	unsigned long flags;
+	long rc;
 	struct pm8058_othc *dd = dev_id;
 
 	spin_lock_irqsave(&dd->lock, flags);

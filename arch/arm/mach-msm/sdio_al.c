@@ -189,6 +189,7 @@
 /* The index of the SDIO card used for the sdio_al_dloader */
 #define SDIO_BOOTLOADER_CARD_INDEX 1
 
+#define SDIO_AL_FD	1 // fast dormacy for data channel.
 
 /* SDIO card state machine */
 enum sdio_al_device_state {
@@ -352,6 +353,10 @@ struct sdio_al {
 	void *subsys_notif_handle;
 	int sdioc_major;
 	int skip_print_info;
+#ifdef SDIO_AL_FD	
+	unsigned int wakelock_time;
+#endif
+	
 };
 
 struct sdio_al_work {
@@ -489,6 +494,11 @@ module_param(debug_data_on, int, 0);
 static int debug_close_on = 1;
 module_param(debug_close_on, int, 0);
 
+#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+int mdm_bootloader_done = 0;
+EXPORT_SYMBOL(mdm_bootloader_done);
+#endif
+
 /** The driver context */
 static struct sdio_al *sdio_al;
 
@@ -565,25 +575,25 @@ static int sdio_al_debugfs_init(void)
 		return -ENOENT;
 
 	sdio_al->debug.sdio_al_debug_lpm_on = debugfs_create_u8("debug_lpm_on",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					sdio_al->debug.sdio_al_debug_root,
 					&sdio_al->debug.debug_lpm_on);
 
 	sdio_al->debug.sdio_al_debug_data_on = debugfs_create_u8(
 					"debug_data_on",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					sdio_al->debug.sdio_al_debug_root,
 					&sdio_al->debug.debug_data_on);
 
 	sdio_al->debug.sdio_al_debug_close_on = debugfs_create_u8(
 					"debug_close_on",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					sdio_al->debug.sdio_al_debug_root,
 					&sdio_al->debug.debug_close_on);
 
 	sdio_al->debug.sdio_al_debug_info = debugfs_create_file(
 					"sdio_debug_info",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					sdio_al->debug.sdio_al_debug_root,
 					NULL,
 					&debug_info_ops);
@@ -594,14 +604,14 @@ static int sdio_al_debugfs_init(void)
 		scnprintf(temp, 18, "sdio_al_log_dev_%d", i + 1);
 		sdio_al->debug.sdio_al_debug_log_buffers[i] =
 			debugfs_create_blob(temp,
-					S_IRUGO | S_IWUGO,
+			S_IRUGO | S_IWUSR |S_IWGRP,
 					sdio_al->debug.sdio_al_debug_root,
 					&sdio_al_dbgfs_log[i]);
 	}
 
 	sdio_al->debug.sdio_al_debug_log_buffers[MAX_NUM_OF_SDIO_DEVICES] =
 			debugfs_create_blob("sdio_al_gen_log",
-				S_IRUGO | S_IWUGO,
+		S_IRUGO | S_IWUSR |S_IWGRP,
 				sdio_al->debug.sdio_al_debug_root,
 				&sdio_al_dbgfs_log[MAX_NUM_OF_SDIO_DEVICES]);
 
@@ -656,6 +666,40 @@ static void sdio_al_debugfs_cleanup(void)
 
 	debugfs_remove(sdio_al->debug.sdio_al_debug_root);
 }
+#endif
+
+#ifdef SDIO_AL_FD
+extern struct class *sec_class;
+struct device *sdioal_dev;
+
+static ssize_t show_waketime(struct device *d,
+		struct device_attribute *attr, char *buf)
+{
+	if (!sdioal_dev)
+		return 0;
+
+	return sprintf(buf, "%u\n", sdio_al->wakelock_time);
+}
+
+static ssize_t store_waketime(struct device *d,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	int r;
+	unsigned long msec;
+	
+	if (!sdioal_dev)
+		return count;
+
+	r = strict_strtoul(buf, 10, &msec);
+	if (r)
+		return count;
+
+	sdio_al->wakelock_time = (msec/1000);
+	return count;
+}
+
+static DEVICE_ATTR(waketime, 0664, show_waketime, store_waketime);
+
 #endif
 
 static int sdio_al_log(struct sdio_al_local_log *log, const char *fmt, ...)
@@ -855,6 +899,11 @@ static void sdio_al_vote_for_sleep(struct sdio_al_device *sdio_al_dev,
 	if (is_vote_for_sleep) {
 		pr_debug(MODULE_NAME ": %s - sdio vote for Sleep", __func__);
 		wake_unlock(&sdio_al_dev->wake_lock);
+#ifdef SDIO_AL_FD
+		if((sdio_al->wakelock_time) && (sdio_al_dev->card->host->index == 1))
+			wake_lock_timeout(&sdio_al_dev->wake_lock, (sdio_al->wakelock_time)*HZ);
+#endif
+
 	} else {
 		pr_debug(MODULE_NAME ": %s - sdio vote against sleep",
 			  __func__);
@@ -1435,6 +1484,9 @@ static void boot_worker(struct work_struct *work)
 done:
 	pr_debug(MODULE_NAME ":Boot Worker for card %d Exit!\n",
 		sdio_al_dev->host->index);
+#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+	mdm_bootloader_done = 1;
+#endif
 }
 
 /**
@@ -1753,6 +1805,7 @@ static int sdio_al_bootloader_setup(void)
 		goto exit_err;
 	}
 
+#if 0		// test code : block version check... lewis.kim 2011.06.19
 	/* Upper byte has to be equal - no backward compatibility for unequal */
 	if ((bootloader_dev->sdioc_boot_sw_header->version >> 16) !=
 	    (sdio_al->pdata->peer_sdioc_boot_version_major)) {
@@ -1765,6 +1818,7 @@ static int sdio_al_bootloader_setup(void)
 		ret = -EIO;
 		goto exit_err;
 	}
+#endif
 
 	sdio_al_logi(bootloader_dev->dev_log, MODULE_NAME ": SDIOC BOOT SW "
 			"version 0x%x\n",
@@ -4310,9 +4364,21 @@ static int __init sdio_al_init(void)
 		goto exit;
 	}
 
-	sdio_register_driver(&sdio_al_sdiofn_driver);
+	ret = sdio_register_driver(&sdio_al_sdiofn_driver);
+	if (ret) {
+		pr_err(MODULE_NAME ": sdio_register_driver failed: %d\n", ret);
+		goto exit;
+	}
 
 	spin_lock_init(&sdio_al->gen_log.log_lock);
+
+#ifdef SDIO_AL_FD
+	sdioal_dev = device_create(sec_class, NULL, 0, NULL, "sdio_al");
+	if (IS_ERR(sdioal_dev))
+		printk("[sdio_al] Failed to create device(sdioal_dev)! \n");
+	if (device_create_file(sdioal_dev, &dev_attr_waketime) < 0)
+		printk("[sdio_al] Failed to create device file(%s)!\n", dev_attr_waketime.attr.name);	
+#endif
 
 exit:
 	if (ret)

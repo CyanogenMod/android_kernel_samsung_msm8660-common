@@ -931,7 +931,9 @@ static int vfe32_start(void)
 	}
 	msm_io_w(irq_comp_mask, vfe32_ctrl->vfebase + VFE_IRQ_COMP_MASK);
 
-	if (vfe32_ctrl->operation_mode == VFE_OUTPUTS_PREVIEW_AND_VIDEO) {
+	switch (vfe32_ctrl->operation_mode) {
+	case VFE_OUTPUTS_PREVIEW:
+	case VFE_OUTPUTS_PREVIEW_AND_VIDEO:
 		if (vfe32_ctrl->outpath.output_mode &
 			VFE32_OUTPUT_MODE_PRIMARY) {
 			msm_io_w(1, vfe32_ctrl->vfebase +
@@ -947,7 +949,8 @@ static int vfe32_start(void)
 			msm_io_w(1, vfe32_ctrl->vfebase +
 			vfe32_AXI_WM_CFG[vfe32_ctrl->outpath.out0.ch2]);
 		}
-	} else {
+		break;
+	default:
 		if (vfe32_ctrl->outpath.output_mode &
 			VFE32_OUTPUT_MODE_SECONDARY) {
 			msm_io_w(1, vfe32_ctrl->vfebase +
@@ -963,7 +966,9 @@ static int vfe32_start(void)
 			msm_io_w(1, vfe32_ctrl->vfebase +
 			vfe32_AXI_WM_CFG[vfe32_ctrl->outpath.out1.ch2]);
 		}
+		break;
 	}
+
 	msm_camio_bus_scale_cfg(
 		sync->sdata->pdata->cam_bus_scale_table, S_PREVIEW);
 	vfe32_start_common();
@@ -1252,8 +1257,10 @@ static int vfe32_proc_general(struct msm_isp_cmd *cmd)
 	case VFE_CMD_START:
 		pr_info("vfe32_proc_general: cmdID = %s\n",
 			vfe32_general_cmd[cmd->id]);
-		if (vfe32_ctrl->operation_mode ==
-				VFE_OUTPUTS_PREVIEW_AND_VIDEO)
+		if ((vfe32_ctrl->operation_mode ==
+				VFE_OUTPUTS_PREVIEW_AND_VIDEO) ||
+				(vfe32_ctrl->operation_mode ==
+				VFE_OUTPUTS_PREVIEW))
 			/* Configure primary channel */
 			rc = vfe32_configure_pingpong_buffers(
 				VFE_MSG_V32_START, VFE_MSG_OUTPUT_PRIMARY);
@@ -3941,6 +3948,9 @@ vfe_remap_failed:
 void msm_vfe_subdev_release(struct platform_device *pdev)
 {
 	struct msm_sync *sync = vfe_syncdata;
+	CDBG("%s, free_irq\n", __func__);
+	disable_irq(vfe32_ctrl->vfeirq->start);
+	tasklet_kill(&vfe32_tasklet);
 	msm_cam_clk_enable(&vfe32_ctrl->pdev->dev, vfe32_clk_info,
 			vfe32_ctrl->vfe_clk, ARRAY_SIZE(vfe32_clk_info), 0);
 	if (vfe32_ctrl->fs_vfe) {
@@ -3948,9 +3958,6 @@ void msm_vfe_subdev_release(struct platform_device *pdev)
 		regulator_put(vfe32_ctrl->fs_vfe);
 		vfe32_ctrl->fs_vfe = NULL;
 	}
-	CDBG("%s, free_irq\n", __func__);
-	disable_irq(vfe32_ctrl->vfeirq->start);
-	tasklet_kill(&vfe32_tasklet);
 	iounmap(vfe32_ctrl->vfebase);
 
 	if (atomic_read(&irq_cnt))

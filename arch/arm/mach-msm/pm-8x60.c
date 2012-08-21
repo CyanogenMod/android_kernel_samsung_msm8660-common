@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -38,6 +38,7 @@
 #ifdef CONFIG_VFP
 #include <asm/vfp.h>
 #endif
+#include <mach/sec_debug.h>
 
 #include "acpuclock.h"
 #include "clock.h"
@@ -63,6 +64,7 @@ enum {
 	MSM_PM_DEBUG_SUSPEND_LIMITS = BIT(2),
 	MSM_PM_DEBUG_CLOCK = BIT(3),
 	MSM_PM_DEBUG_RESET_VECTOR = BIT(4),
+	MSM_PM_DEBUG_IDLE_CLK = BIT(5),
 	MSM_PM_DEBUG_IDLE = BIT(6),
 	MSM_PM_DEBUG_IDLE_LIMITS = BIT(7),
 	MSM_PM_DEBUG_HOTPLUG = BIT(8),
@@ -892,6 +894,10 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 
 	time = ktime_to_ns(ktime_get());
 
+#ifdef CONFIG_SEC_DEBUG_POWERCOLLAPSE_LOG
+	sec_debug_powercollapse_log(1, (unsigned int)sleep_mode);
+#endif
+
 	switch (sleep_mode) {
 	case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
 		msm_pm_swfi();
@@ -921,6 +927,9 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		if (sleep_delay == 0) /* 0 would mean infinite time */
 			sleep_delay = 1;
 
+		if (MSM_PM_DEBUG_IDLE_CLK & msm_pm_debug_mask)
+			clock_debug_print_enabled();
+
 		ret = msm_rpmrs_enter_sleep(
 			sleep_delay, msm_pm_idle_rs_limits, true, notify_rpm);
 		if (!ret) {
@@ -942,6 +951,10 @@ int msm_pm_idle_enter(enum msm_pm_sleep_mode sleep_mode)
 		__WARN();
 		goto cpuidle_enter_bail;
 	}
+
+#ifdef CONFIG_SEC_DEBUG_POWERCOLLAPSE_LOG
+	sec_debug_powercollapse_log(2, (unsigned int)sleep_mode);
+#endif
 
 	time = ktime_to_ns(ktime_get()) - time;
 #ifdef CONFIG_MSM_IDLE_STATS

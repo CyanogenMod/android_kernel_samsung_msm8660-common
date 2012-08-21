@@ -51,6 +51,11 @@
 #ifdef CONFIG_FB_MSM_LOGO
 #define INIT_IMAGE_FILE "/initlogo.rle"
 extern int load_565rle_image(char *filename);
+#define LPM_INIT_IMAGE_FILE "/lpminitlogo.rle"
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && defined(CONFIG_TARGET_LOCALE_KOR)
+#define CHARGING_IMAGE_FILE "/charging_image.rle"
+#endif
+extern unsigned int is_lpcharging_state(void);
 #endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
@@ -188,12 +193,8 @@ static struct led_classdev backlight_led = {
 };
 #endif
 
-#define PANEL_NAME_MAX_LEN 30
 static struct msm_fb_platform_data *msm_fb_pdata;
-static char prim_panel_name[PANEL_NAME_MAX_LEN];
-static char ext_panel_name[PANEL_NAME_MAX_LEN];
-module_param_string(prim_display, prim_panel_name, sizeof(prim_panel_name) , 0);
-module_param_string(ext_display, ext_panel_name, sizeof(ext_panel_name) , 0);
+unsigned char hdmi_prim_display;
 
 int msm_fb_detect_client(const char *name)
 {
@@ -202,19 +203,28 @@ int msm_fb_detect_client(const char *name)
 #ifdef CONFIG_FB_MSM_MDDI_AUTO_DETECT
 	u32 id;
 #endif
+	if (!msm_fb_pdata)
+		return -EPERM;
+
 	len = strnlen(name, PANEL_NAME_MAX_LEN);
-	if (strnlen(prim_panel_name, PANEL_NAME_MAX_LEN)) {
-		MSM_FB_DEBUG("\n name = %s, prim_display = %s",
-			name, prim_panel_name);
-		if (!strncmp((char *)prim_panel_name, name, len))
+	if (strnlen(msm_fb_pdata->prim_panel_name, PANEL_NAME_MAX_LEN)) {
+		pr_err("\n name = %s, prim_display = %s",
+			name, msm_fb_pdata->prim_panel_name);
+		if (!strncmp((char *)msm_fb_pdata->prim_panel_name,
+			name, len)) {
+			if (!strncmp((char *)msm_fb_pdata->prim_panel_name,
+				"hdmi_msm", len))
+				hdmi_prim_display = 1;
 			return 0;
-		else
+		} else {
 			ret = -EPERM;
+		}
 	}
-	if (strnlen(ext_panel_name, PANEL_NAME_MAX_LEN)) {
-		MSM_FB_DEBUG("\n name = %s, ext_display = %s",
-			name, ext_panel_name);
-		if (!strncmp((char *)ext_panel_name, name, len))
+
+	if (strnlen(msm_fb_pdata->ext_panel_name, PANEL_NAME_MAX_LEN)) {
+		pr_err("\n name = %s, ext_display = %s",
+			name, msm_fb_pdata->ext_panel_name);
+		if (!strncmp((char *)msm_fb_pdata->ext_panel_name, name, len))
 			return 0;
 		else
 			ret = -EPERM;
@@ -392,10 +402,10 @@ static int msm_fb_remove(struct platform_device *pdev)
 
 	msm_fb_remove_sysfs(pdev);
 
-	pm_runtime_disable(mfd->fbi->dev);
-
 	if (!mfd)
 		return -ENODEV;
+
+	pm_runtime_disable(mfd->fbi->dev);
 
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
@@ -534,9 +544,12 @@ static int msm_fb_suspend_sub(struct msm_fb_data_type *mfd)
 static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
+	struct msm_fb_panel_data *pdata = NULL;
 
 	if ((!mfd) || (mfd->key != MFD_KEY))
 		return 0;
+
+	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 
 	/* attach display channel irq if there's any */
 	if (mfd->channel_irq != 0)
@@ -552,6 +565,9 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 				      mfd->op_enable);
 		if (ret)
 			MSM_FB_INFO("msm_fb_resume: can't turn on display!\n");
+	} else {
+		if (pdata->power_ctrl)
+			pdata->power_ctrl(TRUE);
 	}
 
 	return ret;
@@ -700,11 +716,35 @@ static void msmfb_early_resume(struct early_suspend *h)
 static int unset_bl_level, bl_updated;
 static int bl_level_old;
 
+#ifdef CONFIG_BATTERY_SEC
+extern unsigned int is_lpcharging_state(void);
+#endif
+
 void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 {
 	struct msm_fb_panel_data *pdata;
 
+#ifdef CONFIG_BATTERY_SEC
+	if(is_lpcharging_state() == 1)
+	{
+		printk("msm_fb_set_backlight : lpm mode!\n");
+		pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+
+		if ((pdata) && (pdata->set_backlight)) {
+			down(&mfd->sem);
+			mfd->bl_level = bkl_lvl;
+			pdata->set_backlight(mfd);
+			up(&mfd->sem);
+		}
+	}
+#endif	
+
+
+#ifdef CONFIG_TARGET_SERIES_P8LTE
+	if (!mfd->panel_power_on) {
+#else
 	if (!mfd->panel_power_on || !bl_updated) {
+#endif
 		unset_bl_level = bkl_lvl;
 		return;
 	} else {
@@ -783,6 +823,9 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				mfd->panel_power_on = curr_pwr_state;
 
 			mfd->op_enable = TRUE;
+		} else {
+			if (pdata->power_ctrl)
+				pdata->power_ctrl(FALSE);
 		}
 		break;
 	}
@@ -966,6 +1009,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	struct fb_var_screeninfo *var;
 	int *id;
 	int fbram_offset;
+	char *logofilename = NULL;
 
 	/*
 	 * fb info initialization
@@ -985,8 +1029,16 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	var->grayscale = 0,	/* No graylevels */
 	var->nonstd = 0,	/* standard pixel format */
 	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
+#ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
+	var->height = 103,	/* height of picture in mm */
+	var->width = 58,	/* width of picture in mm */
+#elif defined(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PANEL) || defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
+	var->height = 114,	/* height of picture in mm */
+	var->width = 71,	/* width of picture in mm */
+#else
 	var->height = -1,	/* height of picture in mm */
 	var->width = -1,	/* width of picture in mm */
+#endif
 	var->accel_flags = 0,	/* acceleration flags */
 	var->sync = 0,	/* see FB_SYNC_* */
 	var->rotate = 0,	/* angle we rotate counter clockwise */
@@ -1126,7 +1178,10 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	var->yres_virtual = panel_info->yres * mfd->fb_page;
 	var->bits_per_pixel = bpp * 8;	/* FrameBuffer color depth */
 	if (mfd->dest == DISPLAY_LCD) {
-		var->reserved[4] = panel_info->lcd.refx100 / 100;
+		if (panel_info->type == MDDI_PANEL && panel_info->mddi.is_type1)
+			var->reserved[4] = panel_info->lcd.refx100 / (100 * 2);
+		else
+			var->reserved[4] = panel_info->lcd.refx100 / 100;
 	} else {
 		if (panel_info->type == MIPI_VIDEO_PANEL) {
 			var->reserved[4] = panel_info->mipi.frame_rate;
@@ -1239,7 +1294,23 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
 #ifdef CONFIG_FB_MSM_LOGO
-	if (!load_565rle_image(INIT_IMAGE_FILE)) ;	/* Flip buffer */
+	if(mfd->index == 0)
+    {
+		if (is_lpcharging_state() == 1) {
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && defined(CONFIG_TARGET_LOCALE_KOR)
+			logofilename = CHARGING_IMAGE_FILE;
+#else
+			//logofilename = LPM_INIT_IMAGE_FILE;
+			logofilename = NULL;
+			MSM_FB_INFO ("[lpm-mode] skip init logo!\n");
+#endif
+		} else {
+			logofilename = INIT_IMAGE_FILE;
+		}
+
+		if (logofilename != NULL)
+			load_565rle_image(logofilename);
+	}
 #endif
 	ret = 0;
 
@@ -1393,13 +1464,21 @@ static int msm_fb_open(struct fb_info *info, int user)
 		printk(KERN_ERR "pm_runtime: fail to wake up\n");
 	}
 
+	if (info->node == 0 && !(mfd->cont_splash_done)) {	/* primary */
+			mfd->ref_cnt++;
+			return 0;
+	}
 
 	if (!mfd->ref_cnt) {
 		mdp_set_dma_pan_info(info, NULL, TRUE);
 
-		if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable)) {
-			printk(KERN_ERR "msm_fb_open: can't turn on display!\n");
-			return -1;
+		if (mfd->panel_info.type != DTV_PANEL) {
+			if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info,
+							mfd->op_enable)) {
+				printk(KERN_ERR "msm_fb_open: "
+						"can't turn on display!\n");
+				return -1;
+			}
 		}
 	}
 
@@ -1443,8 +1522,9 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct msm_fb_panel_data *pdata;
 
-	if ((!mfd->op_enable) || (!mfd->panel_power_on))
-		return -EPERM;
+	if (info->node != 0 || mfd->cont_splash_done)	/* primary */
+		if ((!mfd->op_enable) || (!mfd->panel_power_on))
+			return -EPERM;
 
 	if (var->xoffset > (info->var.xres_virtual - info->var.xres))
 		return -EINVAL;
@@ -1503,6 +1583,15 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 	mutex_unlock(&msm_fb_notify_update_sem);
 
 	down(&msm_fb_pan_sem);
+
+	if (info->node == 0 && !(mfd->cont_splash_done)) { /* primary */
+		mdp_set_dma_pan_info(info, NULL, TRUE);
+		if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable)) {
+			pr_err("%s: can't turn on display!\n", __func__);
+			return -EINVAL;
+		}
+	}
+
 	mdp_set_dma_pan_info(info, dirtyPtr,
 			     (var->activate == FB_ACTIVATE_VBL));
 	mdp_dma_pan_update(info);
@@ -2081,6 +2170,8 @@ int mdp_blit(struct fb_info *info, struct mdp_blit_req *req)
 
 		/* blit first region */
 		if (((splitreq.flags & 0x07) == 0x07) ||
+			((splitreq.flags & 0x07) == 0x05) ||
+			((splitreq.flags & 0x07) == 0x02) ||
 			((splitreq.flags & 0x07) == 0x0)) {
 
 			if (splitreq.flags & MDP_ROT_90) {
@@ -2161,6 +2252,8 @@ int mdp_blit(struct fb_info *info, struct mdp_blit_req *req)
 
 		/* blit second region */
 		if (((splitreq.flags & 0x07) == 0x07) ||
+			((splitreq.flags & 0x07) == 0x05) ||
+			((splitreq.flags & 0x07) == 0x02) ||
 			((splitreq.flags & 0x07) == 0x0)) {
 			splitreq.src_rect.h = s_h_1;
 			splitreq.src_rect.y = s_y_1;
@@ -2610,6 +2703,14 @@ static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 	add_timer(&mfd->msmfb_no_update_notify_timer);
 	mutex_unlock(&msm_fb_notify_update_sem);
 
+	if (info->node == 0 && !(mfd->cont_splash_done)) { /* primary */
+		mdp_set_dma_pan_info(info, NULL, TRUE);
+		if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable)) {
+			pr_err("%s: can't turn on display!\n", __func__);
+			return -EINVAL;
+		}
+	}
+
 	ret = mdp4_overlay_play(info, &req);
 
 	if (unset_bl_level && !bl_updated) {
@@ -2842,7 +2943,6 @@ static int msmfb_mixer_info(struct fb_info *info, unsigned long *argp)
 
 DEFINE_SEMAPHORE(msm_fb_ioctl_ppp_sem);
 DEFINE_MUTEX(msm_fb_ioctl_lut_sem);
-DEFINE_MUTEX(msm_fb_ioctl_hist_sem);
 
 /* Set color conversion matrix from user space */
 
@@ -2937,7 +3037,7 @@ static int msmfb_handle_pp_ioctl(struct msmfb_mdp_pp *pp_ptr)
 			break;
 
 		case mdp_lut_pgc:
-			ret = mdp4_pgc_cfg(
+			ret = mdp4_argc_cfg(
 				&pp_ptr->data.lut_cfg_data.data.pgc_lut_data);
 			break;
 
@@ -2968,7 +3068,9 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	void __user *argp = (void __user *)arg;
 	struct fb_cursor cursor;
 	struct fb_cmap cmap;
-	struct mdp_histogram hist;
+	struct mdp_histogram_data hist;
+	struct mdp_histogram_start_req hist_req;
+	uint32_t block;
 #ifndef CONFIG_FB_MSM_MDP40
 	struct mdp_ccs ccs_matrix;
 #else
@@ -3189,9 +3291,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		if (ret)
 			return ret;
 
-		mutex_lock(&msm_fb_ioctl_hist_sem);
 		ret = mfd->do_histogram(info, &hist);
-		mutex_unlock(&msm_fb_ioctl_hist_sem);
 		break;
 
 	case MSMFB_HISTOGRAM_START:
@@ -3200,13 +3300,23 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 
 		if (!mfd->do_histogram)
 			return -ENODEV;
-		ret = mdp_start_histogram(info);
+
+		ret = copy_from_user(&hist_req, argp, sizeof(hist_req));
+		if (ret)
+			return ret;
+
+		ret = mdp_histogram_start(&hist_req);
 		break;
 
 	case MSMFB_HISTOGRAM_STOP:
 		if (!mfd->do_histogram)
 			return -ENODEV;
-		ret = mdp_stop_histogram(info);
+
+		ret = copy_from_user(&block, argp, sizeof(int));
+		if (ret)
+			return ret;
+
+		ret = mdp_histogram_stop(info, block);
 		break;
 
 
@@ -3329,6 +3439,8 @@ int msm_fb_writeback_terminate(struct fb_info *info)
 EXPORT_SYMBOL(msm_fb_writeback_terminate);
 #endif
 
+extern void sec_getlog_supply_fbinfo(void *p_fb, u32 xres, u32 yres, u32 bpp, u32 frames);
+
 struct platform_device *msm_fb_add_device(struct platform_device *pdev)
 {
 	struct msm_fb_panel_data *pdata;
@@ -3354,11 +3466,10 @@ struct platform_device *msm_fb_add_device(struct platform_device *pdev)
 	 */
 	if (type == HDMI_PANEL || type == DTV_PANEL ||
 		type == TV_PANEL || type == WRITEBACK_PANEL) {
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-		pdata->panel_info.fb_num = 2;
-#else
-		pdata->panel_info.fb_num = 1;
-#endif
+		if (hdmi_prim_display)
+			pdata->panel_info.fb_num = 2;
+		else
+			pdata->panel_info.fb_num = 1;
 	}
 	else
 		pdata->panel_info.fb_num = MSM_FB_NUM;
@@ -3427,6 +3538,15 @@ struct platform_device *msm_fb_add_device(struct platform_device *pdev)
 		fbi_list_index--;
 		return NULL;
 	}
+
+#ifdef CONFIG_SEC_DEBUG
+	if (fbi_list_index == 1) {
+		sec_getlog_supply_fbinfo((void *)(fbi->fix.smem_start - 0x400000),
+					 fbi->var.xres,
+					 fbi->var.yres,
+					 fbi->var.bits_per_pixel, 2);
+	}
+#endif
 	return this_dev;
 }
 EXPORT_SYMBOL(msm_fb_add_device);

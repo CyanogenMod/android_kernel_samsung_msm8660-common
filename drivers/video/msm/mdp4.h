@@ -126,14 +126,21 @@ enum {
 #define INTR_EXTERNAL_INTF_UDERRUN	BIT(10)
 #define INTR_PRIMARY_READ_PTR		BIT(11)
 #define INTR_DMA_P_HISTOGRAM		BIT(17)
+#define INTR_DMA_S_HISTOGRAM		BIT(26)
 #define INTR_OVERLAY2_DONE		BIT(30)
 
 #ifdef CONFIG_FB_MSM_OVERLAY
 #define MDP4_ANY_INTR_MASK	(INTR_OVERLAY0_DONE|INTR_DMA_S_DONE | \
-					INTR_DMA_P_HISTOGRAM)
+				INTR_DMA_P_HISTOGRAM | \
+				INTR_DMA_S_HISTOGRAM | \
+				INTR_VG1_HISTOGRAM | \
+				INTR_VG2_HISTOGRAM )
 #else
 #define MDP4_ANY_INTR_MASK	(INTR_DMA_P_DONE| \
-				INTR_DMA_P_HISTOGRAM)
+				INTR_DMA_P_HISTOGRAM | \
+				INTR_DMA_S_HISTOGRAM | \
+				INTR_VG1_HISTOGRAM | \
+				INTR_VG2_HISTOGRAM)
 #endif
 
 enum {
@@ -398,6 +405,8 @@ void mdp4_isr_read(int);
 void mdp4_clear_lcdc(void);
 void mdp4_mixer_blend_init(int mixer_num);
 void mdp4_vg_qseed_init(int vg_num);
+void mdp4_vg_qseed_init_DMB(int vg_num);
+void mdp4_vg_qseed_init_VideoPlay(int vg_num);
 void mdp4_vg_csc_setup(int vp_num);
 void mdp4_mixer_csc_setup(uint32 mixer);
 void mdp4_dmap_csc_setup(void);
@@ -440,14 +449,7 @@ static inline int mdp4_overlay_dtv_unset(struct msm_fb_data_type *mfd,
 }
 #endif
 
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
 void mdp4_dtv_set_black_screen(void);
-#else
-static inline void mdp4_dtv_set_black_screen(void)
-{
-    /* empty */
-}
-#endif
 
 static inline int mdp4_overlay_borderfill_supported(void)
 {
@@ -634,6 +636,7 @@ void mdp4_dsi_blt_dmap_busy_wait(struct msm_fb_data_type *mfd);
 void mdp4_overlay_dsi_video_vsync_push(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe);
 void mdp4_dsi_cmd_overlay_restore(void);
+void mdp_dsi_cmd_overlay_suspend(void);
 #else
 static inline void mdp4_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 {
@@ -652,6 +655,12 @@ static inline void mdp4_dsi_cmd_overlay_restore(void)
 {
 	/* empty */
 }
+#ifdef CONFIG_FB_MSM_MDP40
+static inline void mdp_dsi_cmd_overlay_suspend(void)
+{
+	/* empty */
+}
+#endif
 #endif /* MIPI_DSI */
 
 void mdp4_dsi_cmd_kickoff_ui(struct msm_fb_data_type *mfd,
@@ -712,7 +721,7 @@ int mdp4_csc_config(struct mdp_csc_cfg_data *config);
 void mdp4_csc_write(struct mdp_csc_cfg *data, uint32_t base);
 int mdp4_csc_enable(struct mdp_csc_cfg_data *config);
 int mdp4_pcc_cfg(struct mdp_pcc_cfg_data *cfg_ptr);
-int mdp4_pgc_cfg(struct mdp_pgc_lut_data *pgc_ptr);
+int mdp4_argc_cfg(struct mdp_pgc_lut_data *pgc_ptr);
 
 u32  mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num);
 void mdp4_init_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num);

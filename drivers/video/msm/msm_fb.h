@@ -46,6 +46,9 @@
 #include "msm_fb_panel.h"
 #include "mdp.h"
 
+#ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
+#define HDMI_VIDEO_QUANTIZATION_ISSUE
+#endif
 #define MSM_FB_DEFAULT_PAGE_SIZE 2
 #define MFD_KEY  0x11161126
 #define MSM_FB_MAX_DEV_LIST 32
@@ -130,7 +133,7 @@ struct msm_fb_data_type {
 	int (*lut_update) (struct fb_info *info,
 			      struct fb_cmap *cmap);
 	int (*do_histogram) (struct fb_info *info,
-			      struct mdp_histogram *hist);
+			      struct mdp_histogram_data *hist);
 	void *cursor_buf;
 	void *cursor_buf_phys;
 
@@ -179,6 +182,7 @@ struct msm_fb_data_type {
 	u32 use_ov0_blt, ov0_blt_state;
 	u32 use_ov1_blt, ov1_blt_state;
 	u32 writeback_state;
+	int cont_splash_done;
 };
 
 struct dentry *msm_fb_get_debugfs_root(void);

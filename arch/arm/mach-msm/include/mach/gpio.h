@@ -199,6 +199,18 @@ enum msm_tlmm_pull_tgt {
 	TLMM_PULL_SDC1_CMD,
 	TLMM_PULL_SDC1_DATA,
 };
+#ifdef CONFIG_SEC_AUDIO_I2S_DRIVING_CURRENT
+enum msm_tlmm_spkr_hdrive_tgt {
+	CODEC_SPKR_SCK_HDRV = 0,
+	CODEC_SPKR_WS_HDRV,
+	CODEC_SPKR_DOUT_HDRV,
+};
+
+enum msm_tlmm_spkr_pull_tgt {
+	CODEC_SPKR_SCK_PULL = 0,
+	CODEC_SPKR_WS_PULL,
+};
+#endif
 
 #ifdef CONFIG_MSM_V2_TLMM
 void msm_tlmm_set_hdrive(enum msm_tlmm_hdrive_tgt tgt, int drv_str);
@@ -238,4 +250,8 @@ static inline int msm_gpio_install_direct_irq(unsigned gpio, unsigned irq,
 }
 #endif
 
+#ifdef CONFIG_SEC_AUDIO_I2S_DRIVING_CURRENT
+void msm_tlmm_set_spkr_hdrive(enum msm_tlmm_spkr_hdrive_tgt tgt, int drv_str);
+void msm_tlmm_set_spkr_pull(enum msm_tlmm_spkr_pull_tgt tgt, int drv_str);
+#endif
 #endif /* __ASM_ARCH_MSM_GPIO_H */

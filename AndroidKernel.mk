@@ -7,6 +7,7 @@ KERNEL_CONFIG := $(KERNEL_OUT)/.config
 TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/arm/boot/zImage
 KERNEL_HEADERS_INSTALL := $(KERNEL_OUT)/usr
 KERNEL_MODULES_INSTALL := system
+KERNEL_MODULES_ROOT_OUT := $(TARGET_ROOT_OUT)/lib/modules
 KERNEL_MODULES_OUT := $(TARGET_OUT)/lib/modules
 
 ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
@@ -21,6 +22,8 @@ mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.dep`;\
 if [ "$$mdpath" != "" ];then\
 mpath=`dirname $$mdpath`;\
 ko=`find $$mpath/kernel -type f -name *.ko`;\
+mkdir -p $(KERNEL_MODULES_ROOT_OUT);\
+for i in $$ko; do cp $$i $(KERNEL_MODULES_ROOT_OUT)/; done;\
 for i in $$ko; do mv $$i $(KERNEL_MODULES_OUT)/; done;\
 fi
 endef
@@ -44,7 +47,7 @@ $(KERNEL_OUT)/piggy : $(TARGET_PREBUILT_INT_KERNEL)
 $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_CONFIG) $(KERNEL_HEADERS_INSTALL)
 	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi-
 	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=arm-eabi- modules
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) ARCH=arm CROSS_COMPILE=arm-eabi- modules_install
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP=--strip-unneeded ARCH=arm CROSS_COMPILE=arm-eabi- modules_install
 	$(mv-modules)
 	$(clean-module-folder)
 

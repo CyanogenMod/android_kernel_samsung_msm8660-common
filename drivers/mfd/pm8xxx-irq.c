@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -21,6 +21,11 @@
 #include <linux/mfd/pm8xxx/irq.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
+#include <mach/board-msm8660.h>
+#endif
 
 /* PMIC8xxx IRQ */
 
@@ -221,6 +226,11 @@ static void pm8xxx_irq_mask(struct irq_data *d)
 	master = block / 8;
 	irq_bit = pmirq % 8;
 
+	if (chip->config[pmirq] == 0) {
+		pr_warn("masking rouge irq=%d pmirq=%d\n", d->irq, pmirq);
+		chip->config[pmirq] = irq_bit << PM_IRQF_BITS_SHIFT;
+	}
+
 	config = chip->config[pmirq] | PM_IRQF_MASK_ALL;
 	pm8xxx_write_config_irq(chip, block, config);
 }
@@ -235,6 +245,11 @@ static void pm8xxx_irq_mask_ack(struct irq_data *d)
 	block = pmirq / 8;
 	master = block / 8;
 	irq_bit = pmirq % 8;
+
+	if (chip->config[pmirq] == 0) {
+		pr_warn("mask acking rouge irq=%d pmirq=%d\n", d->irq, pmirq);
+		chip->config[pmirq] = irq_bit << PM_IRQF_BITS_SHIFT;
+	}
 
 	config = chip->config[pmirq] | PM_IRQF_MASK_ALL | PM_IRQF_CLR;
 	pm8xxx_write_config_irq(chip, block, config);
@@ -367,6 +382,46 @@ bail_out:
 }
 EXPORT_SYMBOL_GPL(pm8xxx_get_irq_stat);
 
+
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
+// This function clears hw revision gpio's irq configuration set incorrectly by sbl3 bootloader.
+// Only E120L and E160(S/K/L)'s sbl3 bootloader uses hw revision gpio for irq, even though it is ueseless actually.
+// (In other words, it' a sort of bug.) Originally I should've changed the bootloader, but the bootloader
+// has been released to market already, so I have to make a solution at kernel side for fota.
+// Without this, One of those gpios starts to cause irq to msm continously, so target can't boot-up.
+static pm8xxx_clear_hw_rev_gpio_irq(const struct pm_irq_chip *chip, int devirq)
+{
+        static struct irq_data pm_gpio_hw_rev;
+        unsigned int rev_gpios[] = {
+#if defined( CONFIG_KOR_MODEL_SHV_E140L )
+                PM8058_GPIO_IRQ(PM8058_IRQ_BASE,5),        
+#endif           
+                PM8058_GPIO_IRQ(PM8058_IRQ_BASE,33),
+                PM8058_GPIO_IRQ(PM8058_IRQ_BASE,34),
+                PM8058_GPIO_IRQ(PM8058_IRQ_BASE,35),
+                PM8058_GPIO_IRQ(PM8058_IRQ_BASE,37),
+        };
+
+        
+        pm_gpio_hw_rev.chip_data = chip;
+
+        // if device is PM8058
+        if( devirq == 344)
+        {
+                int i=0;
+                
+                for( i=0; i< sizeof(rev_gpios)/sizeof(rev_gpios[0]); i++)
+                {
+                        pm_gpio_hw_rev.irq = rev_gpios[i];
+                        pm8xxx_irq_mask_ack(&pm_gpio_hw_rev);
+                        pm8xxx_irq_set_type(&pm_gpio_hw_rev,IRQF_TRIGGER_FALLING);   
+                }        
+        }        
+        
+}
+#endif
+
 struct pm_irq_chip *  __devinit pm8xxx_irq_init(struct device *dev,
 				const struct pm8xxx_irq_platform_data *pdata)
 {
@@ -413,6 +468,13 @@ struct pm_irq_chip *  __devinit pm8xxx_irq_init(struct device *dev,
 		irq_set_noprobe(chip->irq_base + pmirq);
 #endif
 	}
+
+
+#if defined (CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I957)\
+ || defined (CONFIG_KOR_MODEL_SHV_E140S) || defined (CONFIG_KOR_MODEL_SHV_E140K) || defined (CONFIG_KOR_MODEL_SHV_E140L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_EUR_MODEL_GT_P7320)  || defined (CONFIG_JPN_MODEL_SC_07D)
+        // E120L's and E160(S/K/L)'s bootloader bug fix
+        pm8xxx_clear_hw_rev_gpio_irq(chip, devirq);
+#endif
 
 	if (devirq != 0) {
 		rc = request_irq(devirq, pm8xxx_irq_handler,

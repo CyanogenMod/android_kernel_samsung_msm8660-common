@@ -443,7 +443,7 @@ static int __init fb_console_setup(char *this_opt)
 
 	while ((options = strsep(&this_opt, ",")) != NULL) {
 		if (!strncmp(options, "font:", 5))
-			strcpy(fontname, options + 5);
+			strncpy(fontname, options + 5, sizeof(fontname)/*40*/);
 		
 		if (!strncmp(options, "scrollback:", 11)) {
 			options += 11;
@@ -2192,6 +2192,10 @@ static int fbcon_switch(struct vc_data *vc)
 	 */
 	info->var.activate = var.activate;
 	var.vmode |= info->var.vmode & ~FB_VMODE_MASK;
+
+       /* Retain the reserved[] array  */
+       memcpy(var.reserved, info->var.reserved, sizeof(var.reserved));	
+
 	fb_set_var(info, &var);
 	ops->var = info->var;
 

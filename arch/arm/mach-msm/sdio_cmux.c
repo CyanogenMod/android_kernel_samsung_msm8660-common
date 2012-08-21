@@ -210,6 +210,11 @@ static int sdio_cmux_write_cmd(const int id, enum cmd_type type)
 	void *write_data = NULL;
 	struct sdio_cmux_list_elem *list_elem;
 
+	//ADD qualcomm case
+	if (!sdio_cmux_inited)
+		return -ENODEV;
+	//ADD qualcomm case
+
 	if (id < 0 || id >= SDIO_CMUX_NUM_CHANNELS) {
 		pr_err("%s: Invalid lc_id - %d\n", __func__, id);
 		return -EINVAL;

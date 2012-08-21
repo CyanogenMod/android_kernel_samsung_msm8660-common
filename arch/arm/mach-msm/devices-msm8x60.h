@@ -22,6 +22,21 @@
 #define MSM_SSBI1_I2C_BUS_ID     6
 #define MSM_SSBI2_I2C_BUS_ID     7
 #define MSM_SSBI3_I2C_BUS_ID     8
+#if 1//defined(CONFIG_KOR_MODEL_SHV_E110S)
+#define MSM_AMP_I2C_BUS_ID        9
+#define MSM_OPT_I2C_BUS_ID		10
+#define MSM_GYRO_I2C_BUS_ID		11
+#define MSM_MAG_I2C_BUS_ID		12
+#define MSM_TKEY_I2C_BUS_ID		13
+#endif
+
+#if defined(CONFIG_PN544_NFC)
+#define MSM_GSBI10_QUP_I2C_BUS_ID		14
+#endif
+
+#if defined (CONFIG_EPEN_WACOM_G5SP)
+#define MSM_GSBI11_QUP_I2C_BUS_ID 18
+#endif 
 
 #ifdef CONFIG_SND_SOC_MSM8660_APQ
 extern struct platform_device msm_pcm;

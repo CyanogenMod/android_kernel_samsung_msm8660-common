@@ -391,7 +391,8 @@ static int init_watchdog(void)
 	return platform_driver_register(&msm_watchdog_driver);
 }
 
-late_initcall(init_watchdog);
+//late_initcall(init_watchdog);
+postcore_initcall(init_watchdog);
 MODULE_DESCRIPTION("MSM Watchdog Driver");
 MODULE_VERSION("1.0");
 MODULE_LICENSE("GPL v2");

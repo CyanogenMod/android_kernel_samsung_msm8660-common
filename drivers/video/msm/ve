@@ -1,0 +1,764 @@
+39,43d38
+< #ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL
+< #include "mdp4_video_tuning_Q1.h"
+< #elif defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
+< #include "mdp4_video_tuning_HD720.h"
+< #else
+45d39
+< #endif
+62,64c56,61
+< //unsigned int mDNIe_data_R[MAX_LUT_SIZE];
+< //unsigned int mDNIe_data_G[MAX_LUT_SIZE];
+< //unsigned int mDNIe_data_B[MAX_LUT_SIZE];
+---
+> 
+> int play_speed_1_5;
+> #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT)
+> boolean camera_mode;
+> #endif
+> 
+67c64
+< typedef enum {
+---
+> enum Lcd_mDNIe_UI {
+70,71d66
+< 	mDNIe_VIDEO_WARM_MODE, 	// Not Support
+< 	mDNIe_VIDEO_COLD_MODE, 	// Not Support
+76,85c71
+< #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
+< 	mDNIe_DMB_MODE = 20,
+< 	mDNIe_DMB_WARM_MODE, 	// Not Support
+< 	mDNIe_DMB_COLD_MODE, 	// Not Support
+< #endif	
+< #ifdef CONFIG_TARGET_LOCALE_NTT
+< 	mDNIe_ISDBT_MODE = 30,
+< 	mDNIe_ISDBT_WARM_MODE,
+< 	mDNIe_ISDBT_COLD_MODE,
+< #endif
+---
+> 	mDNIe_DMB_MODE,
+91c77
+< } Lcd_mDNIe_UI;
+---
+> };
+93c79
+< typedef enum {
+---
+> enum Lcd_mDNIe_User_Set {
+97c83
+< } Lcd_mDNIe_User_Set;
+---
+> };
+98a85,88
+> enum Lcd_mDNIe_Negative {
+> 	mDNIe_NEGATIVE_OFF = 0,
+> 	mDNIe_NEGATIVE_ON,
+> };
+101,113c91,96
+< struct device *mdnie_dev;
+< struct class *mdnieset_outdoor_class;
+< struct device *switch_mdnieset_outdoor_dev;
+< 
+< Lcd_mDNIe_UI current_mDNIe_Mode = mDNIe_UI_MODE; /* mDNIe Set Status Checking Value.*/
+< // Lcd_mDNIe_User_Set current_mDNIe_user_mode = mDNIe_STANDARD; /*mDNIe_user Set Status Checking Value.*/ //not support by mdp
+< 
+< //u8 current_mDNIe_OutDoor_OnOff = FALSE;  // not support by mdp
+< static bool g_mdine_enable = 0;
+< 
+< void lut_tune(int num, unsigned int *pLutTable );
+< void sharpness_tune(int num );
+< DEFINE_MUTEX(msm_fb_ioctl_lut_sem1);
+---
+> struct device *tune_mdnie_dev;
+> 
+> enum Lcd_mDNIe_UI current_mDNIe_Mode = mDNIe_UI_MODE;
+> enum Lcd_mDNIe_Negative current_Negative_Mode = mDNIe_NEGATIVE_OFF;
+> 
+> static bool g_mdine_enable ;
+119c102
+< static int tuning_enable = 0;
+---
+> static int tuning_enable ;
+126d108
+< 
+167,168c149,153
+< 		ret = sscanf(str_line[i], "0x%x, 0x%x, 0x%x\n", &data1, &data2,&data3);
+< 		DPRINT("Result => [0x%2x 0x%2x 0x%2x] %s\n", data1, data2, data3, (ret==3)?"Ok":"Not available");
+---
+> 		ret =
+> 		    sscanf(str_line[i], "0x%x, 0x%x, 0x%x\n", &data1, &data2,
+> 			   &data3);
+> 		DPRINT("Result => [0x%2x 0x%2x 0x%2x] %s\n", data1, data2,
+> 		       data3, (ret == 3) ? "Ok" : "Not available");
+171,173d155
+< //			mDNIe_data_R[index] = data1;
+< //			mDNIe_data_G[index] = data2;
+< //			mDNIe_data_B[index++] = data3;	
+183d164
+< 
+193c174,175
+< 	DPRINT("[CMC623:INFO]:%s called loading file name : [%s]\n",__func__,filename);
+---
+> 	DPRINT("[CMC623:INFO]:%s called loading file name : [%s]\n", __func__,
+> 	       filename);
+199,200c181
+< 	if(IS_ERR(filp)) 
+< 	{
+---
+> 	if (IS_ERR(filp)) {
+210c191,193
+< 		DPRINT("[CMC623:ERROR]:Can't not alloc memory for tuning file load\n");
+---
+> 		DPRINT
+> 		    ("[CMC623:ERROR]:Can't not alloc memory"\
+> 			"for tuning file load\n");
+246d228
+< 
+249d230
+< 
+257d237
+< 
+259c239,240
+<         struct device_attribute *attr, const char *buf, size_t size)
+---
+> 			    struct device_attribute *attr, const char *buf,
+> 			    size_t size)
+266,269c247,248
+<     while(*pt)
+< 	{
+< 		if(*pt =='\r'|| *pt =='\n')
+< 			{
+---
+> 	while (*pt) {
+> 		if (*pt == '\r' || *pt == '\n') {
+291d269
+< 	if (cmap->red)
+293d270
+< 	if (cmap->green)
+295d271
+< 	if (cmap->blue)
+298a275
+> 
+301,302c278,279
+< 	
+< //	int fb;
+---
+> 	__u16 *r, *g, *b, i;
+> 	int j;
+305a283,284
+> 	struct msm_fb_data_type *mfd;
+> 	uint32_t out;
+307,311c286,287
+< 	static int mdp_lut_i = 0;
+< 	u16 r_1, g_1, b_1;//for final assignment
+< //	fb = open("/dev/graphics/fb0", O_RDWR);
+< 	__u16 *r, *g, *b, i;
+< 	int j = 0;
+---
+> 	/*for final assignment*/
+> 	u16 r_1, g_1, b_1;
+313a290
+> 
+315,317c292,294
+< 	//=====================================
+< 	// cmap allocation 
+< 	//=====================================
+---
+> 	/*=====================================
+> 	* cmap allocation
+> 	=====================================*/
+323c300
+< 	cmap->len = num; // MAX_LUT_SIZE;//LUT has 256 entries
+---
+> 	cmap->len = num;	/*MAX_LUT_SIZE;//LUT has 256 entries*/
+353c330
+< #if 1
+---
+> 
+355d331
+< 	mutex_lock(&msm_fb_ioctl_lut_sem1);
+357c333
+< 	//ret = mdp_lut_hw_update(cmap);
+---
+> 
+360,362d335
+< //		r_1 = mDNIe_data_R[i];
+< //		g_1 = mDNIe_data_G[i];
+< //		b_1 = mDNIe_data_B[i];
+367d339
+< 
+375,376c347
+< 				 ((b_1 & 0xff) << 8) |
+< 				 ((r_1 & 0xff) << 16)));
+---
+> 			((b_1 & 0xff) << 8) | ((r_1 & 0xff) << 16)));
+378c349,351
+< 	MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x17);
+---
+> 
+> 	mfd = (struct msm_fb_data_type *) registered_fb[0]->par;
+> 	if (mfd->panel.type == MIPI_CMD_PANEL) {
+380,384c353,362
+< 	mdp_lut_i = (mdp_lut_i + 1)%2;
+< 	mutex_unlock(&msm_fb_ioctl_lut_sem1);
+< #else	
+< 	info->fbops->fb_open && info->fbops->fb_ioctl(info, MSMFB_SET_LUT, cmap);
+< #endif	
+---
+> 		mutex_lock(&mdp_lut_push_sem);
+> 		mdp_lut_push = 1;
+> 		mdp_lut_push_i = mdp_lut_i;
+> 		mutex_unlock(&mdp_lut_push_sem);
+> 	} else {
+> 		/*mask off non LUT select bits*/
+> 		out = inpdw(MDP_BASE + 0x90070) & ~((0x1 << 10) | 0x7);
+> 		MDP_OUTP(MDP_BASE + 0x90070, (mdp_lut_i << 10) | 0x7 | out);
+> 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+> 	}
+385a364
+> 	mdp_lut_i = (mdp_lut_i + 1)%2;
+388c367
+< //	close(fb);
+---
+> 	/*close(fb);*/
+393a373
+> 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+396a377
+> 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+399,401c380
+< 
+< ////////////////[
+< int s3c_mdnie_start(void)
+---
+> int s3c_mdnie_start()
+407c386
+< int s3c_mdnie_off(void)
+---
+> int s3c_mdnie_off()
+413c392
+< void mDNIe_Set_Mode(Lcd_mDNIe_UI mode)
+---
+> void mDNIe_Set_Mode(enum Lcd_mDNIe_UI mode)
+415c394
+< 	unsigned int *pLut = NULL;
+---
+> 	unsigned int *pLut;
+417c396
+< 	static int isSetDMBMode = 0;
+---
+> 	static int isSetDMBMode;
+421,422c400,402
+< 		printk(KERN_ERR"[mDNIE WARNING] mDNIE engine is OFF. So you cannot set mDnie Mode correctly.\n");
+< 		return;  // return 0;
+---
+> 		printk(KERN_ERR
+> 		       "[mDNIE WARNING] mDNIE engine is OFF. So you cannot set mDnie Mode correctly.\n");
+> 		return;
+423a404,410
+> 
+> 	play_speed_1_5 = 0;
+> #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT)
+> 	video_mode = FALSE;
+> 	camera_mode = FALSE;
+> #endif
+> 
+426,428c413
+< #if 1 // QSEED Check save			
+< 			if(isSetDMBMode==1)
+< 			{
+---
+> 		if (isSetDMBMode == 1) {
+430c415
+< //				mdp4_vg_qseed_init_VideoPlay(1);
+---
+> 			/*mdp4_vg_qseed_init_VideoPlay(1);*/
+433d417
+< #endif			
+439,443c423,425
+< 		case mDNIe_VIDEO_WARM_MODE:
+< 		case mDNIe_VIDEO_COLD_MODE:
+< #if 1 // QSEED Check save			
+< 			if(isSetDMBMode==1)
+< 			{
+---
+> 		/*case mDNIe_VIDEO_WARM_MODE:*/
+> 		/*case mDNIe_VIDEO_COLD_MODE:*/
+> 		if (isSetDMBMode == 1) {
+445c427
+< //				mdp4_vg_qseed_init_VideoPlay(1);
+---
+> 			/*mdp4_vg_qseed_init_VideoPlay(1);*/
+448d429
+< #endif			
+450a432,434
+> #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT)
+> 		video_mode = TRUE;
+> #endif
+454c438
+< 			pLut = CAMERA_LUT;
+---
+> 		pLut = BYPASS_LUT;
+455a440,442
+> #if defined(CONFIG_FB_MSM_MIPI_SAMSUNG_OLED_VIDEO_HD_PT)
+> 		camera_mode = TRUE;
+> #endif
+459c446
+< 			pLut = NAVI_LUT;
+---
+> 		pLut = BYPASS_LUT;
+472,478c459,460
+< #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
+< 		case mDNIe_DMB_MODE:				// warm, clod not distinguish
+< 		case mDNIe_DMB_WARM_MODE:
+< 		case mDNIe_DMB_COLD_MODE:
+< #if 1  // QSEED Check save			
+< 			if(isSetDMBMode==0)
+< 			{
+---
+> 	case mDNIe_DMB_MODE:	/*warm, clod not distinguish*/
+> 		if (isSetDMBMode == 0) {
+480c462
+< //				mdp4_vg_qseed_init_DMB(1);
+---
+> 			/*mdp4_vg_qseed_init_DMB(1);*/
+483d464
+< #endif			
+487,496c468
+< #endif 
+< #ifdef CONFIG_TARGET_LOCALE_NTT
+< 		case mDNIe_ISDBT_MODE:
+< 		case mDNIe_ISDBT_WARM_MODE:
+< 		case mDNIe_ISDBT_COLD_MODE:
+< 			pLut = BYPASS_LUT;
+< 			sharpvalue = SHARPNESS_BYPASS;	
+< //			mDNIe_txtbuf_to_parsing(ISDBT_COLD_MODE_FILE);
+< 			break;
+< #endif
+---
+> 
+510a483,486
+> 	default:
+> 		pLut = BYPASS_LUT;
+> 		sharpvalue = SHARPNESS_BYPASS;
+> 		break;
+517,518d492
+< //		current_mDNIe_OutDoor_OnOff = FALSE;
+< //	}
+523c497,499
+< 	DPRINT("[mDNIe] mDNIe_Set_Mode : Current_mDNIe_mode (%d)  \n", current_mDNIe_Mode);  
+---
+> 	DPRINT("[mDNIe] mDNIe_Set_Mode : Current_mDNIe_mode (%d)\n",
+> 	       current_mDNIe_Mode);
+> 	DPRINT("[mDNIe] Sharpness value : (%d)\n", sharpvalue);
+526c502
+< void mDNIe_User_Select_Mode(Lcd_mDNIe_User_Set mode)
+---
+> void mDNIe_set_negative(enum Lcd_mDNIe_Negative negative)
+528,536c504,505
+< /*
+< 	if(!g_mdine_enable) {
+< 		printk(KERN_ERR"[mDNIE WARNING] mDNIE engine is OFF. So you cannot set mDnie Mode correctly.\n");
+< 		return 0;
+< 	}
+< 	switch (mode) {
+< 	case mDNIe_DYNAMIC:  
+< 		mDNIe_txtbuf_to_parsing(DYNAMIC_MODE_FILE);
+< 		break;
+---
+> 	unsigned int *pLut;
+> 	int sharpvalue = 0;
+538,540c507,509
+< 	case mDNIe_STANDARD:  
+< 		mDNIe_txtbuf_to_parsing(STANDARD_MODE_FILE);
+< 		break;
+---
+> 	if (negative == 0) {
+> 		DPRINT("[mdnie set] mDNIe_Set_mDNIe_Mode = %d\n",
+> 			current_mDNIe_Mode);
+542,544c511,518
+< 	case mDNIe_MOVIE:  
+< 		mDNIe_txtbuf_to_parsing(MOVIE_MODE_FILE);
+< 		break;
+---
+> 		mDNIe_Set_Mode(current_mDNIe_Mode);
+> 		return;
+> 	} else {
+> 		DPRINT("[mdnie set] mDNIe_Set_Negative = %d\n", negative);
+> 		pLut = NEGATIVE_LUT;
+> 		sharpvalue = SHARPNESS_NEGATIVE;
+> 		lut_tune(MAX_LUT_SIZE, pLut);
+> 		sharpness_tune(sharpvalue);
+546,548c520
+< 	current_mDNIe_user_mode = mode;
+< 	printk(KERN_ERR "[mDNIe] mDNIe_user_select_Mode : User_mDNIe_Setting_Mode (%d), Current_mDNIe_mode(%d) \n", current_mDNIe_user_mode,current_mDNIe_Mode);  
+< */
+---
+> 	DPRINT("[mdnie set] mDNIe_Set_Negative END\n");
+550a523,536
+> int is_negativeMode_on(void)
+> {
+> 	pr_info("is negative Mode On = %d\n", current_Negative_Mode);
+> 	if (current_Negative_Mode)
+> 		mDNIe_set_negative(current_Negative_Mode);
+> 	else
+> 		return 0;
+> 	return 1;
+> }
+> 
+> void is_play_speed_1_5(int enable)
+> {
+> 	play_speed_1_5 = enable;
+> }
+553c539,540
+< 		struct device_attribute *attr, char *buf)
+---
+> 					 struct device_attribute *attr,
+> 					 char *buf)
+569,576d555
+< 	case mDNIe_VIDEO_WARM_MODE:
+< 		mdnie_ui = 2;
+< 		break;
+< 
+< 	case mDNIe_VIDEO_COLD_MODE:
+< 		mdnie_ui = 3;
+< 		break;
+< 
+578c557
+< 		mdnie_ui = 4;
+---
+> 		mdnie_ui = 2;
+582c561
+< 		mdnie_ui = 5;
+---
+> 		mdnie_ui = 3;
+586c565
+< 		mdnie_ui = 6;
+---
+> 		mdnie_ui = 4;
+590c569
+< 		mdnie_ui = 7;
+---
+> 		mdnie_ui = 5;
+597,617d575
+< 
+< 	case mDNIe_DMB_WARM_MODE:
+< 		mdnie_ui = mDNIe_DMB_WARM_MODE;
+< 		break;
+< 
+< 	case mDNIe_DMB_COLD_MODE:
+< 		mdnie_ui = mDNIe_DMB_COLD_MODE;
+< 		break;
+< #endif
+< #ifdef CONFIG_TARGET_LOCALE_NTT
+< 	case mDNIe_ISDBT_MODE:
+< 		mdnie_ui = mDNIe_ISDBT_MODE;
+< 		break;
+< 
+< 	case mDNIe_ISDBT_WARM_MODE:
+< 		mdnie_ui = mDNIe_ISDBT_WARM_MODE;
+< 		break;
+< 
+< 	case mDNIe_ISDBT_COLD_MODE:
+< 		mdnie_ui = mDNIe_ISDBT_COLD_MODE;
+< 		break;
+635c593,594
+< 		struct device_attribute *attr, const char *buf, size_t size)
+---
+> 					  struct device_attribute *attr,
+> 					  const char *buf, size_t size)
+641,642d599
+< 	DPRINT("[mdnie set] in scenario_store, input value = %d \n",value);
+< 
+652,659d608
+< 	case SIG_MDNIE_VIDEO_WARM_MODE:
+< 		current_mDNIe_Mode = mDNIe_VIDEO_WARM_MODE;
+< 		break;
+< 
+< 	case SIG_MDNIE_VIDEO_COLD_MODE:
+< 		current_mDNIe_Mode = mDNIe_VIDEO_COLD_MODE;
+< 		break;
+< 
+676d624
+< #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
+681,683d628
+< 	case SIG_MDNIE_DMB_WARM_MODE:
+< 		current_mDNIe_Mode = mDNIe_DMB_WARM_MODE;
+< 		break;
+685,701d629
+< 	case SIG_MDNIE_DMB_COLD_MODE:
+< 		current_mDNIe_Mode = mDNIe_DMB_COLD_MODE;
+< 		break;
+< #endif 
+< #ifdef CONFIG_TARGET_LOCALE_NTT
+< 	case SIG_MDNIE_ISDBT_MODE:
+< 		current_mDNIe_Mode = mDNIe_ISDBT_MODE;
+< 		break;
+< 
+< 	case SIG_MDNIE_ISDBT_WARM_MODE:
+< 		current_mDNIe_Mode = mDNIe_ISDBT_WARM_MODE;
+< 		break;
+< 
+< 	case SIG_MDNIE_ISDBT_COLD_MODE:
+< 		current_mDNIe_Mode = mDNIe_ISDBT_COLD_MODE;
+< 		break;
+< #endif
+715c643,645
+< 		printk(KERN_ERR "\nscenario_store value is wrong : value(%d)\n", value);
+---
+> 		printk(KERN_ERR
+> 		       "scenario_store value is wrong : value(%d)\n",
+> 		       value);
+718c648,653
+< 
+---
+> 	if (current_Negative_Mode) {
+> 		DPRINT("[mdnie set] already negative mode = %d\n",
+> 			current_Negative_Mode);
+> 	} else {
+> 		DPRINT("[mdnie set] in scenario_store, input value = %d\n",
+> 			value);
+720c655
+< 
+---
+> 	}
+722a658,659
+> static DEVICE_ATTR(scenario, 0664, scenario_show,
+> 		   scenario_store);
+724,727c661,663
+< static DEVICE_ATTR(scenario, 0664, scenario_show, scenario_store);
+< 
+< static ssize_t mode_show(struct device *dev,
+< 		struct device_attribute *attr, char *buf)
+---
+> static ssize_t mdnieset_user_select_file_cmd_show(struct device *dev,
+> 						  struct device_attribute *attr,
+> 						  char *buf)
+730d665
+< 
+732d666
+< 
+737,738c671,674
+< static ssize_t mode_store(struct device *dev,
+< 		struct device_attribute *attr, const char *buf, size_t size)
+---
+> static ssize_t mdnieset_user_select_file_cmd_store(struct device *dev,
+> 						   struct device_attribute
+> 						   *attr, const char *buf,
+> 						   size_t size)
+743c679,681
+< 	DPRINT("[mdnie set] in mode_store, input value = %d \n",value);
+---
+> 	DPRINT
+> 	("[mdnie set]inmdnieset_user_select_file_cmd_store, input value = %d\n",
+> 	     value);
+748,749c686,688
+< static DEVICE_ATTR(mode, 0664, mode_show, mode_store);
+< 
+---
+> static DEVICE_ATTR(mdnieset_user_select_file_cmd, 0664,
+> 		   mdnieset_user_select_file_cmd_show,
+> 		   mdnieset_user_select_file_cmd_store);
+752c691,692
+< 		struct device_attribute *attr, char *buf)
+---
+> 					   struct device_attribute *attr,
+> 					   char *buf)
+755d694
+< 	
+759d697
+< 	
+764c702,703
+< 		struct device_attribute *attr, const char *buf, size_t size)
+---
+> 					    struct device_attribute *attr,
+> 					    const char *buf, size_t size)
+776c715,717
+< 		printk(KERN_ERR "mdnieset_init_file_cmd_store value is wrong : value(%d)\n", value);
+---
+> 		printk(KERN_ERR
+> 		       "mdnieset_init_file_cmd_store value is wrong : value(%d)\n",
+> 		       value);
+784,785c725,726
+< static DEVICE_ATTR(mdnieset_init_file_cmd, 0664, mdnieset_init_file_cmd_show, mdnieset_init_file_cmd_store);
+< 
+---
+> static DEVICE_ATTR(mdnieset_init_file_cmd, 0664, mdnieset_init_file_cmd_show,
+> 		   mdnieset_init_file_cmd_store);
+788c729,730
+< 		struct device_attribute *attr, char *buf)
+---
+> 					      struct device_attribute *attr,
+> 					      char *buf)
+791d732
+< 
+796c737,738
+< 		struct device_attribute *attr, const char *buf, size_t size)
+---
+> 					       struct device_attribute *attr,
+> 					       const char *buf, size_t size)
+801a744,746
+> 	DPRINT
+> 	    ("[mdnie set]inmdnieset_outdoor_file_cmd_store, input value = %d\n",
+> 	     value);
+803c748,749
+< 	DPRINT("[mdnie set] in outdoor_store, input value = %d \n",value);
+---
+> 	return size;
+> }
+804a751,761
+> static DEVICE_ATTR(outdoor, 0664,
+> 		   outdoor_show,
+> 		   outdoor_store);
+> 
+> static ssize_t negative_show(struct device *dev,
+> 					      struct device_attribute *attr,
+> 					      char *buf)
+> {
+> 	DPRINT("called %s\n", __func__);
+> 	return sprintf(buf, "0\n");
+> }
+806c763,767
+< //	mDNIe_Set_Mode(current_mDNIe_Mode, current_mDNIe_OutDoor_OnOff);
+---
+> static ssize_t negative_store(struct device *dev,
+> 					       struct device_attribute *attr,
+> 					       const char *buf, size_t size)
+> {
+> 	int value;
+807a769,779
+> 	sscanf(buf, "%d", &value);
+> 
+> 	DPRINT
+> 	    ("[mdnie set]negative_store, input value = %d\n",
+> 	     value);
+> 	pr_info("[negative] value = %d\n", value);
+> 	if (value == 0)
+> 		current_Negative_Mode = mDNIe_NEGATIVE_OFF;
+> 	else
+> 		current_Negative_Mode = mDNIe_NEGATIVE_ON;
+> 	mDNIe_set_negative(current_Negative_Mode);
+809a782,792
+> static DEVICE_ATTR(negative, 0664,
+> 		   negative_show,
+> 		   negative_store);
+> 
+> static ssize_t playspeed_show(struct device *dev,
+> 			struct device_attribute *attr,
+> 			char *buf)
+> {
+> 	DPRINT("called %s\n", __func__);
+> 	return sprintf(buf, "%d\n", play_speed_1_5);
+> }
+811,812c794,799
+< static DEVICE_ATTR(outdoor, 0664, outdoor_show, outdoor_store);
+< ////////////////]
+---
+> static ssize_t playspeed_store(struct device *dev,
+> 			struct device_attribute *attr,
+> 			const char *buf, size_t size)
+> {
+> 	int value;
+> 	sscanf(buf, "%d", &value);
+813a801
+> 	DPRINT("[Play Speed Set]play speed value = %d\n", value);
+814a803,808
+> 	is_play_speed_1_5(value);
+> 	return size;
+> }
+> static DEVICE_ATTR(playspeed, 0664,
+> 			playspeed_show,
+> 			playspeed_store);
+819,823c813
+< 		pr_err("Failed to create class(mdnie_class)!\n");
+< 
+< 	mdnie_dev = device_create(mdnie_class, NULL, 0, NULL, "mdnie");
+< 	if (IS_ERR(mdnie_dev))
+< 		pr_err("Failed to create device(switch_mdnieset_ui_dev)!\n");
+---
+> 		pr_err("Failed to create class(mdnie)!\n");
+825,843c815,863
+< 	if (device_create_file(mdnie_dev, &dev_attr_scenario) < 0)
+< 		pr_err("Failed to create device file(%s)!\n", dev_attr_scenario.attr.name);
+< 
+< 	if (device_create_file(mdnie_dev, &dev_attr_mode) < 0)
+< 		pr_err("Failed to create device file(%s)!\n", dev_attr_mode.attr.name);
+< 
+< 	if (device_create_file(mdnie_dev, &dev_attr_mdnieset_init_file_cmd) < 0)
+< 		pr_err("Failed to create device file(%s)!\n", dev_attr_mdnieset_init_file_cmd.attr.name);
+< 
+< //	mdnieset_outdoor_class = class_create(THIS_MODULE, "mdnieset_outdoor");
+< //	if (IS_ERR(mdnieset_outdoor_class))
+< //		pr_err("Failed to create class(mdnieset_outdoor_class)!\n");
+< 
+< //	switch_mdnieset_outdoor_dev = device_create(mdnieset_outdoor_class, NULL, 0, NULL, "switch_mdnieset_outdoor");
+< //	if (IS_ERR(switch_mdnieset_outdoor_dev))
+< //		pr_err("Failed to create device(switch_mdnieset_outdoor_dev)!\n");
+< 
+< 	if (device_create_file(mdnie_dev, &dev_attr_outdoor) < 0)
+< 		pr_err("Failed to create device file(%s)!\n", dev_attr_outdoor.attr.name);
+---
+> 	tune_mdnie_dev =
+> 	    device_create(mdnie_class, NULL, 0, NULL,
+> 		  "mdnie");
+> 	if (IS_ERR(tune_mdnie_dev))
+> 		pr_err("Failed to create device(mdnie)!\n");
+> 
+> 	if (device_create_file
+> 	    (tune_mdnie_dev, &dev_attr_scenario) < 0)
+> 		pr_err("Failed to create device file(%s)!\n",
+> 	       dev_attr_scenario.attr.name);
+> 
+> 	if (device_create_file
+> 	    (tune_mdnie_dev,
+> 	     &dev_attr_mdnieset_user_select_file_cmd) < 0)
+> 		pr_err("Failed to create device file(%s)!\n",
+> 			dev_attr_mdnieset_user_select_file_cmd.attr.name);
+> 
+> 	if (device_create_file
+> 	    (tune_mdnie_dev, &dev_attr_mdnieset_init_file_cmd) < 0)
+> 		pr_err("Failed to create device file(%s)!\n",
+> 			dev_attr_mdnieset_init_file_cmd.attr.name);
+> 
+> /*	mdnieset_outdoor_class = class_create(THIS_MODULE, "mdnieset_outdoor");
+> 	if (IS_ERR(mdnieset_outdoor_class))
+> 		pr_err("Failed to create class(
+> 			mdnieset_outdoor_class)!\n");
+> 
+> 	switch_mdnieset_outdoor_dev =
+> 	    device_create(mdnieset_outdoor_class, NULL, 0, NULL,
+> 			  "outdoor");
+> 	if (IS_ERR(switch_mdnieset_outdoor_dev))
+> 		pr_err
+> 		    ("Failed to create device(
+> 				switch_mdnieset_outdoor_dev)!\n"); */
+> 
+> 	if (device_create_file
+> 		(tune_mdnie_dev, &dev_attr_outdoor) < 0)
+> 		pr_err("Failed to create device file(%s)!\n",
+> 	       dev_attr_outdoor.attr.name);
+> 
+> 	if (device_create_file
+> 		(tune_mdnie_dev, &dev_attr_negative) < 0)
+> 		pr_err("Failed to create device file(%s)!\n",
+> 			dev_attr_negative.attr.name);
+> 
+> 	if (device_create_file
+> 		(tune_mdnie_dev, &dev_attr_playspeed) < 0)
+> 		pr_err("Failed to create device file(%s)!=n",
+> 		dev_attr_playspeed.attr.name);
+846,847c866,868
+<     if (device_create_file(mdnie_dev, &dev_attr_tuning) < 0) {
+<         pr_err("Failed to create device file(%s)!\n",dev_attr_tuning.attr.name);
+---
+> 	if (device_create_file(tune_mdnie_dev, &dev_attr_tuning) < 0) {
+> 		pr_err("Failed to create device file(%s)!\n",
+> 	       dev_attr_tuning.attr.name);
+849a871
+> 
+852,854d873
+< #ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL
+< 	lut_tune(MAX_LUT_SIZE, UI_LUT);
+< #endif
+856,857d874
+< 
+< 

@@ -13,14 +13,28 @@
 #ifndef MSM_GEMINI_COMMON_H
 #define MSM_GEMINI_COMMON_H
 
-#define MSM_GEMINI_DEBUG
-#ifdef MSM_GEMINI_DEBUG
-#define GMN_DBG(fmt, args...) pr_debug(fmt, ##args)
-#else
-#define GMN_DBG(fmt, args...) do { } while (0)
-#endif
+#undef MSM_GEMINI_DEBUG
 
-#define GMN_PR_ERR   pr_err
+#ifdef MSM_GEMINI_DEBUG
+//#define GMN_DBG(fmt, args...) pr_debug(fmt, ##args)
+#define GMN_PR_ERR(fmt, arg...)	\
+		do {\
+		printk(KERN_ERR "[GEMINI] %s:%d:" fmt "\n",__FUNCTION__, __LINE__, ##arg);}\
+		while(0)
+
+#define GMN_DBG(fmt, arg...)	\
+				do {\
+				printk(KERN_ERR "[GEMINI] %s:%d:" fmt "\n",__FUNCTION__, __LINE__, ##arg);}\
+				while(0)
+
+#else
+
+//#define GMN_PR_ERR   pr_err
+
+#define GMN_DBG(fmt, args...)
+#define GMN_PR_ERR(fmt, arg...)	
+
+#endif
 
 enum GEMINI_MODE {
 	GEMINI_MODE_DISABLE,

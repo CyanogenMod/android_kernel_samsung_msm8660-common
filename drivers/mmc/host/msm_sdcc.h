@@ -281,9 +281,10 @@ struct msmsdcc_dma_data {
 };
 
 struct msmsdcc_pio_data {
-	struct scatterlist	*sg;
-	unsigned int		sg_len;
-	unsigned int		sg_off;
+	struct sg_mapping_iter		sg_miter;
+	char				bounce_buf[4];
+	/* valid bytes in bounce_buf */
+	int				bounce_buf_len;
 };
 
 struct msmsdcc_curr_req {
@@ -383,13 +384,9 @@ struct msmsdcc_host {
 	unsigned int	dummy_52_needed;
 	unsigned int	dummy_52_sent;
 
-	unsigned int	sdio_irq_disabled;
 	bool		is_resumed;
 	struct wake_lock	sdio_wlock;
 	struct wake_lock	sdio_suspend_wlock;
-	unsigned int    sdcc_suspending;
-
-	unsigned int sdcc_irq_disabled;
 	struct timer_list req_tout_timer;
 	unsigned long reg_write_delay;
 	bool io_pad_pwr_switch;
@@ -398,6 +395,10 @@ struct msmsdcc_host {
 	bool sdio_gpio_lpm;
 	bool irq_wake_enabled;
 	struct pm_qos_request_list pm_qos_req_dma;
+	bool sdcc_suspending;
+	bool sdcc_irq_disabled;
+	bool sdcc_suspended;
+	bool sdio_wakeupirq_disabled;
 };
 
 int msmsdcc_set_pwrsave(struct mmc_host *mmc, int pwrsave);

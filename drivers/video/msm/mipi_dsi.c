@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -42,8 +42,13 @@ static boolean tlmm_settings = FALSE;
 static int mipi_dsi_probe(struct platform_device *pdev);
 static int mipi_dsi_remove(struct platform_device *pdev);
 
-static int mipi_dsi_off(struct platform_device *pdev);
-static int mipi_dsi_on(struct platform_device *pdev);
+ int mipi_dsi_off(struct platform_device *pdev);
+ int mipi_dsi_on(struct platform_device *pdev);
+
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+static int mipi_dsi_shutdown(struct platform_device *pdev);
+#endif
+
 
 static struct platform_device *pdev_list[MSM_FB_MAX_DEV_LIST];
 static int pdev_list_cnt;
@@ -54,7 +59,11 @@ static int vsync_gpio = -1;
 static struct platform_driver mipi_dsi_driver = {
 	.probe = mipi_dsi_probe,
 	.remove = mipi_dsi_remove,
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+	.shutdown = mipi_dsi_shutdown,
+#else
 	.shutdown = NULL,
+#endif
 	.driver = {
 		   .name = "mipi_dsi",
 		   },
@@ -62,7 +71,7 @@ static struct platform_driver mipi_dsi_driver = {
 
 struct device dsi_dev;
 
-static int mipi_dsi_off(struct platform_device *pdev)
+int mipi_dsi_off(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd;
@@ -91,6 +100,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 		} else {
 			mdp3_dsi_cmd_dma_busy_wait(mfd);
 		}
+	} else {
+		/* video mode, wait until fifo cleaned */
+		mipi_dsi_controller_cfg(0);
 	}
 
 	/*
@@ -113,6 +125,12 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 #ifdef CONFIG_MSM_BUS_SCALING
 	mdp_bus_scale_update_request(0);
+#endif
+
+#if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) || \
+	defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
+
+	MIPI_OUTP(MIPI_DSI_BASE + 0xA8, 0x00000000); // for LCD-on when wakeup
 #endif
 
 	local_bh_disable();
@@ -141,8 +159,8 @@ static int mipi_dsi_off(struct platform_device *pdev)
 
 	return ret;
 }
-
-static int mipi_dsi_on(struct platform_device *pdev)
+struct platform_device *pdev_temp = NULL;
+int mipi_dsi_on(struct platform_device *pdev)
 {
 	int ret = 0;
 	u32 clk_rate;
@@ -156,6 +174,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	u32 dummy_xres, dummy_yres;
 	int target_type = 0;
 
+	pdev_temp = pdev;
 	mfd = platform_get_drvdata(pdev);
 	fbi = mfd->fbi;
 	var = &fbi->var;
@@ -164,6 +183,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
 		mipi_dsi_pdata->dsi_power_save(1);
 
+	cont_splash_clk_ctrl();
 	local_bh_disable();
 	mipi_dsi_ahb_ctrl(1);
 	local_bh_enable();
@@ -333,6 +353,21 @@ static int mipi_dsi_on(struct platform_device *pdev)
 	return ret;
 }
 
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+static int mipi_dsi_shutdown(struct platform_device *pdev)
+{
+	int ret = 0;
+	printk("%s:+\n", __func__);
+
+	msleep(200);
+	if (mipi_dsi_pdata && mipi_dsi_pdata->dsi_power_save)
+		mipi_dsi_pdata->dsi_power_save(0x10);
+
+	printk("%s:-\n", __func__);
+
+	return ret;
+}
+#endif
 
 static int mipi_dsi_resource_initialized;
 
@@ -427,7 +462,7 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 		return 0;
 	}
 
-	mipi_dsi_clk_init(&pdev->dev);
+	mipi_dsi_clk_init(pdev);
 
 	if (!mipi_dsi_resource_initialized)
 		return -EPERM;
@@ -577,6 +612,26 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 
 	pdev_list[pdev_list_cnt++] = pdev;
 
+#if 1 // Debug Information
+	printk(KERN_ERR "mipi_dsi_probe: H.Period=%d, width=%d, BPorch=%d, xrex=%d,FPorch=%d\n",
+			h_period,
+			(mfd->panel_info.lcdc.h_pulse_width),
+			(mfd->panel_info.lcdc.h_back_porch),
+			(mfd->panel_info.xres),
+			(mfd->panel_info.lcdc.h_front_porch)	);
+	printk(KERN_ERR "mipi_dsi_probe: V.Period=%d, width=%d, BPorch=%d, xrex=%d,FPorch=%d\n",
+			v_period,
+			(mfd->panel_info.lcdc.v_pulse_width),
+			(mfd->panel_info.lcdc.v_back_porch),
+			(mfd->panel_info.yres),
+			(mfd->panel_info.lcdc.v_front_porch)	);
+	printk(KERN_ERR "mipi_dsi_probe: mipi->frame_rate = %d\n", mipi->frame_rate );	
+	printk(KERN_ERR "mipi_dsi_probe: Lanes = %d\n", lanes );	
+	printk(KERN_ERR "mipi_dsi_probe: pll_divider_config.clk_rate = %u\n", pll_divider_config.clk_rate );
+	printk(KERN_ERR "mipi_dsi_probe: dsi_pclk_rate = %u\n", dsi_pclk_rate );
+	printk(KERN_ERR "mipi_dsi_probe: mipi->dsi_pclk_rate = %u\n", mipi->dsi_pclk_rate );
+#endif 
+
 return 0;
 
 mipi_dsi_probe_err:
@@ -616,4 +671,6 @@ static int __init mipi_dsi_driver_init(void)
 	return ret;
 }
 
+EXPORT_SYMBOL(mipi_dsi_on);
+EXPORT_SYMBOL(mipi_dsi_off);
 module_init(mipi_dsi_driver_init);

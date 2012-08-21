@@ -22,6 +22,9 @@
 #include <linux/usb/otg.h>
 #include <linux/wakelock.h>
 #include <linux/pm_qos_params.h>
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include <linux/host_notify.h>
+#endif
 
 /**
  * Supported USB modes
@@ -181,6 +184,9 @@ struct msm_otg_platform_data {
 	u32 swfi_latency;
 	bool enable_dcd;
 	struct msm_bus_scale_pdata *bus_scale_table;
+#ifdef CONFIG_USB_HOST_NOTIFY
+	void (*set_autosw_pba)();
+#endif
 };
 
 /**
@@ -245,6 +251,11 @@ struct msm_otg {
 	unsigned long caps;
 	struct msm_xo_voter *xo_handle;
 	uint32_t bus_perf_client;
+#ifdef CONFIG_USB_HOST_NOTIFY
+	struct host_notify_dev ndev;
+	struct work_struct notify_work;
+	unsigned notify_state;
+#endif
 	/*
 	 * Allowing PHY power collpase turns off the HSUSB 3.3v and 1.8v
 	 * analog regulators while going to low power mode.

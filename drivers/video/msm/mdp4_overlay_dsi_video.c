@@ -62,6 +62,9 @@ void mdp4_dsi_video_fxn_register(cmd_fxn_t fxn)
 	display_on = fxn;
 }
 
+static void mdp4_overlay_dsi_video_wait4event(struct msm_fb_data_type *mfd,
+						int intr_done);
+
 int mdp4_dsi_video_on(struct platform_device *pdev)
 {
 	int dsi_width;
@@ -150,6 +153,17 @@ int mdp4_dsi_video_on(struct platform_device *pdev)
 
 	/* MDP cmd block enable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+
+	if (!(mfd->cont_splash_done)) {
+		mfd->cont_splash_done = 1;
+		mdp_pipe_ctrl(MDP_CMD_BLOCK,
+			      MDP_BLOCK_POWER_OFF, FALSE);
+		mdp4_overlay_dsi_video_wait4event(mfd, INTR_DMA_P_DONE);
+		/* disable timing generator */
+		MDP_OUTP(MDP_BASE + DSI_VIDEO_BASE, 0);
+		mipi_dsi_controller_cfg(0);
+	}
+
 	if (is_mdp4_hw_reset()) {
 		mdp4_hw_init();
 		outpdw(MDP_BASE + 0x0038, mdp4_display_intf);
@@ -251,7 +265,7 @@ int mdp4_dsi_video_on(struct platform_device *pdev)
 	MDP_OUTP(MDP_BASE + DSI_VIDEO_BASE + 0x30, dsi_hsync_skew);
 	MDP_OUTP(MDP_BASE + DSI_VIDEO_BASE + 0x38, ctrl_polarity);
 	mdp4_overlay_reg_flush(pipe, 1);
-	mdp_histogram_ctrl(TRUE);
+	mdp_histogram_ctrl_all(TRUE);
 
 	ret = panel_next_on(pdev);
 	if (ret == 0) {
@@ -280,7 +294,7 @@ int mdp4_dsi_video_off(struct platform_device *pdev)
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	mdp_pipe_ctrl(MDP_OVERLAY0_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
-	mdp_histogram_ctrl(FALSE);
+	mdp_histogram_ctrl_all(FALSE);
 	ret = panel_next_off(pdev);
 
 	/* dis-engage rgb0 from mixer0 */
@@ -457,7 +471,8 @@ static void mdp4_overlay_dsi_video_dma_busy_wait(struct msm_fb_data_type *mfd)
 	if (need_wait) {
 		/* wait until DMA finishes the current job */
 		pr_debug("%s: pending pid=%d\n", __func__, current->pid);
-		wait_for_completion(&mfd->dma->comp);
+		wait_for_completion_timeout(&mfd->dma->comp,
+			msecs_to_jiffies(VSYNC_PERIOD*2));
 	}
 	pr_debug("%s: done pid=%d\n", __func__, current->pid);
 }
