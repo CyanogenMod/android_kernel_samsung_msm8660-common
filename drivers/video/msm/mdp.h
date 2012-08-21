@@ -46,6 +46,10 @@ extern struct mdp_csc_cfg mdp_csc_convert[4];
 
 extern struct workqueue_struct *mdp_hist_wq;
 
+extern int mdp_lut_i;
+extern int mdp_lut_push;
+extern int mdp_lut_push_i;
+extern struct mutex mdp_lut_push_sem;
 extern uint32 mdp_intr_mask;
 
 #define MDP4_REVISION_V1		0
