@@ -8266,7 +8266,7 @@ static struct platform_device opt_gp2a = {
 #define MXT540E_CHRGTIME_BATT		48
 #define MXT540E_CHRGTIME_CHRG		48
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if 0
 #define MXT540E_THRESHOLD_BATT		35
 #else
 #define MXT540E_THRESHOLD_BATT		50
@@ -8276,7 +8276,7 @@ static struct platform_device opt_gp2a = {
 #define MXT540E_ACTVSYNCSPERX_BATT	24
 #define MXT540E_ACTVSYNCSPERX_CHRG	28
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if 0
 #define MXT540E_CALCFG_BATT		242
 #else
 #define MXT540E_CALCFG_BATT		98
@@ -8559,7 +8559,9 @@ static void mxt540e_power_off(void)
 
 static void mxt540e_register_callback(void *function)
 {
+#if 0
 	charging_cbs.tsp_set_charging_cable = function;
+#endif
 }
 
 static void mxt540e_read_ta_status(bool *ta_status)
