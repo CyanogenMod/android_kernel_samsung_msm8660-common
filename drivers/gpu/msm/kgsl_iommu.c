@@ -71,6 +71,7 @@ static struct kgsl_iommu_device *get_iommu_device(struct kgsl_iommu_unit *unit,
 	return NULL;
 }
 
+#if 0
 static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long addr, int flags)
 {
@@ -99,6 +100,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 
 	return 0;
 }
+#endif
 
 /*
  * kgsl_iommu_disable_clk - Disable iommu clocks
@@ -324,9 +326,11 @@ void *kgsl_iommu_create_pagetable(void)
 		KGSL_CORE_ERR("Failed to create iommu domain\n");
 		kfree(iommu_pt);
 		return NULL;
+#if 0
 	} else {
 		iommu_set_fault_handler(iommu_pt->domain,
 			kgsl_iommu_fault_handler);
+#endif
 	}
 
 	return iommu_pt;
