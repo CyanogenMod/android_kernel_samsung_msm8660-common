@@ -410,6 +410,8 @@ struct msmsdcc_host {
 	bool sdio_wakeupirq_disabled;
 	bool pending_resume;
 	struct msmsdcc_msm_bus_vote msm_bus_vote;
+	struct device_attribute	max_bus_bw;
+	struct device_attribute	polling;
 };
 
 int msmsdcc_set_pwrsave(struct mmc_host *mmc, int pwrsave);
