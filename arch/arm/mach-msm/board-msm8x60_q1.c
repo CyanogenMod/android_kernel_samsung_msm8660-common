@@ -123,6 +123,9 @@
 #include <mach/restart.h>
 #include <mach/board-msm8660.h>
 #include <mach/iommu_domains.h>
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+#include <linux/memblock.h>
+#endif
 
 #include <mach/devices-lte.h>
 #include "devices.h"
@@ -4077,8 +4080,8 @@ unsigned char hdmi_is_primary;
 #define MSM_PMEM_AUDIO_SIZE        0x28B000
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
-#define RAM_CONSOLE_BASE            0x42E00000
-#define RAM_CONSOLE_SIZE            SZ_512K
+#define RAM_CONSOLE_START          0x77800000
+#define RAM_CONSOLE_SIZE            SZ_1M
 #endif
 
 #define MSM_SMI_BASE          0x38000000
@@ -4352,10 +4355,8 @@ static struct platform_device android_pmem_smipool_device = {
 #endif
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
-static struct resource ram_console_resources[] = {
+static struct resource ram_console_resource[] = {
 	{
-		.start  = RAM_CONSOLE_BASE,
-		.end    = RAM_CONSOLE_BASE + RAM_CONSOLE_SIZE - 1,
 		.flags  = IORESOURCE_MEM,
 	},
 };
@@ -4363,8 +4364,8 @@ static struct resource ram_console_resources[] = {
 static struct platform_device ram_console_device = {
 	.name           = "ram_console",
 	.id             = -1,
-	.num_resources  = ARRAY_SIZE(ram_console_resources),
-	.resource       = ram_console_resources,
+	.num_resources  = ARRAY_SIZE(ram_console_resource),
+	.resource       = ram_console_resource,
 };
 #endif
 
@@ -9505,6 +9506,13 @@ static void __init msm8x60_reserve(void)
 	msm8x60_set_display_params(prim_panel_name, ext_panel_name);
 	reserve_info = &msm8x60_reserve_info;
 	msm_reserve();
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	if (memblock_remove(RAM_CONSOLE_START, RAM_CONSOLE_SIZE) == 0) {
+		ram_console_resource[0].start = RAM_CONSOLE_START;
+		ram_console_resource[0].end = RAM_CONSOLE_START+RAM_CONSOLE_SIZE-1;
+	}
+#endif
 }
 
 #define EXT_CHG_VALID_MPP 10
