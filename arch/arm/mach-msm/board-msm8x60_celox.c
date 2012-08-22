@@ -10077,10 +10077,12 @@ static void __init msm8x60_reserve(void)
 	msm_reserve();
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
+#if 0
     if (memblock_remove(RAM_CONSOLE_START, RAM_CONSOLE_SIZE) == 0) {
         ram_console_resource[0].start = RAM_CONSOLE_START;
         ram_console_resource[0].end = RAM_CONSOLE_START+RAM_CONSOLE_SIZE-1;
     }
+#endif
 #endif
 }
 
