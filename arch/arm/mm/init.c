@@ -28,6 +28,7 @@
 #include <asm/sizes.h>
 #include <asm/tlb.h>
 #include <asm/fixmap.h>
+#include <asm/cputype.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
@@ -36,6 +37,8 @@
 
 static unsigned long phys_initrd_start __initdata = 0;
 static unsigned long phys_initrd_size __initdata = 0;
+int msm_krait_need_wfe_fixup;
+EXPORT_SYMBOL(msm_krait_need_wfe_fixup);
 
 static int __init early_initrd(char *p)
 {
@@ -350,22 +353,30 @@ unsigned long membank0_size;
 EXPORT_SYMBOL(membank0_size);
 unsigned long membank1_start;
 EXPORT_SYMBOL(membank1_start);
+
+void __init find_membank0_hole(void)
+{
+	sort(&meminfo.bank, meminfo.nr_banks,
+		sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
+
+	membank0_size = meminfo.bank[0].size;
+	membank1_start = meminfo.bank[1].start;
+
+	pr_info("m0 size %lx m1 start %lx\n", membank0_size, membank1_start);
+}
 #endif
 
 void __init arm_memblock_init(struct meminfo *mi, struct machine_desc *mdesc)
 {
 	int i;
 
+#ifndef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
+#endif
 
 	memblock_init();
 	for (i = 0; i < mi->nr_banks; i++)
 		memblock_add(mi->bank[i].start, mi->bank[i].size);
-
-#ifdef CONFIG_DONT_MAP_HOLE_AFTER_MEMBANK0
-	membank0_size = meminfo.bank[0].size;
-	membank1_start = meminfo.bank[1].start;
-#endif
 
 	/* Register the kernel text, kernel data and initrd with memblock. */
 #ifdef CONFIG_XIP_KERNEL
@@ -882,4 +893,18 @@ static int __init keepinitrd_setup(char *__unused)
 }
 
 __setup("keepinitrd", keepinitrd_setup);
+#endif
+
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
+static int __init msm_krait_wfe_init(void)
+{
+	unsigned int val, midr;
+	midr = read_cpuid_id() & 0xffffff00;
+	if ((midr == 0x511f0400) || (midr == 0x510f0600)) {
+		asm volatile("mrc p15, 7, %0, c15, c0, 5" : "=r" (val));
+		msm_krait_need_wfe_fixup = (val & 0x10000) ? 1 : 0;
+	}
+	return 0;
+}
+pure_initcall(msm_krait_wfe_init);
 #endif

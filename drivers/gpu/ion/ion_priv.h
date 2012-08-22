@@ -37,6 +37,12 @@ struct ion_kernel_mapping {
 	void *vaddr;
 };
 
+enum {
+	DI_PARTITION_NUM = 0,
+	DI_DOMAIN_NUM = 1,
+	DI_MAX,
+};
+
 /**
  * struct ion_iommu_map - represents a mapping of an ion buffer to an iommu
  * @iova_addr - iommu virtual address
@@ -47,6 +53,7 @@ struct ion_kernel_mapping {
  * @ref - for reference counting this mapping
  * @mapped_size - size of the iova space mapped
  *		(may not be the same as the buffer size)
+ * @flags - iommu domain/partition specific flags.
  *
  * Represents a mapping of one ion buffer to a particular iommu domain
  * and address range. There may exist other mappings of this buffer in
@@ -57,12 +64,13 @@ struct ion_iommu_map {
 	unsigned long iova_addr;
 	struct rb_node node;
 	union {
-		int domain_info[2];
+		int domain_info[DI_MAX];
 		uint64_t key;
 	};
 	struct ion_buffer *buffer;
 	struct kref ref;
 	int mapped_size;
+	unsigned long flags;
 };
 
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
@@ -270,5 +278,24 @@ struct ion_heap *msm_get_contiguous_heap(void);
  */
 void *ion_map_fmem_buffer(struct ion_buffer *buffer, unsigned long phys_base,
 				void *virt_base, unsigned long flags);
+
+/**
+ * ion_do_cache_op - do cache operations.
+ *
+ * @client - pointer to ION client.
+ * @handle - pointer to buffer handle.
+ * @uaddr -  virtual address to operate on.
+ * @offset - offset from physical address.
+ * @len - Length of data to do cache operation on.
+ * @cmd - Cache operation to perform:
+ *		ION_IOC_CLEAN_CACHES
+ *		ION_IOC_INV_CACHES
+ *		ION_IOC_CLEAN_INV_CACHES
+ *
+ * Returns 0 on success
+ */
+int ion_do_cache_op(struct ion_client *client, struct ion_handle *handle,
+			void *uaddr, unsigned long offset, unsigned long len,
+			unsigned int cmd);
 
 #endif /* _ION_PRIV_H */

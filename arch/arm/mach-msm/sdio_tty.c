@@ -43,15 +43,11 @@ enum sdio_tty_state {
 };
 
 enum sdio_tty_devices {
-	SDIO_CIQ,
-	SDIO_CIQ_TEST_APP,
 	SDIO_CSVT,
 	SDIO_CSVT_TEST_APP,
 };
 
 static const struct platform_device_id sdio_tty_id_table[] = {
-	{ "SDIO_CIQ",		SDIO_CIQ },
-	{ "SDIO_CIQ_TEST_APP",	SDIO_CIQ_TEST_APP },
 	{ "SDIO_CSVT",		SDIO_CSVT },
 	{ "SDIO_CSVT_TEST_APP",	SDIO_CSVT_TEST_APP },
 	{ },
@@ -90,8 +86,6 @@ struct dentry *sdio_tty_debug_info;
  * Enable sdio_tty debug messages
  * By default the sdio_tty debug messages are turned off
  */
-static int ciq_debug_msg_on;
-module_param(ciq_debug_msg_on, int, 0);
 static int csvt_debug_msg_on;
 module_param(csvt_debug_msg_on, int, 0);
 
@@ -705,13 +699,6 @@ static int sdio_tty_probe(struct platform_device *pdev)
 		debug_msg_on = csvt_debug_msg_on;
 		device_id = SDIO_CSVT;
 	}
-	else if (!strcmp(pdev->name, SDIO_TTY_CH_CIQ))
-	{
-		device_name = SDIO_TTY_CIQ_DEV;
-		channel_name = SDIO_TTY_CH_CIQ;
-		debug_msg_on = ciq_debug_msg_on;
-		device_id = SDIO_CIQ;
-	}
 
 	if (device_name) {
 		ret = sdio_tty_init_tty(device_name, channel_name,
@@ -737,10 +724,6 @@ static int sdio_tty_remove(struct platform_device *pdev)
 	if (!strcmp(pdev->name, SDIO_TTY_CH_CSVT))
 	{
 		device_id = SDIO_CSVT;
-	}
-	else if (!strcmp(pdev->name, SDIO_TTY_CH_CIQ))
-	{
-		device_id = SDIO_CIQ;
 	}
 	else
 	{

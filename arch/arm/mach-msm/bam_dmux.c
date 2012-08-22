@@ -168,6 +168,7 @@ static DEFINE_MUTEX(bam_rx_pool_mutexlock);
 static int bam_rx_pool_len;
 static LIST_HEAD(bam_tx_pool);
 static DEFINE_SPINLOCK(bam_tx_pool_spinlock);
+static DEFINE_MUTEX(bam_pdev_mutexlock);
 
 struct bam_mux_hdr {
 	uint16_t magic_num;
@@ -190,6 +191,7 @@ static struct workqueue_struct *bam_mux_tx_workqueue;
 
 /* A2 power collaspe */
 #define UL_TIMEOUT_DELAY 1000	/* in ms */
+#define ENABLE_DISCONNECT_ACK	0x1
 static void toggle_apps_ack(void);
 static void reconnect_to_bam(void);
 static void disconnect_to_bam(void);
@@ -223,6 +225,7 @@ static DEFINE_SPINLOCK(wakelock_reference_lock);
 static int wakelock_reference_count;
 static struct delayed_work msm9615_bam_init_work;
 static int a2_pc_disabled_wakelock_skipped;
+static int disconnect_ack;
 /* End A2 power collaspe */
 
 /* subsystem restart */
@@ -294,9 +297,10 @@ static void bam_dmux_log(const char *fmt, ...)
 	 * W: 1 = Uplink Wait-for-ack
 	 * A: 1 = Uplink ACK received
 	 * #: >=1 On-demand uplink vote
+	 * D: 1 = Disconnect ACK active
 	 */
 	len += scnprintf(buff, sizeof(buff),
-		"<DMUX> %u.%09lu %c%c%c%c %c%c%c%c%d ",
+		"<DMUX> %u.%09lu %c%c%c%c %c%c%c%c%d%c ",
 		(unsigned)t_now, nanosec_rem,
 		a2_pc_disabled ? 'D' : 'd',
 		in_global_reset ? 'R' : 'r',
@@ -306,7 +310,8 @@ static void bam_dmux_log(const char *fmt, ...)
 		bam_is_connected ?  'U' : 'u',
 		wait_for_ack ? 'W' : 'w',
 		ul_wakeup_ack_completion.done ? 'A' : 'a',
-		atomic_read(&ul_ondemand_vote)
+		atomic_read(&ul_ondemand_vote),
+		disconnect_ack ? 'D' : 'd'
 		);
 
 	va_start(arg_list, fmt);
@@ -473,15 +478,24 @@ static inline void handle_bam_mux_cmd_open(struct bam_mux_hdr *rx_hdr)
 	unsigned long flags;
 	int ret;
 
+	mutex_lock(&bam_pdev_mutexlock);
+	if (in_global_reset) {
+		bam_dmux_log("%s: open cid %d aborted due to ssr\n",
+				__func__, rx_hdr->ch_id);
+		mutex_unlock(&bam_pdev_mutexlock);
+		queue_rx();
+		return;
+	}
 	spin_lock_irqsave(&bam_ch[rx_hdr->ch_id].lock, flags);
 	bam_ch[rx_hdr->ch_id].status |= BAM_CH_REMOTE_OPEN;
 	bam_ch[rx_hdr->ch_id].num_tx_pkts = 0;
 	spin_unlock_irqrestore(&bam_ch[rx_hdr->ch_id].lock, flags);
-	queue_rx();
 	ret = platform_device_add(bam_ch[rx_hdr->ch_id].pdev);
 	if (ret)
 		pr_err("%s: platform_device_add() error: %d\n",
 				__func__, ret);
+	mutex_unlock(&bam_pdev_mutexlock);
+	queue_rx();
 }
 
 static void handle_bam_mux_cmd(struct work_struct *work)
@@ -533,6 +547,10 @@ static void handle_bam_mux_cmd(struct work_struct *work)
 		bam_dmux_log("%s: opening cid %d PC enabled\n", __func__,
 				rx_hdr->ch_id);
 		handle_bam_mux_cmd_open(rx_hdr);
+		if (rx_hdr->reserved & ENABLE_DISCONNECT_ACK) {
+			bam_dmux_log("%s: activating disconnect ack\n");
+			disconnect_ack = 1;
+		}
 		dev_kfree_skb_any(rx_skb);
 		break;
 	case BAM_MUX_HDR_CMD_OPEN_NO_A2_PC:
@@ -551,16 +569,24 @@ static void handle_bam_mux_cmd(struct work_struct *work)
 		/* probably should drop pending write */
 		bam_dmux_log("%s: closing cid %d\n", __func__,
 				rx_hdr->ch_id);
+		mutex_lock(&bam_pdev_mutexlock);
+		if (in_global_reset) {
+			bam_dmux_log("%s: close cid %d aborted due to ssr\n",
+					__func__, rx_hdr->ch_id);
+			mutex_unlock(&bam_pdev_mutexlock);
+			break;
+		}
 		spin_lock_irqsave(&bam_ch[rx_hdr->ch_id].lock, flags);
 		bam_ch[rx_hdr->ch_id].status &= ~BAM_CH_REMOTE_OPEN;
 		spin_unlock_irqrestore(&bam_ch[rx_hdr->ch_id].lock, flags);
-		queue_rx();
 		platform_device_unregister(bam_ch[rx_hdr->ch_id].pdev);
 		bam_ch[rx_hdr->ch_id].pdev =
 			platform_device_alloc(bam_ch[rx_hdr->ch_id].name, 2);
 		if (!bam_ch[rx_hdr->ch_id].pdev)
 			pr_err("%s: platform_device_alloc failed\n", __func__);
+		mutex_unlock(&bam_pdev_mutexlock);
 		dev_kfree_skb_any(rx_skb);
+		queue_rx();
 		break;
 	default:
 		DMUX_LOG_KERR("%s: dropping invalid hdr. magic %x"
@@ -960,11 +986,13 @@ int msm_bam_dmux_is_ch_full(uint32_t id)
 
 int msm_bam_dmux_is_ch_low(uint32_t id)
 {
+	unsigned long flags;
 	int ret;
 
 	if (id >= BAM_DMUX_NUM_CHANNELS)
 		return -EINVAL;
 
+	spin_lock_irqsave(&bam_ch[id].lock, flags);
 	bam_ch[id].use_wm = 1;
 	ret = bam_ch[id].num_tx_pkts <= LOW_WATERMARK;
 	DBG("%s: ch %d num tx pkts=%d, LWM=%d\n", __func__,
@@ -973,6 +1001,7 @@ int msm_bam_dmux_is_ch_low(uint32_t id)
 		ret = -ENODEV;
 		pr_err("%s: port not open: %d\n", __func__, bam_ch[id].status);
 	}
+	spin_unlock_irqrestore(&bam_ch[id].lock, flags);
 
 	return ret;
 }
@@ -1236,6 +1265,7 @@ static int debug_log(char *buff, int max, loff_t *ppos)
 			"\tW: 1 = Uplink Wait-for-ack\n"
 			"\tA: 1 = Uplink ACK received\n"
 			"\t#: >=1 On-demand uplink vote\n"
+			"\tD: 1 = Disconnect ACK active\n"
 				);
 		buff += i;
 	}
@@ -1656,6 +1686,9 @@ static void disconnect_to_bam(void)
 	bam_rx_pool_len = 0;
 	mutex_unlock(&bam_rx_pool_mutexlock);
 
+	if (disconnect_ack)
+		toggle_apps_ack();
+
 	verify_tx_queue_is_empty(__func__);
 }
 
@@ -1760,8 +1793,10 @@ static int restart_notifier_cb(struct notifier_block *this,
 	ul_powerdown_finish();
 	a2_pc_disabled = 0;
 	a2_pc_disabled_wakelock_skipped = 0;
+	disconnect_ack = 0;
 
 	/* Cleanup Channel States */
+	mutex_lock(&bam_pdev_mutexlock);
 	for (i = 0; i < BAM_DMUX_NUM_CHANNELS; ++i) {
 		temp_remote_status = bam_ch_is_remote_open(i);
 		bam_ch[i].status &= ~BAM_CH_REMOTE_OPEN;
@@ -1774,6 +1809,7 @@ static int restart_notifier_cb(struct notifier_block *this,
 						bam_ch[i].name, 2);
 		}
 	}
+	mutex_unlock(&bam_pdev_mutexlock);
 
 	/* Cleanup pending UL data */
 	spin_lock_irqsave(&bam_tx_pool_spinlock, flags);

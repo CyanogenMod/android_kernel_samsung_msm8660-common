@@ -344,7 +344,7 @@ static int adv7520_power_on(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd = platform_get_drvdata(pdev);
 
-	clk_enable(tv_enc_clk);
+	clk_prepare_enable(tv_enc_clk);
 	external_common_state->dev = &pdev->dev;
 	if (mfd != NULL) {
 		DEV_INFO("adv7520_power: ON (%dx%d %d)\n",
@@ -378,7 +378,7 @@ static int adv7520_power_off(struct platform_device *pdev)
 	adv7520_chip_off();
 	wake_unlock(&wlock);
 	adv7520_comm_power(0, 1);
-	clk_disable(tv_enc_clk);
+	clk_disable_unprepare(tv_enc_clk);
 	return 0;
 }
 
@@ -874,11 +874,11 @@ static int __devinit
 	} else
 		DEV_ERR("adv7520_probe: failed to add fb device\n");
 
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-	external_common_state->sdev.name = "hdmi_as_primary";
-#else
-	external_common_state->sdev.name = "hdmi";
-#endif
+	if (hdmi_prim_display)
+		external_common_state->sdev.name = "hdmi_as_primary";
+	else
+		external_common_state->sdev.name = "hdmi";
+
 	if (switch_dev_register(&external_common_state->sdev) < 0)
 		DEV_ERR("Hdmi switch registration failed\n");
 

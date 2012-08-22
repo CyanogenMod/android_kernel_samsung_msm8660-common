@@ -15,6 +15,32 @@
 #include "msm_ispif.h"
 
 /*=============================================================*/
+int32_t msm_sensor_adjust_frame_lines(struct msm_sensor_ctrl_t *s_ctrl,
+	uint16_t res)
+{
+	uint16_t cur_line = 0;
+	uint16_t exp_fl_lines = 0;
+	if (s_ctrl->sensor_exp_gain_info) {
+		msm_camera_i2c_read(s_ctrl->sensor_i2c_client,
+			s_ctrl->sensor_exp_gain_info->coarse_int_time_addr,
+			&cur_line,
+			MSM_CAMERA_I2C_WORD_DATA);
+		exp_fl_lines = cur_line +
+			s_ctrl->sensor_exp_gain_info->vert_offset;
+		if (exp_fl_lines > s_ctrl->msm_sensor_reg->
+			output_settings[res].frame_length_lines)
+			msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
+				s_ctrl->sensor_output_reg_addr->
+				frame_length_lines,
+				exp_fl_lines,
+				MSM_CAMERA_I2C_WORD_DATA);
+		CDBG("%s cur_fl_lines %d, exp_fl_lines %d\n", __func__,
+			s_ctrl->msm_sensor_reg->
+			output_settings[res].frame_length_lines,
+			exp_fl_lines);
+	}
+	return 0;
+}
 
 int32_t msm_sensor_write_init_settings(struct msm_sensor_ctrl_t *s_ctrl)
 {
@@ -37,6 +63,12 @@ int32_t msm_sensor_write_res_settings(struct msm_sensor_ctrl_t *s_ctrl,
 		return rc;
 
 	rc = msm_sensor_write_output_settings(s_ctrl, res);
+	if (rc < 0)
+		return rc;
+
+	if (s_ctrl->func_tbl->sensor_adjust_frame_lines)
+		rc = s_ctrl->func_tbl->sensor_adjust_frame_lines(s_ctrl, res);
+
 	return rc;
 }
 
@@ -268,7 +300,8 @@ int32_t msm_sensor_set_sensor_mode(struct msm_sensor_ctrl_t *s_ctrl,
 			s_ctrl->msm_sensor_reg->
 			output_settings[res].line_length_pclk;
 
-		if (s_ctrl->sensordata->pdata->is_csic)
+		if (s_ctrl->sensordata->pdata->is_csic ||
+			!s_ctrl->sensordata->csi_if)
 			rc = s_ctrl->func_tbl->sensor_csi_setting(s_ctrl,
 				MSM_SENSOR_UPDATE_PERIODIC, res);
 		else
@@ -294,7 +327,8 @@ int32_t msm_sensor_mode_init(struct msm_sensor_ctrl_t *s_ctrl,
 		s_ctrl->curr_res = MSM_SENSOR_INVALID_RES;
 		s_ctrl->cam_mode = mode;
 
-		if (s_ctrl->sensordata->pdata->is_csic)
+		if (s_ctrl->sensordata->pdata->is_csic ||
+			!s_ctrl->sensordata->csi_if)
 			rc = s_ctrl->func_tbl->sensor_csi_setting(s_ctrl,
 				MSM_SENSOR_REG_INIT, 0);
 		else
@@ -411,23 +445,6 @@ int32_t msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 				s_ctrl,
 				cdata.mode,
 				&(cdata.cfg.init_info));
-			break;
-
-		case CFG_GET_OUTPUT_INFO:
-			if (s_ctrl->func_tbl->
-			sensor_get_output_info == NULL) {
-				rc = -EFAULT;
-				break;
-			}
-			rc = s_ctrl->func_tbl->
-				sensor_get_output_info(
-				s_ctrl,
-				&cdata.cfg.output_info);
-
-			if (copy_to_user((void *)argp,
-				&cdata,
-				sizeof(struct sensor_cfg_data)))
-				rc = -EFAULT;
 			break;
 
 		case CFG_GET_EEPROM_DATA:
@@ -574,13 +591,14 @@ int32_t msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 			s_ctrl->sensor_id_info->sensor_id_reg_addr, &chipid,
 			MSM_CAMERA_I2C_WORD_DATA);
 	if (rc < 0) {
-		CDBG("%s: read id failed\n", __func__);
+		pr_err("%s: %s: read id failed\n", __func__,
+			s_ctrl->sensordata->sensor_name);
 		return rc;
 	}
 
 	CDBG("msm_sensor id: %d\n", chipid);
 	if (chipid != s_ctrl->sensor_id_info->sensor_id) {
-		CDBG("msm_sensor_match_id chip id doesnot match\n");
+		pr_err("msm_sensor_match_id chip id doesnot match\n");
 		return -ENODEV;
 	}
 	return rc;
@@ -598,7 +616,8 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	struct msm_sensor_ctrl_t *s_ctrl;
 	CDBG("%s_i2c_probe called\n", client->name);
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
-		CDBG("i2c_check_functionality failed\n");
+		pr_err("%s %s i2c_check_functionality failed\n",
+			__func__, client->name);
 		rc = -EFAULT;
 		return rc;
 	}
@@ -610,19 +629,23 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 			s_ctrl->sensor_i2c_client->client->addr =
 				s_ctrl->sensor_i2c_addr;
 	} else {
+		pr_err("%s %s sensor_i2c_client NULL\n",
+			__func__, client->name);
 		rc = -EFAULT;
 		return rc;
 	}
 
 	s_ctrl->sensordata = client->dev.platform_data;
 	if (s_ctrl->sensordata == NULL) {
-		pr_err("%s: NULL sensor data\n", __func__);
+		pr_err("%s %s NULL sensor data\n", __func__, client->name);
 		return -EFAULT;
 	}
 
 	rc = s_ctrl->func_tbl->sensor_power_up(s_ctrl);
-	if (rc < 0)
-		goto probe_fail;
+	if (rc < 0) {
+		pr_err("%s %s power up failed\n", __func__, client->name);
+		return rc;
+	}
 
 	if (s_ctrl->func_tbl->sensor_match_id)
 		rc = s_ctrl->func_tbl->sensor_match_id(s_ctrl);
@@ -658,7 +681,7 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	msm_sensor_register(&s_ctrl->sensor_v4l2_subdev);
 	goto power_down;
 probe_fail:
-	pr_err("%s_i2c_probe failed\n", client->name);
+	pr_err("%s %s_i2c_probe failed\n", __func__, client->name);
 power_down:
 	if (rc > 0)
 		rc = 0;

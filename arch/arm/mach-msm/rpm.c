@@ -729,7 +729,9 @@ int msm_rpm_register_notification(struct msm_rpm_notification *n,
 	rc = msm_rpm_fill_sel_masks(n->sel_masks, req, count);
 	if (rc)
 		goto register_notification_exit;
+
 	mutex_lock(&msm_rpm_mutex);
+
 	if (!msm_rpm_init_notif_done) {
 		msm_rpm_initialize_notification();
 		msm_rpm_init_notif_done = true;

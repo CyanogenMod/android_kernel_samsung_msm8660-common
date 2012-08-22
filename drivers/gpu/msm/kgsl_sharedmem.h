@@ -30,13 +30,6 @@ struct kgsl_process_private;
 /** Set if the memdesc describes cached memory */
 #define KGSL_MEMFLAGS_CACHED    0x00000001
 
-struct kgsl_memdesc_ops {
-	int (*vmflags)(struct kgsl_memdesc *);
-	int (*vmfault)(struct kgsl_memdesc *, struct vm_area_struct *,
-		       struct vm_fault *);
-	void (*free)(struct kgsl_memdesc *memdesc);
-};
-
 extern struct kgsl_memdesc_ops kgsl_vmalloc_ops;
 
 int kgsl_sharedmem_vmalloc(struct kgsl_memdesc *memdesc,
@@ -90,13 +83,38 @@ static inline unsigned int kgsl_get_sg_pa(struct scatterlist *sg)
 	return pa;
 }
 
+int
+kgsl_sharedmem_map_vma(struct vm_area_struct *vma,
+			const struct kgsl_memdesc *memdesc);
+
+/*
+ * For relatively small sglists, it is preferable to use kzalloc
+ * rather than going down the vmalloc rat hole.  If the size of
+ * the sglist is < PAGE_SIZE use kzalloc otherwise fallback to
+ * vmalloc
+ */
+
+static inline void *kgsl_sg_alloc(unsigned int sglen)
+{
+	if ((sglen * sizeof(struct scatterlist)) <  PAGE_SIZE)
+		return kzalloc(sglen * sizeof(struct scatterlist), GFP_KERNEL);
+	else
+		return vmalloc(sglen * sizeof(struct scatterlist));
+}
+
+static inline void kgsl_sg_free(void *ptr, unsigned int sglen)
+{
+	if ((sglen * sizeof(struct scatterlist)) < PAGE_SIZE)
+		kfree(ptr);
+	else
+		vfree(ptr);
+}
+
 static inline int
 memdesc_sg_phys(struct kgsl_memdesc *memdesc,
 		unsigned int physaddr, unsigned int size)
 {
-	memdesc->sg = vmalloc(sizeof(struct scatterlist) * 1);
-	if (memdesc->sg == NULL)
-		return -ENOMEM;
+	memdesc->sg = kgsl_sg_alloc(1);
 
 	kmemleak_not_leak(memdesc->sg);
 

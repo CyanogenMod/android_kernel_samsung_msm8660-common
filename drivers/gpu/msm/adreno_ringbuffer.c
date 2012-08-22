@@ -22,6 +22,8 @@
 #include "adreno.h"
 #include "adreno_pm4types.h"
 #include "adreno_ringbuffer.h"
+#include "adreno_debugfs.h"
+#include "adreno_postmortem.h"
 
 #include "a2xx_reg.h"
 
@@ -104,6 +106,35 @@ adreno_ringbuffer_waitspace(struct adreno_ringbuffer *rb, unsigned int numcmds,
 	} while ((freecmds != 0) && (freecmds <= numcmds));
 }
 
+static unsigned int find_faulting_ib1_size(struct adreno_ringbuffer *rb,
+				unsigned int rptr, unsigned int ib1)
+{
+	unsigned int value;
+	unsigned int temp_rptr = rptr * sizeof(unsigned int);
+	unsigned int rb_size = rb->buffer_desc.size;
+
+	do {
+		temp_rptr = adreno_ringbuffer_dec_wrapped(temp_rptr, rb_size);
+		kgsl_sharedmem_readl(&rb->buffer_desc, &value, temp_rptr);
+
+		if (ib1 == value) {
+			temp_rptr = adreno_ringbuffer_dec_wrapped(temp_rptr,
+								rb_size);
+			kgsl_sharedmem_readl(&rb->buffer_desc, &value,
+						temp_rptr);
+			if (adreno_cmd_is_ib(value)) {
+				temp_rptr += 2 * sizeof(unsigned int);
+				kgsl_sharedmem_readl(&rb->buffer_desc, &value,
+						temp_rptr);
+				return value;
+			} else {
+				temp_rptr += sizeof(unsigned int);
+			}
+		}
+	} while (temp_rptr != rptr);
+
+	return 0;
+}
 
 static unsigned int *adreno_ringbuffer_allocspace(struct adreno_ringbuffer *rb,
 					     unsigned int numcmds)
@@ -309,6 +340,11 @@ int adreno_ringbuffer_start(struct adreno_ringbuffer *rb, unsigned int init_ram)
 
 	adreno_regwrite(device, REG_SCRATCH_UMSK,
 			     GSL_RB_MEMPTRS_SCRATCH_MASK);
+
+	/* update the eoptimestamp field with the last retired timestamp */
+	kgsl_sharedmem_writel(&device->memstore,
+			     KGSL_DEVICE_MEMSTORE_OFFSET(eoptimestamp),
+			     rb->timestamp);
 
 	/* load the CP ucode */
 
@@ -547,6 +583,197 @@ adreno_ringbuffer_issuecmds(struct kgsl_device *device,
 	adreno_ringbuffer_addcmds(rb, flags, cmds, sizedwords);
 }
 
+static bool _parse_ibs(struct kgsl_device_private *dev_priv, uint gpuaddr,
+			   int sizedwords);
+
+static bool
+_handle_type3(struct kgsl_device_private *dev_priv, uint *hostaddr)
+{
+	unsigned int opcode = cp_type3_opcode(*hostaddr);
+	switch (opcode) {
+	case CP_INDIRECT_BUFFER_PFD:
+	case CP_INDIRECT_BUFFER_PFE:
+	case CP_COND_INDIRECT_BUFFER_PFE:
+	case CP_COND_INDIRECT_BUFFER_PFD:
+		return _parse_ibs(dev_priv, hostaddr[1], hostaddr[2]);
+	case CP_NOP:
+	case CP_WAIT_FOR_IDLE:
+	case CP_WAIT_REG_MEM:
+	case CP_WAIT_REG_EQ:
+	case CP_WAT_REG_GTE:
+	case CP_WAIT_UNTIL_READ:
+	case CP_WAIT_IB_PFD_COMPLETE:
+	case CP_REG_RMW:
+	case CP_REG_TO_MEM:
+	case CP_MEM_WRITE:
+	case CP_MEM_WRITE_CNTR:
+	case CP_COND_EXEC:
+	case CP_COND_WRITE:
+	case CP_EVENT_WRITE:
+	case CP_EVENT_WRITE_SHD:
+	case CP_EVENT_WRITE_CFL:
+	case CP_EVENT_WRITE_ZPD:
+	case CP_DRAW_INDX:
+	case CP_DRAW_INDX_2:
+	case CP_DRAW_INDX_BIN:
+	case CP_DRAW_INDX_2_BIN:
+	case CP_VIZ_QUERY:
+	case CP_SET_STATE:
+	case CP_SET_CONSTANT:
+	case CP_IM_LOAD:
+	case CP_IM_LOAD_IMMEDIATE:
+	case CP_LOAD_CONSTANT_CONTEXT:
+	case CP_INVALIDATE_STATE:
+	case CP_SET_SHADER_BASES:
+	case CP_SET_BIN_MASK:
+	case CP_SET_BIN_SELECT:
+	case CP_SET_BIN_BASE_OFFSET:
+	case CP_SET_BIN_DATA:
+	case CP_CONTEXT_UPDATE:
+	case CP_INTERRUPT:
+	case CP_IM_STORE:
+		break;
+	/* these shouldn't come from userspace */
+	case CP_ME_INIT:
+	case CP_SET_PROTECTED_MODE:
+	default:
+		KGSL_CMD_ERR(dev_priv->device, "bad CP opcode %0x\n", opcode);
+		return false;
+		break;
+	}
+
+	return true;
+}
+
+static bool
+_handle_type0(struct kgsl_device_private *dev_priv, uint *hostaddr)
+{
+	unsigned int reg = type0_pkt_offset(*hostaddr);
+	unsigned int cnt = type0_pkt_size(*hostaddr);
+	if (reg < 0x0192 || (reg + cnt) >= 0x8000) {
+		KGSL_CMD_ERR(dev_priv->device, "bad type0 reg: 0x%0x cnt: %d\n",
+			     reg, cnt);
+		return false;
+	}
+	return true;
+}
+
+/*
+ * Traverse IBs and dump them to test vector. Detect swap by inspecting
+ * register writes, keeping note of the current state, and dump
+ * framebuffer config to test vector
+ */
+static bool _parse_ibs(struct kgsl_device_private *dev_priv,
+			   uint gpuaddr, int sizedwords)
+{
+	static uint level; /* recursion level */
+	bool ret = false;
+	uint *hostaddr, *hoststart;
+	int dwords_left = sizedwords; /* dwords left in the current command
+					 buffer */
+	struct kgsl_mem_entry *entry;
+
+	spin_lock(&dev_priv->process_priv->mem_lock);
+	entry = kgsl_sharedmem_find_region(dev_priv->process_priv,
+					   gpuaddr, sizedwords * sizeof(uint));
+	spin_unlock(&dev_priv->process_priv->mem_lock);
+	if (entry == NULL) {
+		KGSL_CMD_ERR(dev_priv->device,
+			     "no mapping for gpuaddr: 0x%08x\n", gpuaddr);
+		return false;
+	}
+
+	hostaddr = (uint *)kgsl_gpuaddr_to_vaddr(&entry->memdesc, gpuaddr);
+	if (hostaddr == NULL) {
+		KGSL_CMD_ERR(dev_priv->device,
+			     "no mapping for gpuaddr: 0x%08x\n", gpuaddr);
+		return false;
+	}
+
+	hoststart = hostaddr;
+
+	level++;
+
+	KGSL_CMD_INFO(dev_priv->device, "ib: gpuaddr:0x%08x, wc:%d, hptr:%p\n",
+		gpuaddr, sizedwords, hostaddr);
+
+	mb();
+	while (dwords_left > 0) {
+		bool cur_ret = true;
+		int count = 0; /* dword count including packet header */
+
+		switch (*hostaddr >> 30) {
+		case 0x0: /* type-0 */
+			count = (*hostaddr >> 16)+2;
+			cur_ret = _handle_type0(dev_priv, hostaddr);
+			break;
+		case 0x1: /* type-1 */
+			count = 2;
+			break;
+		case 0x3: /* type-3 */
+			count = ((*hostaddr >> 16) & 0x3fff) + 2;
+			cur_ret = _handle_type3(dev_priv, hostaddr);
+			break;
+		default:
+			KGSL_CMD_ERR(dev_priv->device, "unexpected type: "
+				"type:%d, word:0x%08x @ 0x%p, gpu:0x%08x\n",
+				*hostaddr >> 30, *hostaddr, hostaddr,
+				gpuaddr+4*(sizedwords-dwords_left));
+			cur_ret = false;
+			count = dwords_left;
+			break;
+		}
+
+		if (!cur_ret) {
+			KGSL_CMD_ERR(dev_priv->device,
+				"bad sub-type: #:%d/%d, v:0x%08x"
+				" @ 0x%p[gb:0x%08x], level:%d\n",
+				sizedwords-dwords_left, sizedwords, *hostaddr,
+				hostaddr, gpuaddr+4*(sizedwords-dwords_left),
+				level);
+
+			if (ADRENO_DEVICE(dev_priv->device)->ib_check_level
+				>= 2)
+				print_hex_dump(KERN_ERR,
+					level == 1 ? "IB1:" : "IB2:",
+					DUMP_PREFIX_OFFSET, 32, 4, hoststart,
+					sizedwords*4, 0);
+			goto done;
+		}
+
+		/* jump to next packet */
+		dwords_left -= count;
+		hostaddr += count;
+		if (dwords_left < 0) {
+			KGSL_CMD_ERR(dev_priv->device,
+				"bad count: c:%d, #:%d/%d, "
+				"v:0x%08x @ 0x%p[gb:0x%08x], level:%d\n",
+				count, sizedwords-(dwords_left+count),
+				sizedwords, *(hostaddr-count), hostaddr-count,
+				gpuaddr+4*(sizedwords-(dwords_left+count)),
+				level);
+			if (ADRENO_DEVICE(dev_priv->device)->ib_check_level
+				>= 2)
+				print_hex_dump(KERN_ERR,
+					level == 1 ? "IB1:" : "IB2:",
+					DUMP_PREFIX_OFFSET, 32, 4, hoststart,
+					sizedwords*4, 0);
+			goto done;
+		}
+	}
+
+	ret = true;
+done:
+	if (!ret)
+		KGSL_DRV_ERR(dev_priv->device,
+			"parsing failed: gpuaddr:0x%08x, "
+			"host:0x%p, wc:%d\n", gpuaddr, hoststart, sizedwords);
+
+	level--;
+
+	return ret;
+}
+
 int
 adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 				struct kgsl_context *context,
@@ -594,9 +821,12 @@ adreno_ringbuffer_issueibcmds(struct kgsl_device_private *dev_priv,
 		start_index = 1;
 
 	for (i = start_index; i < numibs; i++) {
-		(void)kgsl_cffdump_parse_ibs(dev_priv, NULL,
-			ibdesc[i].gpuaddr, ibdesc[i].sizedwords, false);
-
+		if (unlikely(adreno_dev->ib_check_level >= 1 &&
+		    !_parse_ibs(dev_priv, ibdesc[i].gpuaddr,
+				ibdesc[i].sizedwords))) {
+			kfree(link);
+			return -EINVAL;
+		}
 		*cmds++ = CP_HDR_INDIRECT_BUFFER_PFD;
 		*cmds++ = ibdesc[i].gpuaddr;
 		*cmds++ = ibdesc[i].sizedwords;
@@ -832,4 +1062,53 @@ adreno_ringbuffer_restore(struct adreno_ringbuffer *rb, unsigned int *rb_buff,
 		GSL_RB_WRITE(ringcmds, rcmd_gpu, rb_buff[i]);
 	rb->wptr += num_rb_contents;
 	adreno_ringbuffer_submit(rb);
+}
+
+void adreno_print_fault_ib_work(struct work_struct *work)
+{
+	struct kgsl_device *device = container_of(work, struct kgsl_device,
+				print_fault_ib);
+	mutex_lock(&device->mutex);
+	adreno_print_fault_ib(device);
+	mutex_unlock(&device->mutex);
+}
+
+void adreno_print_fault_ib(struct kgsl_device *device)
+{
+	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
+	struct ib_list ib_list;
+	int i;
+
+	unsigned int ib_sz;
+
+	if (!device->page_fault_ptbase ||
+		!is_adreno_ib_dump_on_pagef_enabled(device))
+		goto done;
+
+	ib_sz = find_faulting_ib1_size(&adreno_dev->ringbuffer,
+					device->page_fault_rptr,
+					device->page_fault_ib1);
+	if (!ib_sz) {
+		KGSL_DRV_ERR(device, "Could not find size of fault ib 0x%x\n",
+				device->page_fault_ib1);
+		goto done;
+	}
+	ib_list.count = 0;
+
+	KGSL_DRV_ERR(device, "Page faulting IB1 0x%x, size 0x%x\n",
+			device->page_fault_ib1, ib_sz);
+	dump_ib1(device, device->page_fault_ptbase, 0,
+		device->page_fault_ib1, ib_sz, &ib_list, true);
+
+	/* print ib2's in faulting ib1 */
+	for (i = 0; i < ib_list.count; i++) {
+		KGSL_DRV_ERR(device, "IB2 0x%x, size 0x%x\n",
+			ib_list.bases[i], ib_list.sizes[i]);
+		dump_ib(device, "IB2:", device->page_fault_ptbase,
+			ib_list.offsets[i], ib_list.bases[i], ib_list.sizes[i],
+			true);
+	}
+	KGSL_DRV_ERR(device, "Finished printing fault IB\n");
+done:
+	device->page_fault_ptbase = 0;
 }

@@ -16,9 +16,8 @@
 #include <linux/uaccess.h>
 #include <linux/wait.h>
 #include <linux/mutex.h>
-#include <linux/dma-mapping.h>
-#include <linux/android_pmem.h>
 
+#include <asm/mach-types.h>
 #include <mach/qdsp6v2/audio_acdb.h>
 #include <mach/qdsp6v2/rtac.h>
 
@@ -35,8 +34,10 @@
 #define VOC_PATH_PASSIVE 0
 #define VOC_PATH_FULL 1
 
-#define CVP_CAL_SIZE (240 * 1024)
-#define CVS_CAL_SIZE (48 * 1024)
+/* CVP CAL Size: 245760 = 240 * 1024 */
+#define CVP_CAL_SIZE 245760
+/* CVS CAL Size: 49152 = 48 * 1024 */
+#define CVS_CAL_SIZE 49152
 
 static struct common_data common;
 
@@ -3725,18 +3726,73 @@ static int32_t qdsp_cvp_callback(struct apr_client_data *data, void *priv)
 static int __init voice_init(void)
 {
 	int rc = 0, i = 0;
+	int len;
 
 	memset(&common, 0, sizeof(struct common_data));
 
 	/* Allocate memory for VoIP calibration */
-	common.cvp_cal.phy = pmem_kalloc(CVP_CAL_SIZE,
-				PMEM_MEMTYPE_EBI1|PMEM_ALIGNMENT_4K);
-	common.cvp_cal.buf = ioremap(common.cvp_cal.phy, CVP_CAL_SIZE);
+	common.client = msm_ion_client_create(UINT_MAX, "voip_client");
+	if (IS_ERR_OR_NULL((void *)common.client)) {
+		pr_err("%s: ION create client for Voip failed\n", __func__);
+		goto cont;
+	}
+	common.cvp_cal.handle = ion_alloc(common.client, CVP_CAL_SIZE, SZ_4K,
+					  ION_HEAP(ION_AUDIO_HEAP_ID));
+	if (IS_ERR_OR_NULL((void *) common.cvp_cal.handle)) {
+		pr_err("%s: ION memory allocation for CVP failed\n",
+			__func__);
+		ion_client_destroy(common.client);
+		goto cont;
+	}
 
-	common.cvs_cal.phy = pmem_kalloc(CVS_CAL_SIZE,
-					PMEM_MEMTYPE_EBI1|PMEM_ALIGNMENT_4K);
-	common.cvs_cal.buf = ioremap(common.cvs_cal.phy, CVS_CAL_SIZE);
+	rc = ion_phys(common.client, common.cvp_cal.handle,
+		  (ion_phys_addr_t *)&common.cvp_cal.phy, (size_t *)&len);
+	if (rc) {
+		pr_err("%s: ION Get Physical for cvp failed, rc = %d\n",
+			__func__, rc);
+		ion_free(common.client, common.cvp_cal.handle);
+		ion_client_destroy(common.client);
+		goto cont;
+	}
 
+	common.cvp_cal.buf = ion_map_kernel(common.client,
+					common.cvp_cal.handle, 0);
+	if (IS_ERR_OR_NULL((void *) common.cvp_cal.buf)) {
+		pr_err("%s: ION memory mapping for cvp failed\n", __func__);
+		common.cvp_cal.buf = NULL;
+		ion_free(common.client, common.cvp_cal.handle);
+		ion_client_destroy(common.client);
+		goto cont;
+	}
+	memset((void *)common.cvp_cal.buf, 0, CVP_CAL_SIZE);
+
+	common.cvs_cal.handle = ion_alloc(common.client, CVS_CAL_SIZE, SZ_4K,
+					 ION_HEAP(ION_AUDIO_HEAP_ID));
+	if (IS_ERR_OR_NULL((void *) common.cvs_cal.handle)) {
+		pr_err("%s: ION memory allocation for CVS failed\n",
+			__func__);
+		goto cont;
+	}
+
+	rc = ion_phys(common.client, common.cvs_cal.handle,
+		  (ion_phys_addr_t *)&common.cvs_cal.phy, (size_t *)&len);
+	if (rc) {
+		pr_err("%s: ION Get Physical for cvs failed, rc = %d\n",
+			__func__, rc);
+		ion_free(common.client, common.cvs_cal.handle);
+		goto cont;
+	}
+
+	common.cvs_cal.buf = ion_map_kernel(common.client,
+					common.cvs_cal.handle, 0);
+	if (IS_ERR_OR_NULL((void *) common.cvs_cal.buf)) {
+		pr_err("%s: ION memory mapping for cvs failed\n", __func__);
+		common.cvs_cal.buf = NULL;
+		ion_free(common.client, common.cvs_cal.handle);
+		goto cont;
+	}
+	memset((void *)common.cvs_cal.buf, 0, CVS_CAL_SIZE);
+cont:
 	/* set default value */
 	common.default_mute_val = 1;  /* default is mute */
 	common.default_vol_val = 0;
