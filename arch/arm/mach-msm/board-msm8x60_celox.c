@@ -176,6 +176,10 @@
 #include <mach/tdmb_pdata.h>
 #endif
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+#include <linux/memblock.h>
+#endif
+
 #define MSM_SHARED_RAM_PHYS 0x40000000
 
 #ifdef CONFIG_OPTICAL_GP2A
