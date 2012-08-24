@@ -34,7 +34,7 @@
 #include <linux/cpufreq.h>
 #include <linux/kernel_stat.h>
 #include <linux/tick.h>
-#include "acpuclock.h"
+#include <asm/smp_plat.h>
 
 #define MAX_LONG_SIZE 24
 #define DEFAULT_RQ_POLL_JIFFIES 1
@@ -45,16 +45,16 @@ struct notifier_block cpu_hotplug;
 struct notifier_block freq_policy;
 
 struct cpu_load_data {
-       cputime64_t prev_cpu_idle;
-       cputime64_t prev_cpu_wall;
-       cputime64_t prev_cpu_iowait;
-       unsigned int avg_load_maxfreq;
-       unsigned int samples;
-       unsigned int window_size;
-       unsigned int cur_freq;
-       unsigned int policy_max;
-       cpumask_var_t related_cpus;
-       struct mutex cpu_load_mutex;
+	cputime64_t prev_cpu_idle;
+	cputime64_t prev_cpu_wall;
+	cputime64_t prev_cpu_iowait;
+	unsigned int avg_load_maxfreq;
+	unsigned int samples;
+	unsigned int window_size;
+	unsigned int cur_freq;
+	unsigned int policy_max;
+	cpumask_var_t related_cpus;
+	struct mutex cpu_load_mutex;
 };
 
 static DEFINE_PER_CPU(struct cpu_load_data, cpuload);
@@ -67,20 +67,20 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 
 	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
 
-	busy_time  = kstat_cpu(cpu).cpustat.user;
-	busy_time += kstat_cpu(cpu).cpustat.system;
-	busy_time += kstat_cpu(cpu).cpustat.irq;
-	busy_time += kstat_cpu(cpu).cpustat.softirq;
-	busy_time += kstat_cpu(cpu).cpustat.steal;
-	busy_time += kstat_cpu(cpu).cpustat.nice;
+	busy_time  = kcpustat_cpu(cpu).cpustat[CPUTIME_USER];
+	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
+	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_IRQ];
+	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_SOFTIRQ];
+	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_STEAL];
+	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
 
 	idle_time = cur_wall_time - busy_time;
 	if (wall)
 		*wall = jiffies_to_usecs(cur_wall_time);
 
 	return jiffies_to_usecs(idle_time);
- }
- 
+}
+
 static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 {
 	u64 idle_time = get_cpu_idle_time_us(cpu, NULL);
@@ -94,7 +94,7 @@ static inline cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall)
 }
 
 static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
-                                                        cputime64_t *wall)
+							cputime64_t *wall)
 {
 	u64 iowait_time = get_cpu_iowait_time_us(cpu, wall);
 
@@ -106,6 +106,7 @@ static inline cputime64_t get_cpu_iowait_time(unsigned int cpu,
 
 static int update_average_load(unsigned int freq, unsigned int cpu)
 {
+
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
 	cputime64_t cur_wall_time, cur_idle_time, cur_iowait_time;
 	unsigned int idle_time, wall_time, iowait_time;
@@ -123,6 +124,9 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 	iowait_time = (unsigned int) (cur_iowait_time - pcpu->prev_cpu_iowait);
 	pcpu->prev_cpu_iowait = cur_iowait_time;
 
+	if (idle_time >= iowait_time)
+		idle_time -= iowait_time;
+
 	if (unlikely(!wall_time || wall_time < idle_time))
 		return 0;
 
@@ -137,10 +141,10 @@ static int update_average_load(unsigned int freq, unsigned int cpu)
 		pcpu->window_size = wall_time;
 	} else {
 		/*
-		* The is already a sample available in this window.
-		* Compute weighted average with prev entry, so that we get
-		* the precise weighted load.
-		*/
+		 * The is already a sample available in this window.
+		 * Compute weighted average with prev entry, so that we get
+		 * the precise weighted load.
+		 */
 		pcpu->avg_load_maxfreq =
 			((pcpu->avg_load_maxfreq * pcpu->window_size) +
 			(load_at_max_freq * wall_time)) /
@@ -170,7 +174,7 @@ static unsigned int report_load_at_max_freq(void)
 }
 
 static int cpufreq_transition_handler(struct notifier_block *nb,
-                        unsigned long val, void *data)
+			unsigned long val, void *data)
 {
 	struct cpufreq_freqs *freqs = data;
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, freqs->cpu);
@@ -191,7 +195,7 @@ static int cpufreq_transition_handler(struct notifier_block *nb,
 }
 
 static int cpu_hotplug_handler(struct notifier_block *nb,
-                        unsigned long val, void *data)
+			unsigned long val, void *data)
 {
 	unsigned int cpu = (unsigned long)data;
 	struct cpu_load_data *this_cpu = &per_cpu(cpuload, cpu);
@@ -400,7 +404,18 @@ static struct kobj_attribute def_timer_ms_attr =
 	__ATTR(def_timer_ms, S_IWUSR | S_IRUSR, show_def_timer_ms,
 			store_def_timer_ms);
 
+static ssize_t show_cpu_normalized_load(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, MAX_LONG_SIZE, "%u\n", report_load_at_max_freq());
+}
+
+static struct kobj_attribute cpu_normalized_load_attr =
+	__ATTR(cpu_normalized_load, S_IWUSR | S_IRUSR, show_cpu_normalized_load,
+			NULL);
+
 static struct attribute *rq_attrs[] = {
+	&cpu_normalized_load_attr.attr,
 	&def_timer_ms_attr.attr,
 	&run_queue_avg_attr.attr,
 	&run_queue_poll_ms_attr.attr,
@@ -438,6 +453,11 @@ static int __init msm_rq_stats_init(void)
 	int ret;
 	int i;
 	struct cpufreq_policy cpu_policy;
+	/* Bail out if this is not an SMP Target */
+	if (!is_smp()) {
+		rq_info.init = 0;
+		return -ENOSYS;
+	}
 
 	rq_wq = create_singlethread_workqueue("rq_stats");
 	BUG_ON(!rq_wq);
@@ -450,6 +470,7 @@ static int __init msm_rq_stats_init(void)
 	ret = init_rq_attribs();
 
 	rq_info.init = 1;
+
 	for_each_possible_cpu(i) {
 		struct cpu_load_data *pcpu = &per_cpu(cpuload, i);
 		mutex_init(&pcpu->cpu_load_mutex);
