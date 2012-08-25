@@ -146,7 +146,6 @@ enum sdio_channels_ids {
 	SDIO_DIAG,
 	SDIO_DUN,
 	SDIO_SMEM,
-	SDIO_CIQ,
 	SDIO_CSVT,
 	SDIO_MAX_CHANNELS
 };
@@ -297,7 +296,6 @@ struct test_context {
 	u8 *smem_buf;
 	uint32_t smem_counter;
 
-	struct platform_device *ciq_app_pdev;
 	struct platform_device *csvt_app_pdev;
 
 	wait_queue_head_t   wait_q;
@@ -1181,7 +1179,6 @@ static ssize_t all_channels_test_write(struct file *file,
 		set_params_a2_perf(test_ctx->test_ch_arr[SDIO_RMNT]);
 		set_params_a2_perf(test_ctx->test_ch_arr[SDIO_DUN]);
 		set_params_smem_test(test_ctx->test_ch_arr[SDIO_SMEM]);
-		set_params_loopback_9k(test_ctx->test_ch_arr[SDIO_CIQ]);
 		set_params_a2_perf(test_ctx->test_ch_arr[SDIO_CSVT]);
 
 		ret = test_start();
@@ -1284,13 +1281,8 @@ const struct file_operations host_sender_no_lp_diag_test_ops = {
 	.read = host_sender_no_lp_diag_test_read,
 };
 
-<<<<<<< HEAD
-/* HOST SENDER NO LP DIAG, RPC, CIQ TEST */
-static ssize_t host_sender_no_lp_diag_rpc_ciq_test_write(
-=======
 /* HOST SENDER NO LP DIAG, RPC TEST */
 static ssize_t host_sender_no_lp_diag_rpc_test_write(
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 						 struct file *file,
 						 const char __user *buf,
 						 size_t count,
@@ -1300,13 +1292,8 @@ static ssize_t host_sender_no_lp_diag_rpc_test_write(
 	int i = 0;
 	int number = -1;
 
-<<<<<<< HEAD
-	pr_info(TEST_MODULE_NAME "-- HOST SENDER NO LP FOR DIAG, RPC, "
-		"CIQ TEST --");
-=======
 	pr_info(TEST_MODULE_NAME "-- HOST SENDER NO LP FOR DIAG, RPC "
 		"TEST --");
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 
 	number = sdio_al_test_extract_number(buf, count);
 
@@ -1323,10 +1310,6 @@ static ssize_t host_sender_no_lp_diag_rpc_test_write(
 		sdio_al_test_initial_dev_and_chan(test_ctx);
 
 		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_DIAG]);
-<<<<<<< HEAD
-		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_CIQ]);
-=======
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		set_params_8k_sender_no_lp(test_ctx->test_ch_arr[SDIO_RPC]);
 
 		ret = test_start();
@@ -1338,11 +1321,7 @@ static ssize_t host_sender_no_lp_diag_rpc_test_write(
 	return count;
 }
 
-<<<<<<< HEAD
-static ssize_t host_sender_no_lp_diag_rpc_ciq_test_read(
-=======
 static ssize_t host_sender_no_lp_diag_rpc_test_read(
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 						 struct file *file,
 						 char __user *buffer,
 						 size_t count,
@@ -1351,11 +1330,7 @@ static ssize_t host_sender_no_lp_diag_rpc_test_read(
 	memset((void *)buffer, 0, count);
 
 	snprintf(buffer, count,
-<<<<<<< HEAD
-		 "\nHOST_SENDER_NO_LP_DIAG_RPC_CIQ_TEST\n"
-=======
 		 "\nHOST_SENDER_NO_LP_DIAG_RPC_TEST\n"
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		 "===================================\n"
 		 "Description:\n"
 		 "TBD\n");
@@ -1368,17 +1343,10 @@ static ssize_t host_sender_no_lp_diag_rpc_test_read(
 	}
 }
 
-<<<<<<< HEAD
-const struct file_operations host_sender_no_lp_diag_rpc_ciq_test_ops = {
-	.open = sdio_al_test_open,
-	.write = host_sender_no_lp_diag_rpc_ciq_test_write,
-	.read = host_sender_no_lp_diag_rpc_ciq_test_read,
-=======
 const struct file_operations host_sender_no_lp_diag_rpc_test_ops = {
 	.open = sdio_al_test_open,
 	.write = host_sender_no_lp_diag_rpc_test_write,
 	.read = host_sender_no_lp_diag_rpc_test_read,
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 };
 
 /* RMNET SMALL PACKETS TEST */
@@ -1802,7 +1770,6 @@ static ssize_t modem_reset_channels_8bit_dev_test_write(
 
 		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_RMNT]);
 		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_DUN]);
-		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_CIQ]);
 
 		ret = test_start();
 
@@ -1872,7 +1839,6 @@ static ssize_t modem_reset_all_channels_test_write(struct file *file,
 		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_DIAG]);
 		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_RMNT]);
 		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_DUN]);
-		set_params_modem_reset(test_ctx->test_ch_arr[SDIO_CIQ]);
 
 		ret = test_start();
 
@@ -1938,7 +1904,6 @@ static ssize_t open_close_test_write(struct file *file,
 		sdio_al_test_initial_dev_and_chan(test_ctx);
 
 		set_params_loopback_9k_close(ch_arr[SDIO_DIAG]);
-		set_params_loopback_9k_close(ch_arr[SDIO_CIQ]);
 		set_params_loopback_9k_close(ch_arr[SDIO_RPC]);
 		set_params_loopback_9k_close(ch_arr[SDIO_SMEM]);
 		set_params_loopback_9k_close(ch_arr[SDIO_QMI]);
@@ -1952,13 +1917,8 @@ static ssize_t open_close_test_write(struct file *file,
 			break;
 
 		pr_info(TEST_MODULE_NAME " -- correctness test for"
-<<<<<<< HEAD
-				"DIAG, CIQ ");
-=======
 				"DIAG ");
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 		set_params_loopback_9k(ch_arr[SDIO_DIAG]);
-		set_params_loopback_9k(ch_arr[SDIO_CIQ]);
 
 		ret = test_start();
 
@@ -1982,7 +1942,7 @@ static ssize_t open_close_test_read(struct file *file,
 		 "Description:\n"
 		 "In this test the host sends 5k packets to the modem in the "
 		 "following sequence: Send a random burst of packets on "
-		 "Diag, CIQ and Rmnet channels, read 0 or a random number "
+		 "Diag and Rmnet channels, read 0 or a random number "
 		 "of packets, close and re-open the channel. At the end of the "
 		 "test, the channel is verified by running a loopback test\n\n"
 		 "END OF DESCRIPTION\n");
@@ -2405,8 +2365,6 @@ static ssize_t lpm_test_random_multi_channel_test_write(
 
 		set_params_lpm_test(test_ctx->test_ch_arr[SDIO_RPC],
 				    SDIO_TEST_LPM_RANDOM, 0);
-		set_params_lpm_test(test_ctx->test_ch_arr[SDIO_CIQ],
-				    SDIO_TEST_LPM_RANDOM, 0);
 		set_params_lpm_test(test_ctx->test_ch_arr[SDIO_DIAG],
 				    SDIO_TEST_LPM_RANDOM, 0);
 		set_params_lpm_test(test_ctx->test_ch_arr[SDIO_QMI],
@@ -2435,7 +2393,7 @@ static ssize_t lpm_test_random_multi_channel_test_read(
 		 "Description:\n"
 		 "In this test, the HOST and CLIENT "
 		 "send messages to each other,\n"
-		 "random in time, over RPC, QMI, DIAG AND CIQ channels\n"
+		 "random in time, over RPC, QMI AND DIAG channels\n"
 		 "(i.e, on both SDIO devices).\n"
 		 "All events are being recorded, and later on,\n"
 		 "they are being analysed by the HOST and by the CLIENT,\n"
@@ -2577,21 +2535,12 @@ static int sdio_al_test_debugfs_init(void)
 				    NULL,
 				    &host_sender_no_lp_diag_test_ops);
 
-<<<<<<< HEAD
-	test_ctx->debug.host_sender_no_lp_diag_rpc_ciq_test =
-		debugfs_create_file("170_host_sender_no_lp_diag_rpc_ciq_test",
-				     S_IRUGO | S_IWUSR |S_IWGRP,
-				     test_ctx->debug.debug_root,
-				     NULL,
-				     &host_sender_no_lp_diag_rpc_ciq_test_ops);
-=======
 	test_ctx->debug.host_sender_no_lp_diag_rpc_test =
 		debugfs_create_file("170_host_sender_no_lp_diag_rpc_test",
-				     S_IRUGO | S_IWUSR |S_IWGRP,
+				     S_IRUGO | S_IWUGO,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &host_sender_no_lp_diag_rpc_test_ops);
->>>>>>> 6d7604e... msm8660: import latest I717 kernel source
 
 	test_ctx->debug.rmnet_small_packets_test =
 		debugfs_create_file("180_rmnet_small_packets_test",
@@ -2738,9 +2687,6 @@ static int channel_name_to_id(char *name)
 	else if (!strncmp(name, "SDIO_SMEM_TEST",
 			  strnlen("SDIO_SMEM_TEST", TEST_CH_NAME_SIZE)))
 		return SDIO_SMEM;
-	else if (!strncmp(name, "SDIO_CIQ_TEST",
-			  strnlen("SDIO_CIQ_TEST", TEST_CH_NAME_SIZE)))
-		return SDIO_CIQ;
 	else if (!strncmp(name, "SDIO_CSVT_TEST",
 			  strnlen("SDIO_CSVT_TEST", TEST_CH_NAME_SIZE)))
 		return SDIO_CSVT;
@@ -5870,7 +5816,6 @@ static int set_params_loopback_9k_close(struct test_channel *tch)
 	case SDIO_RPC:
 		tch->packet_length = 128; /* max is 2K*/
 		break;
-	case SDIO_CIQ:
 	case SDIO_DIAG:
 	case SDIO_RMNT:
 	default:
@@ -6338,34 +6283,6 @@ static int sdio_test_channel_remove(struct platform_device *pdev)
 
 }
 
-static int sdio_test_channel_ciq_probe(struct platform_device *pdev)
-{
-	int ret = 0;
-
-	if (!pdev)
-		return -ENODEV;
-
-	test_ctx->ciq_app_pdev = platform_device_alloc("SDIO_CIQ_TEST_APP", -1);
-	ret = platform_device_add(test_ctx->ciq_app_pdev);
-		if (ret) {
-			pr_err(MODULE_NAME ":platform_device_add failed, "
-					   "ret=%d\n", ret);
-			return ret;
-		}
-
-	return sdio_test_channel_probe(pdev);
-}
-
-static int sdio_test_channel_ciq_remove(struct platform_device *pdev)
-{
-	if (!pdev)
-		return -ENODEV;
-
-	platform_device_unregister(test_ctx->ciq_app_pdev);
-
-	return sdio_test_channel_remove(pdev);
-}
-
 static int sdio_test_channel_csvt_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -6449,19 +6366,6 @@ static struct platform_driver sdio_dun_drv = {
 	},
 };
 
-#ifdef CONFIG_EUR_MODEL_GT_I9210
-// delete ciq for eur model 9210
-#else
-static struct platform_driver sdio_ciq_drv = {
-	.probe		= sdio_test_channel_ciq_probe,
-	.remove		= sdio_test_channel_ciq_remove,
-	.driver		= {
-		.name	= "SDIO_CIQ_TEST",
-		.owner	= THIS_MODULE,
-	},
-};
-#endif
-
 static struct platform_driver sdio_csvt_drv = {
 	.probe		= sdio_test_channel_csvt_probe,
 	.remove		= sdio_test_channel_csvt_remove,
@@ -6543,11 +6447,6 @@ static int __init test_init(void)
 	platform_driver_register(&sdio_smem_drv);
 	platform_driver_register(&sdio_rmnt_drv);
 	platform_driver_register(&sdio_dun_drv);
-#ifdef CONFIG_EUR_MODEL_GT_I9210
-	// delete ciq for eur model 9210
-#else
-	platform_driver_register(&sdio_ciq_drv);
-#endif
 	platform_driver_register(&sdio_csvt_drv);
 
 	return ret;
@@ -6576,11 +6475,6 @@ static void __exit test_exit(void)
 	platform_driver_unregister(&sdio_smem_drv);
 	platform_driver_unregister(&sdio_rmnt_drv);
 	platform_driver_unregister(&sdio_dun_drv);
-#ifdef CONFIG_EUR_MODEL_GT_I9210
-	// delete ciq for eur model 9210
-#else
-	platform_driver_unregister(&sdio_ciq_drv);
-#endif
 	platform_driver_unregister(&sdio_csvt_drv);
 
 	for (i = 0; i < SDIO_MAX_CHANNELS; i++) {

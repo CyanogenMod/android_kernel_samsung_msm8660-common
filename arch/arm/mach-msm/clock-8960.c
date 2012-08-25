@@ -4500,6 +4500,7 @@ static DEFINE_CLK_VOTER(dfab_sps_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_bam_dmux_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_scm_clk, &dfab_clk.c);
 static DEFINE_CLK_VOTER(dfab_tzcom_clk, &dfab_clk.c);
+static DEFINE_CLK_VOTER(dfab_qseecom_clk, &dfab_clk.c);
 
 static DEFINE_CLK_VOTER(ebi1_msmbus_clk, &ebi1_clk.c);
 /*
@@ -5132,6 +5133,7 @@ static struct clk_lookup msm_clocks_8064[] = {
 	CLK_DUMMY("dfab_clk",		DFAB_CLK,		NULL, 0),
 	CLK_DUMMY("bus_clk",		DFAB_SCM_CLK,	"scm", 0),
 	CLK_LOOKUP("bus_clk",		dfab_tzcom_clk.c,       "tzcom"),
+        CLK_LOOKUP("bus_clk",           dfab_qseecom_clk.c,     "qseecom"),
 	CLK_LOOKUP("alt_core_clk",    usb_hsic_xcvr_fs_clk.c,  "msm_hsic_host"),
 	CLK_LOOKUP("phy_clk",	      usb_hsic_hsic_clk.c,     "msm_hsic_host"),
 	CLK_LOOKUP("cal_clk",	      usb_hsic_hsio_cal_clk.c, "msm_hsic_host"),
@@ -5274,10 +5276,10 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 			   csiphy_timer_src_clk.c, "msm_csiphy.1"),
 	CLK_LOOKUP("csiphy_timer_clk",	csi0phy_timer_clk.c,	"msm_csiphy.0"),
 	CLK_LOOKUP("csiphy_timer_clk",	csi1phy_timer_clk.c,	"msm_csiphy.1"),
-	CLK_LOOKUP("dsi_byte_div_clk",	dsi1_byte_clk.c,	NULL),
-	CLK_LOOKUP("dsi_byte_div_clk",	dsi2_byte_clk.c,	NULL),
-	CLK_LOOKUP("dsi_esc_clk",	dsi1_esc_clk.c,		NULL),
-	CLK_LOOKUP("dsi_esc_clk",	dsi2_esc_clk.c,		NULL),
+	CLK_LOOKUP("byte_clk",	dsi1_byte_clk.c,	"mipi_dsi.1"),
+	CLK_LOOKUP("byte_clk",	dsi2_byte_clk.c,	"mipi_dsi.2"),
+	CLK_LOOKUP("esc_clk",	dsi1_esc_clk.c,		"mipi_dsi.1"),
+	CLK_LOOKUP("esc_clk",	dsi2_esc_clk.c,		"mipi_dsi.2"),
 	CLK_LOOKUP("core_clk",		gfx2d0_clk.c,	"kgsl-2d0.0"),
 	CLK_LOOKUP("core_clk",		gfx2d0_clk.c,	"footswitch-8x60.0"),
 	CLK_LOOKUP("core_clk",		gfx2d1_clk.c,	"kgsl-2d1.1"),
@@ -5289,23 +5291,25 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 	CLK_LOOKUP("ijpeg_clk",         ijpeg_clk.c,            NULL),
 	CLK_LOOKUP("core_clk",		ijpeg_clk.c,	"footswitch-8x60.3"),
 	CLK_LOOKUP("core_clk",		jpegd_clk.c,		NULL),
-	CLK_LOOKUP("mdp_clk",		mdp_clk.c,		NULL),
+	CLK_LOOKUP("core_clk",		mdp_clk.c,		"mdp.0"),
 	CLK_LOOKUP("core_clk",		mdp_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("mdp_vsync_clk",	mdp_vsync_clk.c,	NULL),
+	CLK_LOOKUP("vsync_clk",	mdp_vsync_clk.c,	"mdp.0"),
 	CLK_LOOKUP("vsync_clk",		mdp_vsync_clk.c, "footswitch-8x60.4"),
-	CLK_LOOKUP("lut_mdp",		lut_mdp_clk.c,		NULL),
+	CLK_LOOKUP("lut_clk",		lut_mdp_clk.c,		"mdp.0"),
 	CLK_LOOKUP("lut_clk",		lut_mdp_clk.c,	"footswitch-8x60.4"),
 	CLK_LOOKUP("core_clk",		rot_clk.c,	"msm_rotator.0"),
 	CLK_LOOKUP("core_clk",		rot_clk.c,	"footswitch-8x60.6"),
-	CLK_LOOKUP("tv_src_clk",	tv_src_clk.c,		NULL),
+	CLK_LOOKUP("src_clk",	tv_src_clk.c,		"dtv.0"),
+	CLK_LOOKUP("src_clk",	tv_src_clk.c,		"tvenc.0"),
 	CLK_LOOKUP("tv_src_clk",	tv_src_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("tv_enc_clk",	tv_enc_clk.c,		NULL),
-	CLK_LOOKUP("tv_dac_clk",	tv_dac_clk.c,		NULL),
+	CLK_LOOKUP("enc_clk",	tv_enc_clk.c,		"tvenc.0"),
+	CLK_LOOKUP("dac_clk",	tv_dac_clk.c,		"tvenc.0"),
 	CLK_LOOKUP("core_clk",		vcodec_clk.c,	"msm_vidc.0"),
 	CLK_LOOKUP("core_clk",		vcodec_clk.c,	"footswitch-8x60.7"),
-	CLK_LOOKUP("mdp_tv_clk",	mdp_tv_clk.c,		NULL),
+	CLK_LOOKUP("mdp_clk",	mdp_tv_clk.c,		"dtv.0"),
+	CLK_LOOKUP("mdp_clk",	mdp_tv_clk.c,		"tvenc.0"),
 	CLK_LOOKUP("tv_clk",		mdp_tv_clk.c,	"footswitch-8x60.4"),
-	CLK_LOOKUP("hdmi_clk",		hdmi_tv_clk.c,		NULL),
+	CLK_LOOKUP("hdmi_clk",		hdmi_tv_clk.c,		"dtv.0"),
 	CLK_LOOKUP("core_clk",		hdmi_app_clk.c,	"hdmi_msm.1"),
 	CLK_LOOKUP("vpe_clk",		vpe_clk.c,		"msm_vpe.0"),
 	CLK_LOOKUP("core_clk",		vpe_clk.c,	"footswitch-8x60.9"),
@@ -5319,13 +5323,14 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 	CLK_LOOKUP("bus_a_clk",	       vcodec_axi_a_clk.c, "footswitch-8x60.7"),
 	CLK_LOOKUP("bus_b_clk",        vcodec_axi_b_clk.c, "footswitch-8x60.7"),
 	CLK_LOOKUP("bus_clk",		vpe_axi_clk.c,	"footswitch-8x60.9"),
-	CLK_LOOKUP("amp_pclk",		amp_p_clk.c,		NULL),
+	CLK_LOOKUP("arb_clk",		amp_p_clk.c,		"mipi_dsi.1"),
+	CLK_LOOKUP("arb_clk",		amp_p_clk.c,		"mipi_dsi.2"),
 	CLK_LOOKUP("csi_pclk",		csi_p_clk.c,		"msm_csid.0"),
 	CLK_LOOKUP("csi_pclk",		csi_p_clk.c,		"msm_csid.1"),
-	CLK_LOOKUP("dsi_m_pclk",	dsi1_m_p_clk.c,		NULL),
-	CLK_LOOKUP("dsi_s_pclk",	dsi1_s_p_clk.c,		NULL),
-	CLK_LOOKUP("dsi_m_pclk",	dsi2_m_p_clk.c,		NULL),
-	CLK_LOOKUP("dsi_s_pclk",	dsi2_s_p_clk.c,		NULL),
+	CLK_LOOKUP("master_iface_clk",	dsi1_m_p_clk.c,		"mipi_dsi.1"),
+	CLK_LOOKUP("slave_iface_clk",	dsi1_s_p_clk.c,		"mipi_dsi.1"),
+	CLK_LOOKUP("master_iface_clk",	dsi2_m_p_clk.c,		"mipi_dsi.2"),
+	CLK_LOOKUP("slave_iface_clk",	dsi2_s_p_clk.c,		"mipi_dsi.2"),
 	CLK_LOOKUP("iface_clk",		gfx2d0_p_clk.c,	"kgsl-2d0.0"),
 	CLK_LOOKUP("iface_clk",		gfx2d0_p_clk.c,	"footswitch-8x60.0"),
 	CLK_LOOKUP("iface_clk",		gfx2d1_p_clk.c,	"kgsl-2d1.1"),
@@ -5338,12 +5343,12 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 	CLK_LOOKUP("iface_clk",		ijpeg_p_clk.c,	"footswitch-8x60.3"),
 	CLK_LOOKUP("iface_clk",		jpegd_p_clk.c,		NULL),
 	CLK_LOOKUP("mem_iface_clk",	imem_p_clk.c,		NULL),
-	CLK_LOOKUP("mdp_pclk",		mdp_p_clk.c,		NULL),
+	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,		"mdp.0"),
 	CLK_LOOKUP("iface_clk",		mdp_p_clk.c,	"footswitch-8x60.4"),
 	CLK_LOOKUP("iface_clk",		smmu_p_clk.c,	"msm_iommu"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"msm_rotator.0"),
 	CLK_LOOKUP("iface_clk",		rot_p_clk.c,	"footswitch-8x60.6"),
-	CLK_LOOKUP("tv_enc_pclk",	tv_enc_p_clk.c,		NULL),
+	CLK_LOOKUP("iface_clk",	tv_enc_p_clk.c,		"tvenc.0"),
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,	"msm_vidc.0"),
 	CLK_LOOKUP("iface_clk",		vcodec_p_clk.c,	"footswitch-8x60.7"),
 	CLK_LOOKUP("vfe_pclk",		vfe_p_clk.c,		"msm_vfe.0"),
@@ -5393,7 +5398,7 @@ static struct clk_lookup msm_clocks_8960_v1[] __initdata = {
 	CLK_LOOKUP("bus_clk",		dfab_bam_dmux_clk.c,	"BAM_RMNT"),
 	CLK_LOOKUP("bus_clk",		dfab_scm_clk.c,	"scm"),
 	CLK_LOOKUP("bus_clk",		dfab_tzcom_clk.c,	"tzcom"),
-
+	CLK_LOOKUP("bus_clk",		dfab_qseecom_clk.c,	"qseecom"),
 	CLK_LOOKUP("mem_clk",		ebi1_adm_clk.c, "msm_dmov"),
 
 	CLK_LOOKUP("l2_mclk",		l2_m_clk,     NULL),
@@ -5593,6 +5598,9 @@ static void __init reg_init(void)
 	/* Source the dsi_byte_clks from the DSI PHY PLLs */
 	rmwreg(0x1, DSI1_BYTE_NS_REG, 0x7);
 	rmwreg(0x2, DSI2_BYTE_NS_REG, 0x7);
+
+	/* Source the dsi1_esc_clk from the DSI1 PHY PLLs */
+	rmwreg(0x1, DSI1_ESC_NS_REG, 0x7);
 
 	/* Source the sata_phy_ref_clk from PXO */
 	if (cpu_is_apq8064())

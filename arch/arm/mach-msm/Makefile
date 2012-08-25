@@ -1,3 +1,4 @@
+CFLAGS_scm.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC=1)
 
 # replace board-msm8x60.o and gpiomux-8x60.o with own model's ones
 
@@ -28,6 +29,7 @@ ifdef CONFIG_TARGET_SERIES_P8LTE
 BOARD_OBJ_NAME:=board-msm8x60_p8lte.o
 GPIOMUX_OBJ_NAME:=gpiomux-8x60_p8lte.o
 endif
+
 
 obj-y += io.o dma.o memory.o
 ifndef CONFIG_ARM_ARCH_TIMER
@@ -101,6 +103,7 @@ obj-$(CONFIG_MSM_PIL_QDSP6V3) += pil-q6v3.o
 obj-$(CONFIG_MSM_PIL_QDSP6V4) += pil-q6v4.o
 obj-$(CONFIG_MSM_PIL_RIVA) += pil-riva.o
 obj-$(CONFIG_MSM_PIL_TZAPPS) += pil-tzapps.o
+obj-$(CONFIG_MSM_PIL_VIDC) += pil-vidc.o
 obj-$(CONFIG_MSM_PIL_MODEM) += pil-modem.o
 obj-$(CONFIG_ARCH_QSD8X50) += sirc.o
 obj-$(CONFIG_ARCH_FSM9XXX) += sirc-fsm9xxx.o

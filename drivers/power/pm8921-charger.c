@@ -417,23 +417,28 @@ static int pm_chg_charge_dis(struct pm8921_chg_chip *chip, int disable)
 
 #define PM8921_CHG_V_MIN_MV	3240
 #define PM8921_CHG_V_STEP_MV	20
-#define PM8921_CHG_V_STEP_10_MV_BIT	BIT(7)
+#define PM8921_CHG_V_STEP_10MV_OFFSET_BIT	BIT(7)
 #define PM8921_CHG_VDDMAX_MAX	4500
 #define PM8921_CHG_VDDMAX_MIN	3400
 #define PM8921_CHG_V_MASK	0x7F
 static int __pm_chg_vddmax_set(struct pm8921_chg_chip *chip, int voltage)
 {
-	int remainder, voltage_20_step;
+	int remainder;
 	u8 temp = 0;
 
-	voltage_20_step = voltage;
-	remainder = voltage % 20;
-	if (remainder >= 10) {
-		voltage_20_step += 10;
-		temp = PM8921_CHG_V_STEP_10_MV_BIT;
+	if (voltage < PM8921_CHG_VDDMAX_MIN
+			|| voltage > PM8921_CHG_VDDMAX_MAX) {
+		pr_err("bad mV=%d asked to set\n", voltage);
+		return -EINVAL;
 	}
 
-	temp |= (voltage_20_step - PM8921_CHG_V_MIN_MV) / PM8921_CHG_V_STEP_MV;
+	temp = (voltage - PM8921_CHG_V_MIN_MV) / PM8921_CHG_V_STEP_MV;
+
+	remainder = voltage % 20;
+	if (remainder >= 10) {
+		temp |= PM8921_CHG_V_STEP_10MV_OFFSET_BIT;
+	}
+
 	pr_debug("voltage=%d setting %02x\n", voltage, temp);
 	return pm8xxx_writeb(chip->dev->parent, CHG_VDD_MAX, temp);
 }
@@ -449,10 +454,10 @@ static int pm_chg_vddmax_get(struct pm8921_chg_chip *chip, int *voltage)
 		*voltage = 0;
 		return rc;
 	}
-	temp &= PM8921_CHG_V_MASK;
-	*voltage = (int)temp * PM8921_CHG_V_STEP_MV + PM8921_CHG_V_MIN_MV;
-	if (temp & PM8921_CHG_V_STEP_10_MV_BIT)
-		*voltage = *voltage - 10;
+	*voltage = (int)(temp & PM8921_CHG_V_MASK) * PM8921_CHG_V_STEP_MV
+							+ PM8921_CHG_V_MIN_MV;
+	if (temp & PM8921_CHG_V_STEP_10MV_OFFSET_BIT)
+		*voltage =  *voltage + 10;
 	return 0;
 }
 
@@ -2170,6 +2175,7 @@ static irqreturn_t batttemp_cold_irq_handler(int irq, void *data)
 
 static irqreturn_t chg_gone_irq_handler(int irq, void *data)
 {
+	u8 reg, rc;
 	struct pm8921_chg_chip *chip = data;
 	int chg_gone, usb_chg_plugged_in;
 
@@ -2177,6 +2183,13 @@ static irqreturn_t chg_gone_irq_handler(int irq, void *data)
 	chg_gone = pm_chg_get_rt_status(chip, CHG_GONE_IRQ);
 
 	pr_debug("chg_gone=%d, usb_valid = %d\n", chg_gone, usb_chg_plugged_in);
+
+	rc = pm8xxx_readb(chip->dev->parent, CHG_CNTRL_3, &reg);
+	if (rc)
+		pr_err("Failed to read CHG_CNTRL_3 rc=%d\n", rc);
+	if (reg & CHG_USB_SUSPEND_BIT)
+		return IRQ_HANDLED;
+
 	schedule_work(&chip->unplug_ovp_fet_open_work);
 
 	pr_debug("Chg gone fsm_state=%d\n", pm_chg_get_fsm_state(data));

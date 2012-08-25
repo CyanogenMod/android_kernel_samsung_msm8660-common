@@ -600,13 +600,13 @@ void read_reg( char srcReg, int srcLength, char* destBuffer, const int isUseMute
 //	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x14000000); // lp
 
 	packet_size[0] = (char) srcLength;
-	mipi_dsi_cmds_tx(pMFD, &s6e8aa0_tx_buf, &(s6e8aa0_packet_size_cmd),	1);
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &(s6e8aa0_packet_size_cmd),	1);
 
 	show_cnt = 0;
 	for( j = 0; j < loop_limit; j ++ )
 	{
 		reg_read_pos[1] = read_pos;
-		if( mipi_dsi_cmds_tx(pMFD, &s6e8aa0_tx_buf, &(s6e8aa0_read_pos_cmd), 1) < 1 ) {
+		if( mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &(s6e8aa0_read_pos_cmd), 1) < 1 ) {
 			LOG_ADD( "Tx command FAILED" );
 			break;
 		}
@@ -683,7 +683,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 		DPRINT("%s +\n", __func__);
 
 		txAmount = ARRAY_SIZE(s6e8aa0_display_on_before_read_id);
-		txCnt = mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_display_on_before_read_id,
+		txCnt = mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_display_on_before_read_id,
 				txAmount );    
 		if( txAmount != txCnt )	
 		{
@@ -797,7 +797,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 
 #endif
 		txAmount = ARRAY_SIZE(s6e8aa0_display_on_before_gamma_cmds);
-		txCnt = mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_display_on_before_gamma_cmds,
+		txCnt = mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_display_on_before_gamma_cmds,
 				txAmount );    
 
 		if( txAmount != txCnt )	
@@ -829,7 +829,7 @@ static int lcd_on_seq(struct msm_fb_data_type *mfd)
 		s6e8aa0_lcd.lcd_acl = acl_level; 
 		LOG_FINISH();
 
-		mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_display_on_after_gamma_cmds,
+		mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_display_on_after_gamma_cmds,
 				ARRAY_SIZE(s6e8aa0_display_on_after_gamma_cmds));    
 
 		s6e8aa0_lcd.lcd_state.initialized = TRUE;
@@ -850,7 +850,7 @@ failed_tx_lcd_on_seq:
 #else // regal process
 	mutex_lock(&(s6e8aa0_lcd.lock));
     // lcd_panel_init
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_display_on_cmds,
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_display_on_cmds,
 			ARRAY_SIZE(s6e8aa0_display_on_cmds));    
 	s6e8aa0_lcd.lcd_state.initialized = TRUE;
 	s6e8aa0_lcd.lcd_state.display_on = TRUE;
@@ -899,7 +899,7 @@ static int lcd_off_seq(struct msm_fb_data_type *mfd)
 
 	mutex_lock(&(s6e8aa0_lcd.lock));
 	set_lcd_esd_ignore( TRUE );
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_display_off_cmds,
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_display_off_cmds,
 			ARRAY_SIZE(s6e8aa0_display_off_cmds));
 	s6e8aa0_lcd.lcd_state.display_on = FALSE;
 	s6e8aa0_lcd.lcd_state.initialized = FALSE;
@@ -973,8 +973,8 @@ static int __devinit lcd_shutdown(struct platform_device *pdev)
 static void lcd_gamma_apply( struct msm_fb_data_type *mfd, int srcGamma)
 {
 	LOG_ADD( " GAMMA(%d=%dcd)", srcGamma, s6e8aa0_lcd.lcd_brightness_table[srcGamma].lux );
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_brightness_table[srcGamma].cmd,	1);
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_brightness_table[srcGamma].cmd,	1);
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
 }
 
 static void lcd_gamma_smartDimming_apply( struct msm_fb_data_type *mfd, int srcGamma)
@@ -1012,8 +1012,8 @@ static void lcd_gamma_smartDimming_apply( struct msm_fb_data_type *mfd, int srcG
 	}
 	DPRINT( "SD: %03d %s\n", gamma_lux, pBuffer );
 #endif 
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &DSI_CMD_SmartDimming_GAMMA,	1);
-	mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &DSI_CMD_SmartDimming_GAMMA,	1);
+	mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
 	LOG_ADD( " SDIMMING(%d=%dcd)", srcGamma, gamma_lux );
 }
 
@@ -1031,13 +1031,13 @@ static void lcd_gamma_ctl(struct msm_fb_data_type *mfd, struct lcd_setting *lcd)
 		{
 			mutex_lock(&(s6e8aa0_lcd.lock));
 			lcd_gamma_smartDimming_apply( mfd, gamma_level );
-			mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
+			mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
 			mutex_unlock(&(s6e8aa0_lcd.lock));
 		} 
 		else {
 		mutex_lock(&(s6e8aa0_lcd.lock));
 			lcd_gamma_apply( mfd, gamma_level );
-		mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
+		mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_gamma_update_cmd, 1);
 		mutex_unlock(&(s6e8aa0_lcd.lock));
 		}
 
@@ -1238,7 +1238,7 @@ static void lcd_apply_elvss(struct msm_fb_data_type *mfd, int srcElvss, struct l
 			update_elvss = (char) calc_elvss | 0x80; //0x80 = indentity of elvss;
 			EACH_ELVSS_COND_SET[EACH_ELVSS_COND_UPDATE_POS] = update_elvss;
 		
-			mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &(lcd_each_elvss_table[0]), 1);
+			mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &(lcd_each_elvss_table[0]), 1);
 			// elvss is always ON, It's not need update-cmd.
 
 			s6e8aa0_lcd.lcd_elvss = srcElvss;
@@ -1248,7 +1248,7 @@ static void lcd_apply_elvss(struct msm_fb_data_type *mfd, int srcElvss, struct l
 
 	if( lcd->factory_id_elvssType == lcd_id_elvss_normal )
 	{
-			mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_elvss_table[srcElvss].cmd,	1);
+			mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_elvss_table[srcElvss].cmd,	1);
 			// elvss is always ON, It's not need update-cmd.
 
 			s6e8aa0_lcd.lcd_elvss = srcElvss;
@@ -1304,16 +1304,16 @@ static void lcd_apply_acl(struct msm_fb_data_type *mfd, unsigned int srcAcl, boo
 #if 1 // Q1 : Not ACL-OFF by brightness
 	if( s6e8aa0_lcd.lcd_acl_table[srcAcl].lux == 0 )
 	{
-		mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_acl_off_cmd, 1);
+		mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_acl_off_cmd, 1);
 		LOG_ADD( " ACL(OFF:%s,%d)", s6e8aa0_lcd.lcd_acl_table[srcAcl].strID, s6e8aa0_lcd.lcd_acl_table[srcAcl].lux);
 	}
 	else
 #endif 	
 	{
-		mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_acl_table[srcAcl].cmd, 1);
+		mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, s6e8aa0_lcd.lcd_acl_table[srcAcl].cmd, 1);
 		if( nowOffNeedOn || s6e8aa0_lcd.lcd_acl_table[s6e8aa0_lcd.lcd_acl].lux == 0 )
 		{
-			mipi_dsi_cmds_tx(mfd, &s6e8aa0_tx_buf, &s6e8aa0_acl_on_cmd, 1);
+			mipi_dsi_cmds_tx(&s6e8aa0_tx_buf, &s6e8aa0_acl_on_cmd, 1);
 			LOG_ADD( " ACL(ON:%s,%d)", s6e8aa0_lcd.lcd_acl_table[srcAcl].strID, s6e8aa0_lcd.lcd_acl_table[srcAcl].lux);
 		}
 		else

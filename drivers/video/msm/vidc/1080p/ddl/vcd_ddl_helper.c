@@ -10,10 +10,12 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/ion.h>
 #include <mach/msm_memtypes.h>
 #include "vcd_ddl.h"
 #include "vcd_ddl_shared_mem.h"
 #include "vcd_res_tracker_api.h"
+
 
 struct ddl_context *ddl_get_context(void)
 {
@@ -255,6 +257,16 @@ u32 ddl_decoder_dpb_init(struct ddl_client_context *ddl)
 				memset(frame[i].vcd_frm.virtual + luma_size,
 					 0x80808080,
 					frame[i].vcd_frm.alloc_len - luma_size);
+				if (frame[i].vcd_frm.ion_flag == CACHED) {
+					msm_ion_do_cache_op(
+					ddl_context->video_ion_client,
+					frame[i].vcd_frm.buff_ion_handle,
+					(unsigned long *)frame[i].
+					vcd_frm.virtual,
+					(unsigned long)frame[i].
+					vcd_frm.alloc_len,
+					ION_IOC_CLEAN_INV_CACHES);
+				}
 			} else {
 				DDL_MSG_ERROR("luma size error");
 				return VCD_ERR_FAIL;
@@ -342,7 +354,7 @@ u32 ddl_decoder_dpb_init(struct ddl_client_context *ddl)
 void ddl_release_context_buffers(struct ddl_context *ddl_context)
 {
 	ddl_pmem_free(&ddl_context->metadata_shared_input);
-	ddl_fw_release();
+	ddl_fw_release(&ddl_context->dram_base_a);
 }
 
 void ddl_release_client_internal_buffers(struct ddl_client_context *ddl)
@@ -364,6 +376,8 @@ void ddl_release_client_internal_buffers(struct ddl_client_context *ddl)
 		struct ddl_encoder_data *encoder =
 			&(ddl->codec_data.encoder);
 		ddl_pmem_free(&encoder->seq_header);
+		ddl_pmem_free(&encoder->batch_frame.slice_batch_in);
+		ddl_pmem_free(&encoder->batch_frame.slice_batch_out);
 		ddl_vidc_encode_dynamic_property(ddl, false);
 		encoder->dynamic_prop_change = 0;
 		ddl_free_enc_hw_buffers(ddl);
@@ -630,6 +644,7 @@ u32 ddl_allocate_dec_hw_buffers(struct ddl_client_context *ddl)
 	u32 status = VCD_S_SUCCESS, dpb = 0;
 	u32 width = 0, height = 0;
 	u8 *ptr;
+	struct ddl_context *ddl_context = ddl->ddl_context;
 
 	dec_bufs = &ddl->codec_data.decoder.hw_bufs;
 	ddl_calc_dec_hw_buffers_size(ddl->codec_data.decoder.
@@ -640,6 +655,11 @@ u32 ddl_allocate_dec_hw_buffers(struct ddl_client_context *ddl)
 			DDL_KILO_BYTE(2));
 		if (!ptr)
 			status = VCD_ERR_ALLOC_FAIL;
+		msm_ion_do_cache_op(ddl_context->video_ion_client,
+					dec_bufs->context.alloc_handle,
+					dec_bufs->context.virtual_base_addr,
+					dec_bufs->context.buffer_size,
+					ION_IOC_CLEAN_INV_CACHES);
 	}
 	if (buf_size.sz_nb_ip > 0) {
 		dec_bufs->h264_nb_ip.mem_type = DDL_MM_MEM;
@@ -718,9 +738,16 @@ u32 ddl_allocate_dec_hw_buffers(struct ddl_client_context *ddl)
 		if (!ptr)
 			status = VCD_ERR_ALLOC_FAIL;
 		else {
-			if (!res_trk_check_for_sec_session())
+			if (!res_trk_check_for_sec_session()) {
 				memset(dec_bufs->desc.align_virtual_addr,
 					0, buf_size.sz_desc);
+				msm_ion_do_cache_op(
+					ddl_context->video_ion_client,
+					dec_bufs->desc.alloc_handle,
+					dec_bufs->desc.virtual_base_addr,
+					dec_bufs->desc.buffer_size,
+					ION_IOC_CLEAN_INV_CACHES);
+			}
 		}
 	}
 	if (status)
@@ -823,6 +850,7 @@ u32 ddl_allocate_enc_hw_buffers(struct ddl_client_context *ddl)
 	struct ddl_enc_buffer_size buf_size;
 	void *ptr;
 	u32 status = VCD_S_SUCCESS;
+	struct ddl_context *ddl_context = ddl->ddl_context;
 
 	enc_bufs = &ddl->codec_data.encoder.hw_bufs;
 	enc_bufs->dpb_count = DDL_ENC_MIN_DPB_BUFFERS;
@@ -901,6 +929,11 @@ u32 ddl_allocate_enc_hw_buffers(struct ddl_client_context *ddl)
 				buf_size.sz_context, DDL_KILO_BYTE(2));
 			if (!ptr)
 				status = VCD_ERR_ALLOC_FAIL;
+			msm_ion_do_cache_op(ddl_context->video_ion_client,
+					enc_bufs->context.alloc_handle,
+					enc_bufs->context.virtual_base_addr,
+					enc_bufs->context.buffer_size,
+					ION_IOC_CLEAN_INV_CACHES);
 		}
 		if (status)
 			ddl_free_enc_hw_buffers(ddl);
@@ -1018,4 +1051,15 @@ void ddl_fill_dec_desc_buffer(struct ddl_client_context *ddl)
 		memcpy(dec_desc_buf->align_virtual_addr,
 			   ip_bitstream->desc_buf,
 			   ip_bitstream->desc_size);
+}
+
+void ddl_set_vidc_timeout(struct ddl_client_context *ddl)
+{
+	u32 vidc_time_out = 0;
+	if (ddl->codec_data.decoder.idr_only_decoding)
+		vidc_time_out = 2 * DDL_VIDC_1080P_200MHZ_TIMEOUT_VALUE;
+	DDL_MSG_HIGH("%s Video core time out value = 0x%x",
+		 __func__, vidc_time_out);
+	vidc_sm_set_video_core_timeout_value(
+		&ddl->shared_mem[ddl->command_channel], vidc_time_out);
 }

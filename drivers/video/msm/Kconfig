@@ -36,11 +36,16 @@ config FB_MSM_TRIPLE_BUFFER
 	bool "Support for triple frame buffer"
 	default n
 
+config FB_MSM_MDP_HW
+	bool
+	default n
+
 choice
 	prompt "MDP HW version"
 	default FB_MSM_MDP22
 
 config FB_MSM_MDP22
+	select FB_MSM_MDP_HW
 	bool "MDP HW ver2.2"
 	---help---
 	  Support for MSM MDP HW revision 2.2
@@ -55,6 +60,7 @@ config FB_MSM_MDP30
 
 config FB_MSM_MDP303
 	depends on FB_MSM_MDP30
+	select FB_MSM_MDP_HW
 	bool "MDP HW ver3.03"
 	default n
 	---help---
@@ -65,6 +71,7 @@ config FB_MSM_MDP303
 
 config FB_MSM_MDP31
 	select FB_MSM_LCDC_HW
+	select FB_MSM_MDP_HW
 	bool "MDP HW ver3.1"
 	---help---
 	  Support for MSM MDP HW revision 3.1
@@ -72,10 +79,17 @@ config FB_MSM_MDP31
 
 config FB_MSM_MDP40
 	select FB_MSM_LCDC_HW
+	select FB_MSM_MDP_HW
 	bool "MDP HW ver4.0"
 	---help---
 	  Support for MSM MDP HW revision 4.0
 	  Say Y here if this is msm7x30 variant platform.
+
+config FB_MSM_MDP_NONE
+	bool "MDP HW None"
+	---help---
+	  Say Y here if this is mdm platform.
+
 endchoice
 
 config FB_MSM_EBI2
@@ -181,6 +195,11 @@ config FB_MSM_MIPI_DSI_SIMULATOR
 	default n
 
 config FB_MSM_MIPI_DSI_NOVATEK
+        bool
+        select FB_MSM_MIPI_DSI
+        default n
+
+config FB_MSM_MIPI_DSI_ORISE
         bool
         select FB_MSM_MIPI_DSI
         default n
@@ -336,6 +355,16 @@ config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
 	select FB_MSM_MIPI_DSI_NOVATEK
 	default n
 
+config FB_MSM_MIPI_ORISE_VIDEO_720P_PT
+	bool
+	select FB_MSM_MIPI_DSI_ORISE
+	default n
+
+config FB_MSM_MIPI_ORISE_CMD_720P_PT
+	bool
+	select FB_MSM_MIPI_DSI_ORISE
+	default n
+
 config FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT
 	bool
 	select FB_MSM_MIPI_DSI_RENESAS
@@ -383,6 +412,15 @@ config FB_MSM_MIPI_SIMULATOR_VIDEO
 	bool
 	select FB_MSM_MIPI_DSI_SIMULATOR
 	default n
+
+config FB_MSM_NO_MDP_PIPE_CTRL
+	depends on FB_MSM_OVERLAY
+	bool "Do not use mdp_pipe_ctrl"
+	---help---
+	  Saying 'Y' here obsoletes the mdp_pipe_ctrl function,
+	  which was used to control mdp-related clocks. MDP4 vsync-driven
+	  screen updates will use a different clock control mechanism if
+	  this is selected.
 
 config FB_MSM_OVERLAY0_WRITEBACK
 	depends on FB_MSM_OVERLAY
@@ -517,6 +555,8 @@ config FB_MSM_MIPI_PANEL_DETECT
 	select FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT
 	select FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT
 	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
+	select FB_MSM_MIPI_ORISE_VIDEO_720P_PT
+	select FB_MSM_MIPI_ORISE_CMD_720P_PT
 	select FB_MSM_MIPI_SIMULATOR_VIDEO
 	select FB_MSM_MIPI_CHIMEI_WXGA
 	---help---
@@ -605,6 +645,14 @@ config FB_MSM_MIPI_NOVATEK_VIDEO_QHD_PT_PANEL
 config FB_MSM_MIPI_NOVATEK_CMD_QHD_PT_PANEL
 	bool "MIPI NOVATEK CMD QHD PT Panel"
 	select FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
+
+config FB_MSM_MIPI_ORISE_VIDEO_720P_PT_PANEL
+	bool "MIPI ORISE VIDEO 720P PT Panel"
+	select FB_MSM_MIPI_ORISE_VIDEO_720P_PT
+
+config FB_MSM_MIPI_ORISE_CMD_720P_PT_PANEL
+	bool "MIPI ORISE CMD 720P PT Panel"
+	select FB_MSM_MIPI_ORISE_CMD_720P_PT
 
 config FB_MSM_MIPI_RENESAS_VIDEO_FWVGA_PT_PANEL
 	bool "MIPI Renesas Video FWVGA PT Panel"
@@ -850,7 +898,7 @@ endchoice
 
 choice
 	prompt "Default framebuffer color depth"
-	depends on FB_MSM_MDP40 || FB_MSM_MDP31
+	depends on FB_MSM_MDP40 || FB_MSM_MDP31 || FB_MSM_MDP303
 	default FB_MSM_DEFAULT_DEPTH_RGBA8888
 
 config FB_MSM_DEFAULT_DEPTH_RGB565
@@ -864,4 +912,17 @@ config FB_MSM_DEFAULT_DEPTH_RGBA8888
 
 endchoice
 
+config FB_MSM_EBI2_EPSON_S1D_QVGA_PANEL
+	bool "EBI2 Epson QVGA Panel"
+	select FB_MSM_EBI2
+	default n
+	---help---
+	  Support for EBI2 Epson QVGA (240x320) panel
+
+config FB_MSM_EBI2_PANEL_DETECT
+	bool "EBI2 Panel Detect"
+	select FB_MSM_EBI2_EPSON_S1D_QVGA_PANEL
+	default n
+	---help---
+	  Support for EBI2 panel auto detect
 endif

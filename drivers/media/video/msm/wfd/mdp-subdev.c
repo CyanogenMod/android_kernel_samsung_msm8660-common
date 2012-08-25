@@ -45,7 +45,7 @@ int mdp_open(struct v4l2_subdev *sd, void *arg)
 		goto exit;
 	}
 
-	/*Tell HDMI daemon to open fb1*/
+	/*Tell HDMI daemon to open fb2*/
 	rc = kobject_uevent(&fbi->dev->kobj, KOBJ_ADD);
 	if (rc) {
 		WFD_MSG_ERR("Failed add to kobj");

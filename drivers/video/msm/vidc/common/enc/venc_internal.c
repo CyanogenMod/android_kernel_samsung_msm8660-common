@@ -31,6 +31,7 @@
 #include <media/msm/vidc_type.h>
 #include <media/msm/vcd_api.h>
 #include <media/msm/vidc_init.h>
+#include "vcd_res_tracker_api.h"
 #include "venc_internal.h"
 
 #if DEBUG
@@ -1655,6 +1656,8 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
+	u32 ion_flag = 0;
+	struct ion_handle *buff_handle = NULL;
 
 	u32 vcd_status = VCD_ERR_FAIL;
 
@@ -1685,6 +1688,21 @@ u32 vid_enc_encode_frame(struct video_client_ctx *client_ctx,
 
 		/* Rely on VCD using the same flags as OMX */
 		vcd_input_buffer.flags = input_frame_info->flags;
+
+		ion_flag = vidc_get_fd_info(client_ctx, BUFFER_TYPE_INPUT,
+				pmem_fd, kernel_vaddr, buffer_index,
+				&buff_handle);
+
+		if (vcd_input_buffer.data_len > 0) {
+			if (ion_flag == CACHED) {
+				msm_ion_do_cache_op(
+				client_ctx->user_ion_client,
+				buff_handle,
+				(unsigned long *) vcd_input_buffer.virtual,
+				(unsigned long) vcd_input_buffer.data_len,
+				ION_IOC_CLEAN_CACHES);
+			}
+		}
 
 		vcd_status = vcd_encode_frame(client_ctx->vcd_handle,
 		&vcd_input_buffer);
@@ -1753,10 +1771,13 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 	struct vcd_property_hdr vcd_property_hdr;
 	struct vcd_property_enc_recon_buffer *control = NULL;
 	struct msm_mapped_buffer *mapped_buffer = NULL;
+	int rc = -1;
+	unsigned long ionflag = 0;
+	unsigned long iova = 0;
+	unsigned long buffer_size = 0;
 	size_t ion_len = -1;
 	unsigned long phy_addr;
-	int rc = -1;
-	unsigned long ionflag;
+
 	if (!client_ctx || !venc_recon) {
 		pr_err("%s() Invalid params", __func__);
 		return false;
@@ -1789,12 +1810,23 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 				return false;
 			}
 			put_pmem_file(file);
+			flags = MSM_SUBSYSTEM_MAP_IOVA;
+			mapped_buffer = msm_subsystem_map_buffer(
+			(unsigned long)control->physical_addr, len,
+			flags, vidc_mmu_subsystem,
+			sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
+			if (IS_ERR(mapped_buffer)) {
+				pr_err("buffer map failed");
+				return false;
+			}
+			control->client_data = (void *) mapped_buffer;
+			control->dev_addr = (u8 *)mapped_buffer->iova[0];
 	} else {
 		client_ctx->recon_buffer_ion_handle[i] = ion_import_fd(
 				client_ctx->user_ion_client, control->pmem_fd);
 		if (IS_ERR_OR_NULL(client_ctx->recon_buffer_ion_handle[i])) {
 			ERR("%s(): get_ION_handle failed\n", __func__);
-			goto ion_error;
+			goto import_ion_error;
 		}
 		rc = ion_handle_get_flags(client_ctx->user_ion_client,
 					client_ctx->recon_buffer_ion_handle[i],
@@ -1802,7 +1834,7 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 		if (rc) {
 			ERR("%s():get_ION_flags fail\n",
 				 __func__);
-			goto ion_error;
+			goto import_ion_error;
 		}
 		control->kernel_virtual_addr = (u8 *) ion_map_kernel(
 			client_ctx->user_ion_client,
@@ -1811,30 +1843,42 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 		if (!control->kernel_virtual_addr) {
 			ERR("%s(): get_ION_kernel virtual addr fail\n",
 				 __func__);
-			goto ion_error;
+			goto import_ion_error;
 		}
-		rc = ion_phys(client_ctx->user_ion_client,
+		if (res_trk_check_for_sec_session()) {
+			rc = ion_phys(client_ctx->user_ion_client,
 				client_ctx->recon_buffer_ion_handle[i],
 				&phy_addr, &ion_len);
-		if (rc) {
-			ERR("%s():get_ION_kernel physical addr fail\n",
-				 __func__);
-			goto ion_error;
+			if (rc) {
+				ERR("%s():get_ION_kernel physical addr fail\n",
+					__func__);
+				goto map_ion_error;
+			}
+			control->physical_addr =  (u8 *) phy_addr;
+			len = (unsigned long) ion_len;
+			control->client_data = NULL;
+			control->dev_addr = (u8 *)control->physical_addr;
+		} else {
+			rc = ion_map_iommu(client_ctx->user_ion_client,
+					client_ctx->recon_buffer_ion_handle[i],
+					VIDEO_DOMAIN,
+					VIDEO_MAIN_POOL,
+					SZ_4K,
+					0,
+					(unsigned long *)&iova,
+					(unsigned long *)&buffer_size,
+					UNCACHED, 0);
+			if (rc) {
+				ERR("%s():ION map iommu addr fail\n",
+					 __func__);
+				goto map_ion_error;
+			}
+			control->physical_addr =  (u8 *) iova;
+			len = buffer_size;
+			control->client_data = NULL;
+			control->dev_addr = (u8 *)iova;
 		}
-		control->physical_addr =  (u8 *) phy_addr;
-		len = (unsigned long) ion_len;
 	}
-	flags = MSM_SUBSYSTEM_MAP_IOVA;
-	mapped_buffer = msm_subsystem_map_buffer(
-	(unsigned long)control->physical_addr, len,
-	flags, vidc_mmu_subsystem,
-	sizeof(vidc_mmu_subsystem)/sizeof(unsigned int));
-	if (IS_ERR(mapped_buffer)) {
-		pr_err("buffer map failed");
-		return false;
-	}
-	control->client_data = (void *) mapped_buffer;
-	control->dev_addr = (u8 *)mapped_buffer->iova[0];
 
 	vcd_property_hdr.prop_id = VCD_I_RECON_BUFFERS;
 	vcd_property_hdr.sz =
@@ -1850,7 +1894,7 @@ u32 vid_enc_set_recon_buffers(struct video_client_ctx *client_ctx,
 				__func__, vcd_status);
 		return false;
 	}
-ion_error:
+map_ion_error:
 	if (control->kernel_virtual_addr)
 		ion_unmap_kernel(client_ctx->user_ion_client,
 			client_ctx->recon_buffer_ion_handle[i]);
@@ -1858,6 +1902,7 @@ ion_error:
 		ion_free(client_ctx->user_ion_client,
 			client_ctx->recon_buffer_ion_handle[i]);
 		client_ctx->recon_buffer_ion_handle[i] = NULL;
+import_ion_error:
 	return false;
 }
 
@@ -1901,6 +1946,12 @@ u32 vid_enc_free_recon_buffers(struct video_client_ctx *client_ctx,
 		if (client_ctx->recon_buffer_ion_handle[i]) {
 			ion_unmap_kernel(client_ctx->user_ion_client,
 				client_ctx->recon_buffer_ion_handle[i]);
+			if (!res_trk_check_for_sec_session()) {
+				ion_unmap_iommu(client_ctx->user_ion_client,
+				client_ctx->recon_buffer_ion_handle[i],
+				VIDEO_DOMAIN,
+				VIDEO_MAIN_POOL);
+			}
 			ion_free(client_ctx->user_ion_client,
 				client_ctx->recon_buffer_ion_handle[i]);
 			client_ctx->recon_buffer_ion_handle[i] = NULL;

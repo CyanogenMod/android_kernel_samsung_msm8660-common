@@ -2587,7 +2587,7 @@ static int hdcp_authentication_part1(void)
 			[7:0] LINK0_AKSV_1 */
 		/* LINK0_AINFO	= 0x2 FEATURE 1.1 on.
 		 *		= 0x0 FEATURE 1.1 off*/
-		HDMI_OUTP(0x0148, 0x2 << 8);
+		HDMI_OUTP(0x0148, 0x0);
 
 		/* 0x012C HDCP_ENTROPY_CTRL0
 			[31:0] BITS_OF_INFLUENCE_0 */
@@ -4103,30 +4103,30 @@ int hdmi_msm_clk(int on)
 
 	DEV_DBG("HDMI Clk: %s\n", on ? "Enable" : "Disable");
 	if (on) {
-		rc = clk_enable(hdmi_msm_state->hdmi_app_clk);
+		rc = clk_prepare_enable(hdmi_msm_state->hdmi_app_clk);
 		if (rc) {
 			DEV_ERR("'hdmi_app_clk' clock enable failed, rc=%d\n",
 				rc);
 			return rc;
 		}
 
-		rc = clk_enable(hdmi_msm_state->hdmi_m_pclk);
+		rc = clk_prepare_enable(hdmi_msm_state->hdmi_m_pclk);
 		if (rc) {
 			DEV_ERR("'hdmi_m_pclk' clock enable failed, rc=%d\n",
 				rc);
 			return rc;
 		}
 
-		rc = clk_enable(hdmi_msm_state->hdmi_s_pclk);
+		rc = clk_prepare_enable(hdmi_msm_state->hdmi_s_pclk);
 		if (rc) {
 			DEV_ERR("'hdmi_s_pclk' clock enable failed, rc=%d\n",
 				rc);
 			return rc;
 		}
 	} else {
-		clk_disable(hdmi_msm_state->hdmi_app_clk);
-		clk_disable(hdmi_msm_state->hdmi_m_pclk);
-		clk_disable(hdmi_msm_state->hdmi_s_pclk);
+		clk_disable_unprepare(hdmi_msm_state->hdmi_app_clk);
+		clk_disable_unprepare(hdmi_msm_state->hdmi_m_pclk);
+		clk_disable_unprepare(hdmi_msm_state->hdmi_s_pclk);
 	}
 
 	return 0;
@@ -4230,7 +4230,7 @@ static void hdmi_msm_hpd_read_work(struct work_struct *work)
 {
 	uint32 hpd_ctrl;
 
-	clk_enable(hdmi_msm_state->hdmi_app_clk);
+	clk_prepare_enable(hdmi_msm_state->hdmi_app_clk);
 	hdmi_msm_state->pd->core_power(1, 1);
 	hdmi_msm_state->pd->enable_5v(1);
 	hdmi_msm_set_mode(FALSE);
@@ -4256,7 +4256,7 @@ static void hdmi_msm_hpd_read_work(struct work_struct *work)
 	hdmi_msm_set_mode(FALSE);
 	hdmi_msm_state->pd->core_power(0, 1);
 	hdmi_msm_state->pd->enable_5v(0);
-	clk_disable(hdmi_msm_state->hdmi_app_clk);
+	clk_disable_unprepare(hdmi_msm_state->hdmi_app_clk);
 }
 
 static void hdmi_msm_hpd_off(void)
@@ -4711,7 +4711,6 @@ static int __devinit hdmi_msm_probe(struct platform_device *pdev)
 	hdmi_msm_state->hdcp_timer.data = (uint32)NULL;
 
 	hdmi_msm_state->hdcp_timer.expires = 0xffffffffL;
-	add_timer(&hdmi_msm_state->hdcp_timer);
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL_HDCP_SUPPORT */
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL_CEC_SUPPORT
@@ -4766,11 +4765,10 @@ static int __devinit hdmi_msm_probe(struct platform_device *pdev)
 
 #ifdef QCT_SWITCH_STATE_CMD
 	/* Initialize hdmi node and register with switch driver */
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-	external_common_state->sdev.name = "hdmi_as_primary";
-#else
-	external_common_state->sdev.name = "hdmi";
-#endif
+	if (hdmi_prim_display)
+		external_common_state->sdev.name = "hdmi_as_primary";
+	else
+		external_common_state->sdev.name = "hdmi";
 	if (switch_dev_register(&external_common_state->sdev) < 0)
 		DEV_ERR("Hdmi switch registration failed\n");
 #else

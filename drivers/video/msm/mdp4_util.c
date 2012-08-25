@@ -28,6 +28,7 @@
 #include <asm/system.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
+#include <mach/iommu_domains.h>
 #include "mdp.h"
 #include "msm_fb.h"
 #include "mdp4.h"
@@ -260,7 +261,7 @@ void mdp4_hw_init(void)
 	/* MDP cmd block enable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
-	mdp4_update_perf_level(OVERLAY_PERF_LEVEL4);
+	mdp_bus_scale_update_request(5);
 
 #ifdef MDP4_ERROR
 	/*
@@ -324,6 +325,8 @@ void mdp4_hw_init(void)
 
 	clk_rate = mdp_get_core_clk();
 	mdp4_fetch_cfg(clk_rate);
+
+	mdp4_overlay_cfg_init();
 
 	/* Mark hardware as initialized. Only revisions > v2.1 have a register
 	 * for tracking core reset status. */
@@ -389,6 +392,7 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 	outpdw(MDP_INTR_CLEAR, isr);
 
 	if (isr & INTR_PRIMARY_INTF_UDERRUN) {
+		pr_debug("%s: UNDERRUN -- primary\n", __func__);
 		mdp4_stat.intr_underrun_p++;
 		/* When underun occurs mdp clear the histogram registers
 		that are set before in hw_init so restore them back so
@@ -406,8 +410,10 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 		}
 	}
 
-	if (isr & INTR_EXTERNAL_INTF_UDERRUN)
+	if (isr & INTR_EXTERNAL_INTF_UDERRUN) {
+		pr_debug("%s: UNDERRUN -- external\n", __func__);
 		mdp4_stat.intr_underrun_e++;
+	}
 
 	isr &= mask;
 
@@ -415,20 +421,34 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 		goto out;
 
 	panel = mdp4_overlay_panel_list();
-	if (isr & INTR_PRIMARY_VSYNC) {
-		mdp4_stat.intr_vsync_p++;
+
+	if (isr & INTR_DMA_P_DONE) {
+		mdp4_stat.intr_dma_p++;
 		dma = &dma2_data;
-		spin_lock(&mdp_spin_lock);
-		mdp_intr_mask &= ~INTR_PRIMARY_VSYNC;
-		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-		dma->waiting = FALSE;
 		if (panel & MDP4_PANEL_LCDC)
-			mdp4_primary_vsync_lcdc();
+			mdp4_dmap_done_lcdc(0);
+#ifdef CONFIG_FB_MSM_OVERLAY
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 		else if (panel & MDP4_PANEL_DSI_VIDEO)
-			mdp4_primary_vsync_dsi_video();
+			mdp4_dmap_done_dsi_video(0);
+		else if (panel & MDP4_PANEL_DSI_CMD)
+			mdp4_dmap_done_dsi_cmd(0);
+#else
+		else { /* MDDI */
+			mdp4_dma_p_done_mddi(dma);
+			mdp_pipe_ctrl(MDP_DMA2_BLOCK,
+				MDP_BLOCK_POWER_OFF, TRUE);
+			complete(&dma->comp);
+		}
 #endif
-		spin_unlock(&mdp_spin_lock);
+#else
+		else {
+			spin_lock(&mdp_spin_lock);
+			dma->busy = FALSE;
+			spin_unlock(&mdp_spin_lock);
+			complete(&dma->comp);
+		}
+#endif
 
 #ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
 		// It make LP-mode between frame-to-frame.
@@ -445,43 +465,41 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 			MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000); // hs
 		}
 #endif 	
-
 	}
-#ifdef CONFIG_FB_MSM_DTV
-	if (isr & INTR_EXTERNAL_VSYNC) {
-		mdp4_stat.intr_vsync_e++;
-		dma = &dma_e_data;
-		spin_lock(&mdp_spin_lock);
-		mdp_intr_mask &= ~INTR_EXTERNAL_VSYNC;
-		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-		dma->waiting = FALSE;
-		if (panel & MDP4_PANEL_DTV)
-			mdp4_external_vsync_dtv();
-		spin_unlock(&mdp_spin_lock);
-	}
+	if (isr & INTR_DMA_S_DONE) {
+		mdp4_stat.intr_dma_s++;
+#if defined(CONFIG_FB_MSM_OVERLAY) && defined(CONFIG_FB_MSM_MDDI)
+		dma = &dma2_data;
+#else
+		dma = &dma_s_data;
 #endif
 
+		dma->busy = FALSE;
+		mdp_pipe_ctrl(MDP_DMA_S_BLOCK,
+				MDP_BLOCK_POWER_OFF, TRUE);
+		complete(&dma->comp);
+	}
+	if (isr & INTR_DMA_E_DONE) {
+		mdp4_stat.intr_dma_e++;
+		if (panel & MDP4_PANEL_DTV)
+			mdp4_dmae_done_dtv();
+	}
 #ifdef CONFIG_FB_MSM_OVERLAY
 	if (isr & INTR_OVERLAY0_DONE) {
 		mdp4_stat.intr_overlay0++;
 		dma = &dma2_data;
 		if (panel & (MDP4_PANEL_LCDC | MDP4_PANEL_DSI_VIDEO)) {
 			/* disable LCDC interrupt */
-			spin_lock(&mdp_spin_lock);
-			mdp_intr_mask &= ~INTR_OVERLAY0_DONE;
-			outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-			dma->waiting = FALSE;
-			spin_unlock(&mdp_spin_lock);
 			if (panel & MDP4_PANEL_LCDC)
-				mdp4_overlay0_done_lcdc(dma);
+				mdp4_overlay0_done_lcdc(0);
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 			else if (panel & MDP4_PANEL_DSI_VIDEO)
-				mdp4_overlay0_done_dsi_video(dma);
+				mdp4_overlay0_done_dsi_video(0);
 #endif
 		} else {        /* MDDI, DSI_CMD  */
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 			if (panel & MDP4_PANEL_DSI_CMD)
-				mdp4_overlay0_done_dsi_cmd(dma);
+				mdp4_overlay0_done_dsi_cmd(0);
 #else
 			if (panel & MDP4_PANEL_MDDI)
 				mdp4_overlay0_done_mddi(dma);
@@ -523,75 +541,20 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 #endif
 #endif	/* OVERLAY */
 
-	if (isr & INTR_DMA_P_DONE) {
-		mdp4_stat.intr_dma_p++;
-		dma = &dma2_data;
-		if (panel & MDP4_PANEL_LCDC) {
-			/* disable LCDC interrupt */
-			spin_lock(&mdp_spin_lock);
-			mdp_intr_mask &= ~INTR_DMA_P_DONE;
-			outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-			dma->waiting = FALSE;
-			mdp4_dma_p_done_lcdc();
-			spin_unlock(&mdp_spin_lock);
-		}
-#ifdef CONFIG_FB_MSM_OVERLAY
-#ifdef CONFIG_FB_MSM_MIPI_DSI
-		else if (panel & MDP4_PANEL_DSI_VIDEO) {
-			/* disable LCDC interrupt */
-			spin_lock(&mdp_spin_lock);
-			mdp_intr_mask &= ~INTR_DMA_P_DONE;
-			outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-			dma->waiting = FALSE;
-			mdp4_dma_p_done_dsi_video();
-			spin_unlock(&mdp_spin_lock);
-		} else if (panel & MDP4_PANEL_DSI_CMD) {
-			mdp4_dma_p_done_dsi(dma);
-		}
-#else
-		else { /* MDDI */
-			mdp4_dma_p_done_mddi();
-			mdp_pipe_ctrl(MDP_DMA2_BLOCK,
-				MDP_BLOCK_POWER_OFF, TRUE);
-			complete(&dma->comp);
-		}
-#endif
-#else
-		else {
-			spin_lock(&mdp_spin_lock);
-			dma->busy = FALSE;
-			spin_unlock(&mdp_spin_lock);
-			complete(&dma->comp);
-		}
-#endif
+	if (isr & INTR_PRIMARY_VSYNC) {
+		mdp4_stat.intr_vsync_p++;
+		if (panel & MDP4_PANEL_LCDC)
+			mdp4_primary_vsync_lcdc();
+		else if (panel & MDP4_PANEL_DSI_VIDEO)
+			mdp4_primary_vsync_dsi_video();
 	}
-	if (isr & INTR_DMA_S_DONE) {
-		mdp4_stat.intr_dma_s++;
-#if defined(CONFIG_FB_MSM_OVERLAY) && defined(CONFIG_FB_MSM_MDDI)
-		dma = &dma2_data;
-#else
-		dma = &dma_s_data;
+#ifdef CONFIG_FB_MSM_DTV
+	if (isr & INTR_EXTERNAL_VSYNC) {
+		mdp4_stat.intr_vsync_e++;
+		if (panel & MDP4_PANEL_DTV)
+			mdp4_external_vsync_dtv();
+	}
 #endif
-
-		dma->busy = FALSE;
-		mdp_pipe_ctrl(MDP_DMA_S_BLOCK,
-				MDP_BLOCK_POWER_OFF, TRUE);
-		complete(&dma->comp);
-	}
-	if (isr & INTR_DMA_E_DONE) {
-		mdp4_stat.intr_dma_e++;
-		dma = &dma_e_data;
-		spin_lock(&mdp_spin_lock);
-		mdp_intr_mask &= ~INTR_DMA_E_DONE;
-		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
-		dma->busy = FALSE;
-		mdp4_dma_e_done_dtv();
-		if (dma->waiting) {
-			dma->waiting = FALSE;
-			complete(&dma->comp);
-		}
-		spin_unlock(&mdp_spin_lock);
-	}
 	if (isr & INTR_DMA_P_HISTOGRAM) {
 		mdp4_stat.intr_histogram++;
 		ret = mdp_histogram_block2mgmt(MDP_BLOCK_DMA_P, &mgmt);
@@ -616,6 +579,10 @@ irqreturn_t mdp4_isr(int irq, void *ptr)
 		if (!ret)
 			mdp_histogram_handle_isr(mgmt);
 	}
+	if (isr & INTR_PRIMARY_RDPTR) {
+		mdp4_stat.intr_rdptr++;
+		mdp4_primary_rdptr();
+	}
 
 out:
 	mdp_is_in_isr = FALSE;
@@ -633,7 +600,7 @@ static uint32 vg_qseed_table0[] = {
 };
 
 static uint32 vg_qseed_table1[] = {
-	0x76543210, 0xfedcba98
+	0x00000000, 0x20000000,
 };
 
 static uint32 vg_qseed_table2[] = {
@@ -3017,6 +2984,9 @@ static uint32_t mdp4_csc_block2base(uint32_t block)
 	case MDP_BLOCK_OVERLAY_1:
 		base = 0x1A000;
 		break;
+	case MDP_BLOCK_OVERLAY_2:
+		base = (mdp_rev >= MDP_REV_44) ? 0x8A000 : 0x0;
+		break;
 	case MDP_BLOCK_VG_1:
 		base = 0x24000;
 		break;
@@ -3069,6 +3039,11 @@ int mdp4_csc_enable(struct mdp_csc_cfg_data *config)
 		break;
 	case MDP_BLOCK_OVERLAY_1:
 		base = 0x18200;
+		output = config->csc_data.flags;
+		mask = 0x07;
+		break;
+	case MDP_BLOCK_OVERLAY_2:
+		base = 0x88200;
 		output = config->csc_data.flags;
 		mask = 0x07;
 		break;
@@ -3150,21 +3125,23 @@ void mdp4_init_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		buf = mfd->ov1_wb_buf;
 
 	buf->ihdl = NULL;
-	buf->phys_addr = 0;
+	buf->write_addr = 0;
+	buf->read_addr = 0;
 }
 
 u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 {
 	struct mdp_buf_type *buf;
 	ion_phys_addr_t	addr;
-	u32 len;
+	size_t buffer_size;
+	unsigned long len;
 
 	if (mix_num == MDP4_MIXER0)
 		buf = mfd->ov0_wb_buf;
 	else
 		buf = mfd->ov1_wb_buf;
 
-	if (buf->phys_addr || !IS_ERR_OR_NULL(buf->ihdl))
+	if (buf->write_addr || !IS_ERR_OR_NULL(buf->ihdl))
 		return 0;
 
 	if (!buf->size) {
@@ -3172,15 +3149,19 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 		return -EINVAL;
 	}
 
+	buffer_size = roundup(mfd->panel_info.xres * \
+		mfd->panel_info.yres * 3 * 2, SZ_4K);
+
 	if (!IS_ERR_OR_NULL(mfd->iclient)) {
-		pr_info("%s:%d ion based allocation\n", __func__, __LINE__);
-		buf->ihdl = ion_alloc(mfd->iclient, buf->size, 4,
-			(1 << mfd->mem_hid));
+		pr_info("%s:%d ion based allocation mfd->mem_hid 0x%x\n",
+			__func__, __LINE__, mfd->mem_hid);
+		buf->ihdl = ion_alloc(mfd->iclient, buffer_size, SZ_4K,
+			mfd->mem_hid);
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
-			if (ion_phys(mfd->iclient, buf->ihdl,
-				&addr, &len)) {
-				pr_err("%s:%d: ion_phys map failed\n",
-					__func__, __LINE__);
+			if (ion_map_iommu(mfd->iclient, buf->ihdl,
+				DISPLAY_DOMAIN, GEN_POOL, SZ_4K, 0, &addr,
+				&len, 0, 0)) {
+				pr_err("ion_map_iommu() failed\n");
 				return -ENOMEM;
 			}
 		} else {
@@ -3189,13 +3170,14 @@ u32 mdp4_allocate_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 			return -ENOMEM;
 		}
 	} else {
-		addr = allocate_contiguous_memory_nomap(buf->size,
+		addr = allocate_contiguous_memory_nomap(buffer_size,
 			mfd->mem_hid, 4);
 	}
 	if (addr) {
 		pr_info("allocating %d bytes at %x for mdp writeback\n",
-			buf->size, (u32) addr);
-		buf->phys_addr = addr;
+			buffer_size, (u32) addr);
+		buf->write_addr = addr;
+		buf->read_addr = buf->write_addr;
 		return 0;
 	} else {
 		pr_err("%s cannot allocate memory for mdp writeback!\n",
@@ -3215,19 +3197,22 @@ void mdp4_free_writeback_buf(struct msm_fb_data_type *mfd, u32 mix_num)
 
 	if (!IS_ERR_OR_NULL(mfd->iclient)) {
 		if (!IS_ERR_OR_NULL(buf->ihdl)) {
+			ion_unmap_iommu(mfd->iclient, buf->ihdl,
+				DISPLAY_DOMAIN, GEN_POOL);
 			ion_free(mfd->iclient, buf->ihdl);
-			pr_info("%s:%d free writeback imem\n", __func__,
-				__LINE__);
 			buf->ihdl = NULL;
+			pr_info("%s:%d free ION writeback imem",
+					__func__, __LINE__);
 		}
 	} else {
-		if (buf->phys_addr) {
-			free_contiguous_memory_by_paddr(buf->phys_addr);
+		if (buf->write_addr) {
+			free_contiguous_memory_by_paddr(buf->write_addr);
 			pr_info("%s:%d free writeback pmem\n", __func__,
 				__LINE__);
 		}
 	}
-	buf->phys_addr = 0;
+	buf->write_addr = 0;
+	buf->read_addr = 0;
 }
 
 static int mdp4_update_pcc_regs(uint32_t offset,
@@ -3376,13 +3361,11 @@ static int mdp4_read_pcc_regs(uint32_t offset,
 
 #define MDP_PCC_OFFSET 0xA000
 #define MDP_DMA_GC_OFFSET 0x8800
-#define MDP_LM_0_GC_OFFSET 0x4800
-#define MDP_LM_1_GC_OFFSET 0x4880
-
+#define MDP_LM_GC_OFFSET 0x4800
 
 #define MDP_DMA_P_OP_MODE_OFFSET 0x70
 #define MDP_DMA_S_OP_MODE_OFFSET 0x28
-#define MDP_LM_OP_MODE_OFFSET 0x10
+#define MDP_LM_OP_MODE_OFFSET 0x14
 
 #define DMA_PCC_R2_OFFSET 0x100
 
@@ -3479,6 +3462,10 @@ static uint32_t mdp_pp_block2argc(uint32_t block)
 	case MDP_BLOCK_OVERLAY_0:
 	case MDP_BLOCK_OVERLAY_1:
 		valid = (mdp_rev >= MDP_REV_42) ? 1 : 0;
+		break;
+
+	case MDP_BLOCK_OVERLAY_2:
+		valid = (mdp_rev >= MDP_REV_44) ? 1 : 0;
 		break;
 
 	default:
@@ -3616,11 +3603,8 @@ int mdp4_argc_cfg(struct mdp_pgc_lut_data *pgc_ptr)
 
 	case MDP_BLOCK_OVERLAY_0:
 	case MDP_BLOCK_OVERLAY_1:
-		offset = (uint32_t *)(blockbase +
-				(MDP_BLOCK_OVERLAY_0 == pgc_ptr->block ?
-				 MDP_LM_0_GC_OFFSET
-				 : MDP_LM_1_GC_OFFSET));
-
+	case MDP_BLOCK_OVERLAY_2:
+		offset = (uint32_t *)(blockbase + MDP_LM_GC_OFFSET);
 		pgc_enable_offset = (uint32_t *)(blockbase
 				+ MDP_LM_OP_MODE_OFFSET);
 		lshift_bits = 2;

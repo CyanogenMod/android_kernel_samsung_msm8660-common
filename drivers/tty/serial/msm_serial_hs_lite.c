@@ -1104,6 +1104,7 @@ static void dump_hsl_regs(struct uart_port *port)
 #ifdef CONFIG_SERIAL_MSM_HSL_CONSOLE
 	con_state = get_console_state(port);
 #endif
+
 	msm_hsl_console_state[0] = sr;
 	msm_hsl_console_state[1] = isr;
 	msm_hsl_console_state[2] = mr1;

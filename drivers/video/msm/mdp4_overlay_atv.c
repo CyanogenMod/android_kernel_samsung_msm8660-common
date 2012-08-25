@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010, 2012 Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -37,6 +37,7 @@ static struct mdp4_overlay_pipe *atv_pipe;
 int mdp4_atv_on(struct platform_device *pdev)
 {
 	uint8 *buf;
+	unsigned int buf_offset;
 	int bpp, ptype;
 	struct fb_info *fbi;
 	struct fb_var_screeninfo *var;
@@ -57,8 +58,7 @@ int mdp4_atv_on(struct platform_device *pdev)
 
 	bpp = fbi->var.bits_per_pixel / 8;
 	buf = (uint8 *) fbi->fix.smem_start;
-	buf += fbi->var.xoffset * bpp +
-		fbi->var.yoffset * fbi->fix.line_length;
+	buf_offset = calc_fb_offset(mfd, fbi, bpp);
 
 	if (atv_pipe == NULL) {
 		ptype = mdp4_overlay_format2type(mfd->fb_imgType);
@@ -97,20 +97,26 @@ int mdp4_atv_on(struct platform_device *pdev)
 	pipe->src_w = fbi->var.xres;
 	pipe->src_y = 0;
 	pipe->src_x = 0;
-	pipe->srcp0_addr = (uint32) buf;
+	if (mfd->map_buffer) {
+		pipe->srcp0_addr = (unsigned int)mfd->map_buffer->iova[0] + \
+			buf_offset;
+		pr_debug("start 0x%lx srcp0_addr 0x%x\n", mfd->
+			map_buffer->iova[0], pipe->srcp0_addr);
+	} else {
+		pipe->srcp0_addr = (uint32)(buf + buf_offset);
+	}
+
 	pipe->srcp0_ystride = fbi->fix.line_length;
 
 	mdp4_overlay_dmae_xy(pipe);	/* dma_e */
 	mdp4_overlay_dmae_cfg(mfd, 1);
-
 	mdp4_overlay_rgb_setup(pipe);
-
-	mdp4_mixer_stage_up(pipe);
 
 	mdp4_overlayproc_cfg(pipe);
 
 	mdp4_overlay_reg_flush(pipe, 1);
-
+	mdp4_mixer_stage_up(pipe);
+	mdp4_mixer_stage_commit(pipe->mixer_num);
 	if (ret == 0)
 		mdp_pipe_ctrl(MDP_OVERLAY1_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 
@@ -132,8 +138,10 @@ int mdp4_atv_off(struct platform_device *pdev)
 	msleep(100);
 
 	/* dis-engage rgb2 from mixer1 */
-	if (atv_pipe)
+	if (atv_pipe) {
 		mdp4_mixer_stage_down(atv_pipe);
+		mdp4_iommu_unmap(atv_pipe);
+	}
 
 	return ret;
 }
@@ -150,6 +158,7 @@ void mdp4_atv_overlay(struct msm_fb_data_type *mfd)
 {
 	struct fb_info *fbi = mfd->fbi;
 	uint8 *buf;
+	unsigned int buf_offset;
 	int bpp;
 	unsigned long flag;
 	struct mdp4_overlay_pipe *pipe;
@@ -160,17 +169,25 @@ void mdp4_atv_overlay(struct msm_fb_data_type *mfd)
 	/* no need to power on cmd block since it's lcdc mode */
 	bpp = fbi->var.bits_per_pixel / 8;
 	buf = (uint8 *) fbi->fix.smem_start;
-	buf += fbi->var.xoffset * bpp +
-		fbi->var.yoffset * fbi->fix.line_length;
+	buf_offset = calc_fb_offset(mfd, fbi, bpp);
 
 	mutex_lock(&mfd->dma->ov_mutex);
 
 	pipe = atv_pipe;
-	pipe->srcp0_addr = (uint32) buf;
+	if (mfd->map_buffer) {
+		pipe->srcp0_addr = (unsigned int)mfd->map_buffer->iova[0] + \
+			buf_offset;
+		pr_debug("start 0x%lx srcp0_addr 0x%x\n", mfd->
+			map_buffer->iova[0], pipe->srcp0_addr);
+	} else {
+		pipe->srcp0_addr = (uint32)(buf + buf_offset);
+	}
+	mdp4_overlay_mdp_perf_req(pipe, mfd);
+	mdp4_overlay_mdp_perf_upd(mfd, 1);
 	mdp4_overlay_rgb_setup(pipe);
-	mdp4_mixer_stage_up(pipe);
 	mdp4_overlay_reg_flush(pipe, 0);
-
+	mdp4_mixer_stage_up(pipe);
+	mdp4_mixer_stage_commit(pipe->mixer_num);
 	printk(KERN_INFO "mdp4_atv_overlay: pipe=%x ndx=%d\n",
 					(int)pipe, pipe->pipe_ndx);
 
@@ -185,10 +202,7 @@ void mdp4_atv_overlay(struct msm_fb_data_type *mfd)
 	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 	wait_for_completion_killable(&atv_pipe->comp);
 	mdp_disable_irq(MDP_OVERLAY1_TERM);
-
-	/* change mdp clk while mdp is idle` */
-	mdp4_set_perf_level();
-
+	mdp4_overlay_mdp_perf_upd(mfd, 0);
 	mdp4_stat.kickoff_atv++;
 	mutex_unlock(&mfd->dma->ov_mutex);
 }

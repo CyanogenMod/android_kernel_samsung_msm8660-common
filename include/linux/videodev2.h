@@ -1089,6 +1089,7 @@ struct v4l2_querymenu {
 #define V4L2_CTRL_FLAG_NEXT_CTRL	0x80000000
 
 /*  User-class control IDs defined by V4L2 */
+#define V4L2_CID_MAX_CTRLS		1024
 #define V4L2_CID_BASE			(V4L2_CTRL_CLASS_USER | 0x900)
 #define V4L2_CID_USER_BASE 		V4L2_CID_BASE
 /*  IDs reserved for driver specific controls */
@@ -1516,6 +1517,13 @@ enum v4l2_mpeg_cx2341x_video_median_filter_type {
 
 /*  MPEG-class control IDs specific to the Samsung MFC 5.1 driver as defined by V4L2 */
 #define V4L2_CID_MPEG_MFC51_BASE				(V4L2_CTRL_CLASS_MPEG | 0x1100)
+#define V4L2_CID_MPEG_QCOM_BASE	(V4L2_CTRL_CLASS_MPEG | 0x2100)
+
+#define V4L2_CID_MPEG_QCOM_SET_PERF_LEVEL (V4L2_CID_MPEG_QCOM_BASE + 0)
+enum v3l2_mpeg_qcom_perf_level {
+	V4L2_CID_MPEG_QCOM_PERF_LEVEL_PERFORMANCE		= 0,
+	V4L2_CID_MPEG_QCOM_PERF_LEVEL_TURBO			= 1,
+};
 
 #define V4L2_CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY		(V4L2_CID_MPEG_MFC51_BASE+0)
 #define V4L2_CID_MPEG_MFC51_VIDEO_DECODER_H264_DISPLAY_DELAY_ENABLE	(V4L2_CID_MPEG_MFC51_BASE+1)
