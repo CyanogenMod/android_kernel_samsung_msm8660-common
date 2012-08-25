@@ -27,11 +27,12 @@
 #define KGSL_CMD_FLAGS_NONE             0x00000000
 #define KGSL_CMD_FLAGS_PMODE		0x00000001
 #define KGSL_CMD_FLAGS_NO_TS_CMP	0x00000002
-#define KGSL_CMD_FLAGS_NOT_KERNEL_CMD	0x00000004
 
 /* Command identifiers */
 #define KGSL_CONTEXT_TO_MEM_IDENTIFIER	0xDEADBEEF
 #define KGSL_CMD_IDENTIFIER		0xFEEDFACE
+#define KGSL_START_OF_IB_IDENTIFIER    0x2EADEABE
+#define KGSL_END_OF_IB_IDENTIFIER      0x2ABEDEAD
 
 #ifdef CONFIG_MSM_SCM
 #define ADRENO_DEFAULT_PWRSCALE_POLICY  (&kgsl_pwrscale_policy_tz)
@@ -85,10 +86,34 @@ struct adreno_gpudev {
 	int (*ctxt_create)(struct adreno_device *, struct adreno_context *);
 	void (*ctxt_save)(struct adreno_device *, struct adreno_context *);
 	void (*ctxt_restore)(struct adreno_device *, struct adreno_context *);
-	void (*ctxt_draw_workaround)(struct adreno_device *);
+	void (*ctxt_draw_workaround)(struct adreno_device *, struct adreno_context *);
 	irqreturn_t (*irq_handler)(struct adreno_device *);
 	void (*irq_control)(struct adreno_device *, int);
 	void * (*snapshot)(struct adreno_device *, void *, int *, int);
+};
+
+/*
+ * struct adreno_recovery_data - Structure that contains all information to
+ * perform gpu recovery from hangs
+ * @ib1 - IB1 that the GPU was executing when hang happened
+ * @context_id - Context which caused the hang
+ * @global_eop - eoptimestamp at time of hang
+ * @rb_buffer - Buffer that holds the commands from good contexts
+ * @rb_size - Number of valid dwords in rb_buffer
+ * @bad_rb_buffer - Buffer that holds commands from the hanging context
+ * bad_rb_size - Number of valid dwords in bad_rb_buffer
+ * @last_valid_ctx_id - The last context from which commands were placed in
+ * ringbuffer before the GPU hung
+ */
+struct adreno_recovery_data {
+	unsigned int ib1;
+	unsigned int context_id;
+	unsigned int global_eop;
+	unsigned int *rb_buffer;
+	unsigned int rb_size;
+	unsigned int *bad_rb_buffer;
+	unsigned int bad_rb_size;
+	unsigned int last_valid_ctx_id;
 };
 
 extern struct adreno_gpudev adreno_a2xx_gpudev;
@@ -115,6 +140,8 @@ uint8_t *adreno_convertaddr(struct kgsl_device *device,
 
 void *adreno_snapshot(struct kgsl_device *device, void *snapshot, int *remain,
 		int hang);
+
+int adreno_dump_and_recover(struct kgsl_device *device);
 
 static inline int adreno_is_a200(struct adreno_device *adreno_dev)
 {

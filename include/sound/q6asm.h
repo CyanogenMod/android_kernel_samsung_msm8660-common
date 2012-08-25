@@ -15,9 +15,6 @@
 #include <mach/qdsp6v2/apr.h>
 #include <mach/msm_subsystem_map.h>
 #include <sound/apr_audio.h>
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-#include <linux/ion.h>
-#endif
 
 #define IN                      0x000
 #define OUT                     0x001
@@ -97,15 +94,10 @@ typedef void (*app_cb)(uint32_t opcode, uint32_t token,
 struct audio_buffer {
 	dma_addr_t phys;
 	void       *data;
+	struct msm_mapped_buffer *mem_buffer;
 	uint32_t   used;
 	uint32_t   size;/* size of buffer */
 	uint32_t   actual_size; /* actual number of bytes read by DSP */
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	struct ion_handle *handle;
-	struct ion_client *client;
-#else
-	struct msm_mapped_buffer *mem_buffer;
-#endif
 };
 
 struct audio_aio_write_param {
@@ -235,6 +227,9 @@ int q6asm_enable_sbrps(struct audio_client *ac,
 
 int q6asm_cfg_dual_mono_aac(struct audio_client *ac,
 			uint16_t sce_left, uint16_t sce_right);
+
+int q6asm_set_encdec_chan_map(struct audio_client *ac,
+			uint32_t num_channels);
 
 int q6asm_enc_cfg_blk_qcelp(struct audio_client *ac, uint32_t frames_per_buf,
 		uint16_t min_rate, uint16_t max_rate,

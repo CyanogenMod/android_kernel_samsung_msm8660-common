@@ -30,7 +30,6 @@ struct pcm_afe_info {
 	int prepared;
 	struct hrtimer hrt;
 	int poll_time;
-	struct audio_client *audio_client;
 };
 
 
