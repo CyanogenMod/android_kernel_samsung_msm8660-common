@@ -150,8 +150,7 @@ struct kgsl_mmu_pt_ops {
 			unsigned int protflags,
 			unsigned int *tlb_flags);
 	int (*mmu_unmap) (void *mmu_pt,
-			struct kgsl_memdesc *memdesc,
-			unsigned int *tlb_flags);
+			struct kgsl_memdesc *memdesc);
 	void *(*mmu_create_pagetable) (void);
 	void (*mmu_destroy_pagetable) (void *pt);
 	int (*mmu_pt_equal) (struct kgsl_pagetable *pt,
