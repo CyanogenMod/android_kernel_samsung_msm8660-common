@@ -947,8 +947,10 @@ static void ld9040_disp_powerup(void)
 		LCD_CSX_HIGH
 		LCD_SCL_HIGH
 		//TODO: turn on ldo
+
 		#if 1
-			msleep(20);
+			// msleep(20);
+			msleep(50);
 		#else
 			msleep(50);
 			//LCD_RESET_N_HI
