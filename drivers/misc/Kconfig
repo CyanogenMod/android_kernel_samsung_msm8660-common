@@ -697,7 +697,7 @@ config STMPE811_ADC
           
 config GENERIC_BLN
     bool "Generic BLN support for backlight notification"
-    default y
+    default n
     help
       Say Y here to enable the backlight notification
       for android led-notification (modified liblight needed)
