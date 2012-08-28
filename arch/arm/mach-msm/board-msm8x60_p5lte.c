@@ -126,6 +126,7 @@
 #include <mach/rpm-regulator.h>
 #include <mach/restart.h>
 #include <mach/board-msm8660.h>
+#include <mach/iommu_domains.h>
 
 #include "devices.h"
 #include <mach/devices-lte.h>
@@ -2961,17 +2962,17 @@ static void __init msm8x60_init_dsps(void)
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 /* prim = 1280 x 800 x 4(bpp) x 3(pages) */
-#define MSM_FB_PRIM_BUF_SIZE 0xBB8000
+#define MSM_FB_PRIM_BUF_SIZE roundup(0xBB8000, 4096)
 #else
 /* prim = 1280 x 800 x 4(bpp) x 2(pages) */
-#define MSM_FB_PRIM_BUF_SIZE 0x7D0000
+#define MSM_FB_PRIM_BUF_SIZE roundup(0x7D0000, 4096)
 #endif
 
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 
-#define MSM_FB_EXT_BUF_SIZE  (1920 * 1080 * 2 * 1) /* 2 bpp x 1 page */
+#define MSM_FB_EXT_BUF_SIZE  (roundup((1920 * 1080 * 2), 4096) * 1) /* 2 bpp x 1 page */
 #elif defined(CONFIG_FB_MSM_TVOUT)
-#define MSM_FB_EXT_BUF_SIZE  (720 * 576 * 2 * 2) /* 2 bpp x 2 pages */
+#define MSM_FB_EXT_BUF_SIZE  (roundup((720 * 576 * 2), 4096) * 2) /* 2 bpp x 2 pages */
 #else
 #define MSM_FB_EXT_BUFT_SIZE	0
 #endif
@@ -5771,10 +5772,12 @@ static struct platform_device *surf_devices[] __initdata = {
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
 	.permission_type = IPT_TYPE_MM_CARVEOUT,
-	.align = PAGE_SIZE,
+	.align = SZ_64K,
 	.request_region = request_smi_region,
 	.release_region = release_smi_region,
 	.setup_region = setup_smi_region,
+	.iommu_map_all = 1,
+	.iommu_2x_map_domain = VIDEO_DOMAIN,
 };
 
 static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
@@ -9904,44 +9907,15 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.dsi_power_save   = mipi_dsi_panel_power,
 };
 
-#ifdef CONFIG_FB_MSM_MIPI_DSI
-int mdp_core_clk_rate_table[] = {
-	85330000,
-	85330000,
-	160000000,
-	200000000,
-};
-#elif defined(CONFIG_FB_MSM_HDMI_AS_PRIMARY)
-int mdp_core_clk_rate_table[] = {
-	200000000,
-	200000000,
-	200000000,
-	200000000,
-};
-#else
-int mdp_core_clk_rate_table[] = {
-	128000000, //0922 QC recommend : from 85330000
-	177780000, //0922 QC recommend : from 85330000
-	177780000, //0922 QC recommend : from -> 177780000
-	200000000,
-};
-#endif
-
 static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-	.mdp_core_clk_rate = 200000000,
-#else
-	.mdp_core_clk_rate = 128000000, // 85330000,
-#endif
-	.mdp_core_clk_table = mdp_core_clk_rate_table,
-	.num_mdp_clk = ARRAY_SIZE(mdp_core_clk_rate_table),
+	.mdp_max_clk = 200000000,
 #ifdef CONFIG_MSM_BUS_SCALING
 	.mdp_bus_scale_table = &mdp_bus_scale_pdata,
 #endif
 	.mdp_rev = MDP_REV_41,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	.mem_hid = ION_CP_WB_HEAP_ID,
+	.mem_hid = BIT(ION_CP_WB_HEAP_ID),
 #else
 #ifdef CONFIG_SAMSUNG_MEMORY_LAYOUT_ARRANGE
 	.mem_hid = MEMTYPE_PMEM_MDP,
