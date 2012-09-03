@@ -732,6 +732,14 @@ static inline void mdp4_dsi_video_base_swap(int cndx,
 {
 	/* empty */
 }
+static inline void mdp4_dsi_cmd_blt_start(struct msm_fb_data_type *mfd)
+{
+        /* empty */
+}
+static inline void mdp4_dsi_cmd_blt_stop(struct msm_fb_data_type *mfd)
+{
+        /* empty */
+}
 #endif  /* CONFIG_FB_MSM_MIPI_DSI */
 
 void mdp4_lcdc_overlay_blt(struct msm_fb_data_type *mfd,
