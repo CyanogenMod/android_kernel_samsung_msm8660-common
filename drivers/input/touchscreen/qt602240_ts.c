@@ -623,9 +623,11 @@ static void mxt224_ta_probe(int ta_status)
 		noise_threshold = 30;
 		movfilter = 11;		
 		blen = 32;
-		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727)
 		active_depth = 26;//20120418
 		charge_time = 22;
+		#elif defined (CONFIG_USA_MODEL_SGH_T989)
+		active_depth = 24;
 		#else
 		active_depth = 56;
 		#endif

@@ -1138,7 +1138,8 @@ static void init_hw(void)
 		struct pm_gpio cfg;
 	};
 
-#if	defined (CONFIG_USA_MODEL_SGH_I727)
+#if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+
 	struct pm8058_gpio_cfg touchkey_int_cfg = 
 	{
 	  PM8058_GPIO_PM_TO_SYS(12), // id-1		
@@ -1795,6 +1796,8 @@ static ssize_t set_touchkey_update_show(struct device *dev, struct device_attrib
 	while (retry--) {
 #if defined (CONFIG_JPN_MODEL_SC_03D)
 			if (ISSP_main(get_hw_rev()) == 0) {
+#elif defined (CONFIG_USA_MODEL_SGH_T989)
+			if (ISSP_main(TOUCHKEY_PBA_REV_05) == 0) {
 #else
 			if (ISSP_main(TOUCHKEY_PBA_REV_NA) == 0) {
 #endif
