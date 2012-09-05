@@ -9317,7 +9317,7 @@ static const u8 *mxt224e_config[] = {
 	end_config_e,
 };
 #else
-#if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+#if defined (CONFIG_USA_MODEL_SGH_I727) 
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
 				48,		/* IDLEACQINT */
 				255,	/* ACTVACQINT */
@@ -9379,6 +9379,73 @@ static const u8 *mxt224e_config[] = {
 	t38_config_e,//110927 gumi noise
 	end_config_e,
 };
+#elif defined(CONFIG_USA_MODEL_SGH_T989) //20120531
+static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
+				48,		/* IDLEACQINT */
+				255,	/* ACTVACQINT */
+				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
+				27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+
+/* NEXTTCHDI added */
+static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
+				139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
+				10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+				18, 15, 50, 50, 0};
+	
+
+static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
+static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
+static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
+/*static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 26, 0, 0, 1, 0, 0};*/
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 24, 0, 0, 1, 0, 0};//20120530
+
+static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
+
+
+static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
+   				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
+				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+				80, 18, 15, 0};
+
+static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
+    			3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2, //20120530
+   				0, 0, 0, 6, 6, 0, 0, 48, 4, 48, 
+/*				10, 0, 9, 5, 0, 15, 0, 1, 0, 0,*/
+				10, 0, 100, 5, 0, 100, 0, 5, 0, 0, //20120530
+
+				0, 0, 0, 0, 0, 30, 2, 15,	1, 81,
+				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+				80, 18, 15, 0};
+
+static u8 end_config_e[] = {RESERVED_T255};
+
+static const u8 *mxt224e_config[] = {
+	t7_config_e,
+	t8_config_e,
+	t9_config_e,
+	t15_config_e,
+	t18_config_e,
+	t23_config_e,
+	t25_config_e,
+	t40_config_e,
+	t42_config_e,
+	t46_config_e,
+	t47_config_e,
+	t48_config_e,
+	t38_config_e,//110927 gumi noise
+	end_config_e,
+};
+
 #else
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
 				48,		/* IDLEACQINT */
