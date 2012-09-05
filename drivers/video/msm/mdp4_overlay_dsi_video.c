@@ -847,7 +847,6 @@ void mdp4_primary_vsync_dsi_video(void)
 
 	cndx = 0;
 	vctrl = &vsync_ctrl_db[cndx];
-	pr_debug("%s: cpu=%d\n", __func__, smp_processor_id());
 	vctrl->vsync_time = ktime_get();
 	schedule_work(&vctrl->vsync_work);
 
@@ -1005,8 +1004,6 @@ void mdp4_dsi_video_overlay(struct msm_fb_data_type *mfd)
 	if (!pipe || !mfd->panel_power_on)
 		return;
 
-	pr_debug("%s: cpu=%d pid=%d\n", __func__,
-			smp_processor_id(), current->pid);
 	if (pipe->pipe_type == OVERLAY_TYPE_RGB) {
 		bpp = fbi->var.bits_per_pixel / 8;
 		buf = (uint8 *) fbi->fix.smem_start;
