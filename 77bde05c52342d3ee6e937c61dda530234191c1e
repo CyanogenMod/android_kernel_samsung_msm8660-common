@@ -1,0 +1,8 @@
+Change-Id: Id7cb946564ca84188df8fc52a6d4181ddc51f85a
+Code-Review+2: Steve Kondik <shade@chemlab.org>
+Verified+1: Steve Kondik <shade@chemlab.org>
+Submitted-by: Steve Kondik <shade@chemlab.org>
+Submitted-at: Thu, 06 Sep 2012 04:45:45 +0400
+Reviewed-on: http://review.cyanogenmod.com/22877
+Project: CyanogenMod/android_kernel_samsung_msm8660-common
+Branch: refs/heads/jellybean
