@@ -36,6 +36,7 @@ static int msm_cpuidle_enter(
 	cpu_pm_enter();
 #endif
 	ret = msm_pm_idle_enter((enum msm_pm_sleep_mode) (state->driver_data));
+	dev->last_residency = ret;
 
 #ifdef CONFIG_CPU_PM
 	cpu_pm_exit();
