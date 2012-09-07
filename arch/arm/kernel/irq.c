@@ -98,7 +98,9 @@ void handle_IRQ(unsigned int irq, struct pt_regs *regs)
 	irq_finish(irq);
 
 	irq_exit();
+#ifdef CONFIG_SEC_DEBUG_IRQ_EXIT_LOG
 	sec_debug_irq_enterexit_log(irq, start_time);
+#endif
 	set_irq_regs(old_regs);
 	perf_mon_interrupt_out();
 }
