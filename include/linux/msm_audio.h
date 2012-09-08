@@ -99,6 +99,9 @@ enum A2220_BandType{
 };
 #endif
 
+#define AUDIO_REGISTER_ION _IOW(AUDIO_IOCTL_MAGIC, 97, unsigned)
+#define AUDIO_DEREGISTER_ION _IOW(AUDIO_IOCTL_MAGIC, 98, unsigned)
+
 #define	AUDIO_MAX_COMMON_IOCTL_NUM	100
 
 
@@ -173,6 +176,11 @@ struct msm_audio_stats {
 	uint32_t byte_count;
 	uint32_t sample_count;
 	uint32_t unused[2];
+};
+
+struct msm_audio_ion_info {
+	int fd;
+	void *vaddr;
 };
 
 struct msm_audio_pmem_info {
