@@ -13,7 +13,7 @@ static void sec_keyboard_power(struct work_struct *work)
 			struct sec_keyboard_drvdata, power_dwork.work);
 
 	if (UNKOWN_KEYLAYOUT == data->kl) {
-		data->acc_power(1, false);
+		data->acc_power(2, false);
 		data->pre_connected = false;
 
 		if (data->check_uart_path)
@@ -169,7 +169,7 @@ static int check_keyboard_dock(struct sec_keyboard_callbacks *cb, bool val)
 		if (data->pre_connected) {
 			if (UNKOWN_KEYLAYOUT != data->pre_kl) {
 				data->kl = data->pre_kl;
-				data->acc_power(1, true);
+				data->acc_power(2, true);
 				forced_wakeup(data);
 				printk(KERN_DEBUG "[Keyboard] kl : %d\n",
 					data->pre_kl);
@@ -187,7 +187,7 @@ static int check_keyboard_dock(struct sec_keyboard_callbacks *cb, bool val)
 			data->check_uart_path(true);
 
 		msleep(200);
-		data->acc_power(1, true);
+		data->acc_power(2, true);
 
 		/* try to get handshake data */
 		for (try_cnt = 0; try_cnt < max_cnt; try_cnt++) {

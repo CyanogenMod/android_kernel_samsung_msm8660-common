@@ -38,7 +38,7 @@
 
 #include "sec_cam_dev.h"
 
-#if defined(CONFIG_TARGET_SERIES_P5LTE)
+#if defined(CONFIG_TARGET_SERIES_P5LTE) || defined (CONFIG_TARGET_SERIES_P4LTE)
 #include "s5k5ccaf_regs_p5.h"
 #elif defined(CONFIG_TARGET_SERIES_P8LTE)
 #include "s5k5ccaf_regs_p8_skt.h"
@@ -345,7 +345,7 @@ int s5k5ccaf_set_whitebalance(int wb)
 				
 			default:
 				printk("Invalid wb (%d) !!!\n", wb);
-				return rc;		
+				return rc;
 		}
 	} else
 #endif
@@ -373,7 +373,7 @@ int s5k5ccaf_set_whitebalance(int wb)
 			
 			default:
 				printk("Invalid wb (%d) !!!\n", wb);
-				return rc;		
+				return rc;
 		}
 	}
 
@@ -665,7 +665,7 @@ int s5k5ccaf_set_fps(unsigned int mode, unsigned int fps)
 		case S5K5CCGX_8_FPS:
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_fps_8fix);
 			break;
-#endif			
+#endif
 		case S5K5CCGX_15_FPS:
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_fps_15fix);
 			break;
@@ -682,7 +682,6 @@ int s5k5ccaf_set_fps(unsigned int mode, unsigned int fps)
 	} else {
 		S5K5CCAF_WRITE_LIST(s5k5ccaf_fps_auto);
 	}
-
 
 	s5k5ccaf_ctrl->settings.fps_mode = mode;
 	s5k5ccaf_ctrl->settings.fps = fps;
@@ -716,7 +715,7 @@ int s5k5ccaf_set_sharpness(int sharpness)
 
 		default:
 			printk("Invalid sharpness (%d) !!!\n", sharpness);
-			return rc;		
+			return rc;
 	}
 	
 	s5k5ccaf_ctrl->settings.sharpness = sharpness;
@@ -744,7 +743,7 @@ int s5k5ccaf_set_awb(int lock)
 }
 
 int s5k5ccaf_set_ae_awb(int lock)
-{	
+{
 	if(s5k5ccaf_ctrl->app_mode == S5K5CCGX_3RD_PARTY_APP) {
 		return 0; //for barcode scanner, QRcode
 	}
@@ -804,7 +803,7 @@ int s5k5ccaf_set_af_mode(int mode)
 
 		default:
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_normal_on); 
-			return rc;
+			break;
 	}
 
 	s5k5ccaf_ctrl->settings.focus_mode = mode;
@@ -821,10 +820,10 @@ static u16 s5k5ccaf_get_ae_stable(void)
 	if(s5k5ccaf_sensor_read(0x0F12, &read_value) < 0)   {
 		printk("sensor read fail...!\n");
 		goto out;
-	}	
+	}
 
 	CAM_DEBUG("read_value (ae stable) = 0x%X", read_value);
-	
+
 	return read_value;
 
 out:
@@ -888,7 +887,7 @@ int s5k5ccaf_set_af_status(int status, int initial_pos)
 			s5k5ccaf_sensor_write(0x0F12, 0x0006);
 			printk("\n\n%s : 720P Auto Focus Operation \n\n", __func__);
 		} else {
-			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_do);		
+			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_do);
 			if(af_low_lux) {
 				CAM_DEBUG("200ms delay for Low Lux AF");
 				CAM_DELAY(200);	//200ms delay after AF Start(from 5CC guide)
@@ -901,11 +900,11 @@ int s5k5ccaf_set_af_status(int status, int initial_pos)
 		// 0 : only AF stop
 		// 1 : only lenz move base position
 		// 2 : AF stop and lenz move base posizion
-		if(initial_pos == 2) {		
+		if(initial_pos == 2) {
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_abort);
-			s5k5ccaf_set_af_mode(s5k5ccaf_ctrl->settings.focus_mode);			
+			s5k5ccaf_set_af_mode(s5k5ccaf_ctrl->settings.focus_mode);
 		} else if (initial_pos == 1) {
-			s5k5ccaf_set_af_mode(s5k5ccaf_ctrl->settings.focus_mode);			
+			s5k5ccaf_set_af_mode(s5k5ccaf_ctrl->settings.focus_mode);
 		} else {
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_af_abort);
 		}
@@ -922,7 +921,7 @@ int s5k5ccaf_set_af_status(int status, int initial_pos)
 		af_low_lux = 0;
 		
 		s5k5ccaf_ctrl->touchaf_enable = false;
-	}	
+	}
 
 	s5k5ccaf_ctrl->settings.focus_status = status;
 
@@ -1092,11 +1091,8 @@ int s5k5ccaf_set_touchaf_pos(int x, int y)
 	outer_window_start_x = outer_window_start_x * 1024 / sensor_width;
 	inner_window_start_y = inner_window_start_y * 1024 / sensor_height;
 	outer_window_start_y = outer_window_start_y * 1024 / sensor_height;
-	CAM_DEBUG("calculated value inner_window_start_x = %d", inner_window_start_x);
-	CAM_DEBUG("calculated value inner_window_start_y = %d", inner_window_start_y);
-	CAM_DEBUG("calculated value outer_window_start_x = %d", outer_window_start_x);
-	CAM_DEBUG("calculated value outer_window_start_y = %d", outer_window_start_y);
-
+	CAM_DEBUG("calculated value inner_window_start = %d, %d", inner_window_start_x, inner_window_start_y);
+	CAM_DEBUG("calculated value outer_window_start = %d, %d", outer_window_start_x, outer_window_start_y);
 
 	//Write register
 	s5k5ccaf_sensor_write(0x0028, 0x7000);
@@ -1121,7 +1117,7 @@ int s5k5ccaf_set_touchaf_pos(int x, int y)
 	s5k5ccaf_sensor_write(0x002A, 0x023C);
 	s5k5ccaf_sensor_write(0x0F12, 0x0001);
 
-	CAM_DEBUG("update AF window and sleep 100ms");
+	//CAM_DEBUG("update AF window and sleep 100ms");
 	CAM_DELAY(100);
 
 	return 0;
@@ -1136,7 +1132,7 @@ int s5k5ccaf_get_af_status(int is_search_status)
 			s5k5ccaf_sensor_write(0x002C, 0x7000);
 			s5k5ccaf_sensor_write(0x002E, 0x2D12);
 			s5k5ccaf_sensor_read(0x0F12, &af_status);
-			CAM_DEBUG("1st AF status : %x", af_status);			
+			//CAM_DEBUG("1st AF status : %x", af_status);
 			break;
 			
 		case 1:
@@ -1145,15 +1141,15 @@ int s5k5ccaf_get_af_status(int is_search_status)
 			s5k5ccaf_sensor_write(0x002C, 0x7000);
 			s5k5ccaf_sensor_write(0x002E, 0x1F2F);
 			s5k5ccaf_sensor_read(0x0F12, &af_status);
-			CAM_DEBUG("2nd AF status : %x", af_status);
+			//CAM_DEBUG("2nd AF status : %x", af_status);
 			if((!s5k5ccaf_ctrl->hd_enabled) && (af_status == 0) && (s5k5ccaf_ctrl->settings.flash_state == 1)) {
 				S5K5CCAF_WRITE_LIST(s5k5ccaf_preflash_end);
 				s5k5ccaf_set_flash(MOVIE_FLASH,0);
 				s5k5ccaf_ctrl->settings.flash_state = 0;
-			}			
+			}
 			break;
 		default:
-			CAM_DEBUG("unexpected mode is comming from hal\n");
+			cam_err("unexpected mode is comming from hal");
 			break;
 	}
 
@@ -1193,15 +1189,15 @@ int s5k5ccaf_get_exif_flash(void)
 
 	// flash settings
 	switch(s5k5ccaf_ctrl->settings.flash_mode) {
-		case S5K5CCGX_FLASH_AUTO:		
+		case S5K5CCGX_FLASH_AUTO:
 			if(cur_lux > LOW_LIGHT_LEVEL)
-				temp = 0x0018;	//(auto) Flash did not fire			
+				temp = 0x0018;	//(auto) Flash did not fire
 			else 
 				temp = 0x0019;	//(auto) Flash fired
 			break;
 		case S5K5CCGX_FLASH_ON:
 			temp = 0x0009;		//Flash fired, compulsory flash mode
-			break;		
+			break;
 	}
 
 	CAM_DEBUG("flash_mode = %d, temp = %x\n", s5k5ccaf_ctrl->settings.flash_mode, temp); 
@@ -1217,8 +1213,8 @@ static void s5k5ccaf_get_exif_exposure(void)
 	s5k5ccaf_sensor_write(0xFCFC, 0xD000);
 	s5k5ccaf_sensor_write(0x002C, 0x7000);
 	s5k5ccaf_sensor_write(0x002E, 0x2A14);
-	s5k5ccaf_sensor_read(0x0F12, &read_value_lsb); 	
-	s5k5ccaf_sensor_read(0x0F12, &read_value_msb); 		
+	s5k5ccaf_sensor_read(0x0F12, &read_value_lsb);
+	s5k5ccaf_sensor_read(0x0F12, &read_value_msb); 
 
 	s5k5ccaf_ctrl->settings.exif_shutterspeed = 400000/(read_value_lsb+(read_value_msb<<16));
 
@@ -1262,7 +1258,7 @@ int s5k5ccaf_set_preview_index(int width, int height) {
 int s5k5ccaf_set_preview_size(int size_index)
 {
 	int rc = 0;
-	
+
 	switch(size_index) {
 		case S5K5CCGX_PREVIEW_528x432:	// 528x432
 			CAM_DEBUG("528x432");
@@ -1361,18 +1357,18 @@ int wait_sensor_mode(int mode, int interval, int cnt)
 	int rc = 0;
 	unsigned short sensor_mode;
 	
-	cam_info("wait_sensor_mode E %d", sensor_mode);
+	cam_info("wait_sensor_mode E %d", mode);
 	do {
 		s5k5ccaf_sensor_write(0x002C, 0x7000);
 		s5k5ccaf_sensor_write(0x002E, 0x1E86);
-		s5k5ccaf_sensor_read(0x0F12, &sensor_mode);	
+		s5k5ccaf_sensor_read(0x0F12, &sensor_mode);
 		msleep(interval);
 	} while((--cnt) > 0 && !(sensor_mode == mode));
 
-	cam_info("wait_sensor_mode X %d (wait = %d)", sensor_mode, cnt);
+	cam_info("wait_sensor_mode X %d (wait = %d)", mode, cnt);
 	
 	if(cnt == 0) {
-		cam_err("!! MODE CHANGE ERROR to %d !!\n", mode);
+		cam_err("!! MODE CHANGE ERROR to %d !!", mode);
 		rc = -1;
 	}
 	
@@ -1393,11 +1389,12 @@ void s5k5ccaf_set_preview(void)
 			cam_info("return to preview mode");
 #ifndef USE_VIDEO_SIZE
 			S5K5CCAF_WRITE_LIST(s5k5ccaf_init0);
-#endif				
+#endif
 			s5k5ccaf_ctrl->op_mode = S5K5CCGX_MODE_PREVIEW;
 			s5k5ccaf_set_preview_size(s5k5ccaf_ctrl->settings.preview_size_idx);
 			wait_sensor_mode(S5K5CCGX_PREVIEW_MODE, 10, 50);	//20 -> 50 : recommended by SEM
 			s5k5ccaf_ctrl->hd_enabled = 0;
+			s5k5ccaf_set_ae_awb(0); //AE/AWB Unlock
 		} else {
 			if(s5k5ccaf_ctrl->settings.preview_size_idx == S5K5CCGX_PREVIEW_PVGA) { // 720p 	
 				cam_info("change to 720P preview");
@@ -1405,9 +1402,9 @@ void s5k5ccaf_set_preview(void)
 				S5K5CCAF_WRITE_LIST(s5k5ccaf_1280_720_Preview); 
 				wait_sensor_mode(S5K5CCGX_PREVIEW_MODE, 10, 20);
 				s5k5ccaf_ctrl->hd_enabled = 1;
-			} else {		
+			} else {
 				cam_info("change preview size");
-#ifndef CONFIG_LOAD_FILE				
+#ifndef CONFIG_LOAD_FILE
 				S5K5CCAF_WRITE_LIST(s5k5ccaf_init0);
 #endif		
 				s5k5ccaf_ctrl->op_mode = S5K5CCGX_MODE_PREVIEW;
@@ -1416,7 +1413,7 @@ void s5k5ccaf_set_preview(void)
 				}
 				wait_sensor_mode(S5K5CCGX_PREVIEW_MODE, 10, 20);
 				s5k5ccaf_ctrl->hd_enabled = 0;
-			}			
+			}
 
 			cam_info("s5k5ccaf_ctrl->cam_mode = %d", s5k5ccaf_ctrl->cam_mode);
 			if(s5k5ccaf_ctrl->cam_mode == S5K5CCGX_MOVIE_MODE || s5k5ccaf_ctrl->cam_mode == S5K5CCGX_MMS_MODE) {
@@ -1431,10 +1428,10 @@ void s5k5ccaf_set_preview(void)
 					s5k5ccaf_ctrl->first_af_running = 1;
 					S5K5CCAF_WRITE_LIST(s5k5ccaf_1st_720P_af_do); 
 				}
-#endif				
+#endif
 				CAM_DELAY(200);
 			} else {
-				if(s5k5ccaf_ctrl->settings.scene == SCENE_MODE_NONE) {					
+				if(s5k5ccaf_ctrl->settings.scene == SCENE_MODE_NONE) {
 					s5k5ccaf_set_whitebalance(s5k5ccaf_ctrl->settings.wb);
 					s5k5ccaf_set_effect(s5k5ccaf_ctrl->settings.effect);
 					s5k5ccaf_set_brightness(s5k5ccaf_ctrl->settings.brightness);
@@ -1442,9 +1439,9 @@ void s5k5ccaf_set_preview(void)
 					if(s5k5ccaf_ctrl->vtcall_mode) { //for Qik, HDVT
 						s5k5ccaf_set_fps(s5k5ccaf_ctrl->vtcall_mode, s5k5ccaf_ctrl->settings.fps); //fixed fps
 					} else {
-						s5k5ccaf_set_fps(s5k5ccaf_ctrl->settings.fps_mode, s5k5ccaf_ctrl->settings.fps);		
+						s5k5ccaf_set_fps(s5k5ccaf_ctrl->settings.fps_mode, s5k5ccaf_ctrl->settings.fps);
 					}
-					CAM_DELAY(200);
+					CAM_DELAY(300);
 				} else {
 					s5k5ccaf_set_af_mode(s5k5ccaf_ctrl->settings.focus_mode);
 					s5k5ccaf_set_scene(s5k5ccaf_ctrl->settings.scene);	
@@ -1457,7 +1454,7 @@ void s5k5ccaf_set_preview(void)
 						cam_info("additional delay 800ms (FIREWORK)");	
 					} else {
 						CAM_DELAY(200);
-					}							
+					}
 				}
 			}
 		}
@@ -1521,8 +1518,8 @@ void s5k5ccaf_set_capture(void)
 	s5k5ccaf_get_exif_exposure();
 
 	if(s5k5ccaf_ctrl->settings.flash_state == 1) {
-		//CAM_DEBUG("CAPTURE FLASH OFF - after 700ms delay");			
-		S5K5CCAF_WRITE_LIST(s5k5ccaf_mainflash_end);				
+		//CAM_DEBUG("CAPTURE FLASH OFF - after 700ms delay");
+		S5K5CCAF_WRITE_LIST(s5k5ccaf_mainflash_end);
 		S5K5CCAF_WRITE_LIST(s5k5ccaf_flash_ae_clear);
 		s5k5ccaf_ctrl->settings.flash_state = 0;
 	}
@@ -1533,7 +1530,7 @@ void s5k5ccaf_set_capture(void)
 static long s5k5ccaf_set_sensor_mode(int mode)
 {
 	CAM_DEBUG("s5k5ccaf_set_sensor_mode : %d", mode);
-	
+
 	switch (mode) {
 		case SENSOR_PREVIEW_MODE:
 			s5k5ccaf_start();
@@ -1551,7 +1548,7 @@ static long s5k5ccaf_set_sensor_mode(int mode)
 	}
 
 	s5k5ccaf_ctrl->sensor_mode = mode;
-		
+
 	return 0;
 }
 
@@ -1658,7 +1655,7 @@ int s5k5ccaf_sensor_ext_config(void __user *arg)
 			rc = s5k5ccaf_set_metering(cfg_data.value_1);
 			break;
 
-		case EXT_CFG_SET_PREVIEW_SIZE:	
+		case EXT_CFG_SET_PREVIEW_SIZE:
 			cam_info("set preview size %dx%d", cfg_data.value_1, cfg_data.value_2);
 			s5k5ccaf_ctrl->settings.preview_size_width = cfg_data.value_1;	// just set width
 			s5k5ccaf_ctrl->settings.preview_size_height = cfg_data.value_2;	// just set height
@@ -1686,7 +1683,7 @@ int s5k5ccaf_sensor_ext_config(void __user *arg)
 			cfg_data.value_1 = rc;
 			break;
 			
-		case EXT_CFG_SET_TOUCHAF_POS:	
+		case EXT_CFG_SET_TOUCHAF_POS:
 #if defined(CONFIG_TARGET_SERIES_P8LTE)
 			if( s5k5ccaf_ctrl->first_af_running ) {
 				int first_af_status;
@@ -1733,7 +1730,7 @@ int s5k5ccaf_sensor_ext_config(void __user *arg)
 			break;
 
 		case EXT_CFG_GET_EXIF_FlASH:
-			rc = s5k5ccaf_get_exif_flash();		
+			rc = s5k5ccaf_get_exif_flash();
 			cfg_data.value_1 = rc;
 			break;
 
@@ -1758,7 +1755,6 @@ int s5k5ccaf_sensor_ext_config(void __user *arg)
 	}
 
 	return rc;
-	
 }
 
 static int s5k5ccaf_sensor_pre_init(const struct msm_camera_sensor_info *data)
@@ -1781,7 +1777,7 @@ static int s5k5ccaf_sensor_init_probe(const struct msm_camera_sensor_info *data)
 	printk("[S5K5CCAF] sensor_init_probe()\n");
 
 	gpio_set_value_cansleep(CAM_3M_RST, LOW);
-	gpio_set_value_cansleep(CAM_VGA_RST, LOW);	
+	gpio_set_value_cansleep(CAM_VGA_RST, LOW);
 	gpio_set_value_cansleep(CAM_VGA_STBY, LOW);
 
 	gpio_set_value_cansleep(CAM_3M_STBY, HIGH);	// modify Jeonhk 20110812

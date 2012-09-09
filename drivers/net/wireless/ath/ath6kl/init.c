@@ -46,7 +46,7 @@ static unsigned int ar6k_clock = 26000000;
 static unsigned int ar6k_clock = 19200000;
 #endif
 static unsigned short reg_domain = 0xffff;
-static unsigned short lrssi = 10;
+static unsigned short lrssi = 20;   /* -95 dBm (SNR) - ROAM_THRESHOLD (20) = -75 dBm*/
 
 static unsigned short en_ani = 1;
 module_param(debug_mask, uint, 0644);
@@ -2012,10 +2012,15 @@ int ath6kl_core_init(struct ath6kl *ar)
 		ar->wow_suspend_mode = wow_mode;
 	else
 		ar->wow_suspend_mode = 0;
+#ifdef CONFIG_MACH_PX
+	ar->wiphy->flags |= WIPHY_FLAG_HAVE_AP_SME |
+	            		WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD;
+#else
 
 	ar->wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM |
 			    WIPHY_FLAG_HAVE_AP_SME |
 			    WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD;
+#endif 
 
 #ifdef CONFIG_MACH_PX
 #else

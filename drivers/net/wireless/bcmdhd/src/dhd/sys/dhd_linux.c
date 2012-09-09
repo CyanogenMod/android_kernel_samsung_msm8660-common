@@ -3699,7 +3699,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	setbit(eventmask, WLC_E_MIC_ERROR);
 	setbit(eventmask, WLC_E_ASSOC_REQ_IE);
 	setbit(eventmask, WLC_E_ASSOC_RESP_IE);
+#ifndef WL_CFG80211
 	setbit(eventmask, WLC_E_PMKID_CACHE);
+#endif
 	setbit(eventmask, WLC_E_TXFAIL);
 	setbit(eventmask, WLC_E_JOIN_START);
 	setbit(eventmask, WLC_E_SCAN_COMPLETE);
@@ -4585,13 +4587,13 @@ dhd_os_wd_timer(void *bus, uint wdtick)
 	/* Totally stop the timer */
 	if (!wdtick && dhd->wd_timer_valid == TRUE) {
 		dhd->wd_timer_valid = FALSE;
-		dhd_os_spin_unlock(pub, flags);
 		if (dhd)
 #ifdef DHDTHREAD
 		del_timer_sync(&dhd->timer);
 #else
 		del_timer(&dhd->timer);
 #endif /* DHDTHREAD */
+		dhd_os_spin_unlock(pub, flags);
 		return;
 	}
 

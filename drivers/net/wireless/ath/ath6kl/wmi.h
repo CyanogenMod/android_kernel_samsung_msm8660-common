@@ -706,6 +706,7 @@ enum wmi_connect_ctrl_flags_bits {
 	CONNECT_DO_WPA_OFFLOAD = 0x0040,
 	CONNECT_DO_NOT_DEAUTH = 0x0080,
 	CONNECT_WPS_FLAG = 0x0100,
+    CONNECT_IGNORE_BSSID_HINT = 0x0200,
 };
 
 struct wmi_connect_cmd {
@@ -1487,11 +1488,15 @@ enum wmi_bi_ftype {
 	PROBEREQ_FTYPE,
 };
 
+#ifdef CONFIG_MACH_PX
+#define DEF_LRSSI_SCAN_PERIOD		( 5 * 1000 )
+#else
 #define DEF_LRSSI_SCAN_PERIOD		 5
+#endif
 #define DEF_LRSSI_ROAM_THRESHOLD	20
 #define DEF_LRSSI_ROAM_FLOOR		60
 #ifdef CONFIG_MACH_PX
-#define DEF_SCAN_FOR_ROAM_INTVL		 5
+#define DEF_SCAN_FOR_ROAM_INTVL		 2
 #else
 #define DEF_SCAN_FOR_ROAM_INTVL		 2
 #endif

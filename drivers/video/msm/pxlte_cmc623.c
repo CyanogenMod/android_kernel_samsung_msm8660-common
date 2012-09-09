@@ -71,7 +71,7 @@ unsigned long last_cmc623_Algorithm = 0xffff;
 static int current_gamma_level = CMC623_BRIGHTNESS_MAX_LEVEL;
 static int current_cabc_onoff = 1;
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
 static int cmc623_current_region_enable = false; //region mode added
 #endif
 
@@ -244,7 +244,7 @@ bool cmc623_I2cWrite16(unsigned char Addr, unsigned long Data)
 		return -ENODEV;
 	}
 	
-#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
 		if(Addr == 0x0000)
 		{
 		if(Data == last_cmc623_Bank)
@@ -854,7 +854,7 @@ int p5lte_cmc623_on(int enable)
 	}
 
 	if (enable) {
-		#if defined(CONFIG_KOR_OPERATOR_SKT)
+		#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 		gpio_set_value(CMC623_nRST, 1);
 		ret = gpio_get_value(CMC623_nRST);
 		pr_debug("%s, CMC623_nRST : %d\n",__func__,ret);
@@ -866,7 +866,7 @@ int p5lte_cmc623_on(int enable)
 			ret = gpio_get_value(LCD_PWR_EN);
 			pr_debug("%s, LCD_PWR_EN : %d\n",__func__,ret);
 			
-			#if defined(CONFIG_KOR_OPERATOR_SKT)
+			#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 			udelay(10);
 			#else
 			udelay(20);
@@ -883,7 +883,7 @@ int p5lte_cmc623_on(int enable)
         		pr_debug("%s: error enabling regulator\n", __func__);
 				return -1;
         	} 
-			#if defined(CONFIG_KOR_OPERATOR_SKT)
+			#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 			gpio_set_value(MLCD_ON, 1);
 			ret = gpio_get_value(MLCD_ON);
 			pr_debug("%s, MLCD_ON : %d\n",__func__,ret);
@@ -971,7 +971,7 @@ int p5lte_cmc623_on(int enable)
 				gpio_set_value(CMC623_nRST, 0);
 			msleep(4);
 
-			#if defined(CONFIG_KOR_OPERATOR_SKT)
+			#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 			gpio_set_value(MLCD_ON, 0);
 			ret = gpio_get_value(MLCD_ON);
 			pr_debug("%s, MLCD_ON : %d\n",__func__,ret);
@@ -1157,7 +1157,7 @@ void cmc623_manual_brightness(int bl_lvl)
 }
 #endif
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
 void cmc623_Set_Region_Ext(int enable, int hStart, int hEnd, int vStart, int vEnd)
 {
 	u16 data=0;
@@ -1376,7 +1376,7 @@ int p5lte_cmc623_init(void)
 	if(ret < 0) {
 		pr_debug(KERN_ERR "%s CMC gpio %d request failed\n",__func__,LCD_PWR_EN);
 	}
-	#if defined(CONFIG_KOR_OPERATOR_SKT)
+	#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 	ret = gpio_request(MLCD_ON, "MLCD_ON");
 	if(ret < 0) {
 		pr_debug(KERN_ERR "%s CMC gpio %d request failed\n",__func__,MLCD_ON);
@@ -1395,7 +1395,7 @@ int p5lte_cmc623_init(void)
 	gpio_direction_output(CMC623_SLEEP, 0);
 	gpio_direction_output(CMC623_BYPASS, 0);
 	gpio_direction_output(CMC623_FAILSAFE, 0);
-	#if defined(CONFIG_KOR_OPERATOR_SKT)
+	#if defined(CONFIG_KOR_OPERATOR_SKT)|| defined(CONFIG_KOR_OPERATOR_KT)
 	gpio_direction_output(MLCD_ON, 0);
 	gpio_direction_output(CMC623_SDA, 0);
 	gpio_direction_output(CMC623_SCL, 0);

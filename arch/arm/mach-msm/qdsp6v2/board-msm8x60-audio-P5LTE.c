@@ -68,6 +68,8 @@
 #include "timpani_profile_quincy_lgt.h"
 #elif defined(CONFIG_USA_MODEL_SGH_I957)  //P5LTE-ATT
 #include "timpani_profile_p5lte_att.h"
+#elif defined(CONFIG_JPN_MODEL_SC_01D)  //P4LTE-NTT
+#include "timpani_profile_p5lte_att.h"
 #elif defined(CONFIG_EUR_MODEL_GT_P7320)  //P5LTE-EUR //SHOULD BE CHECKED
 #include "timpani_profile_p5lte_att.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E140S)  //P5LTE-SKT
@@ -158,6 +160,9 @@ struct platform_device msm_device_dspcrashd_8x60 = {
 #define PMIC_GPIO_SUB_MICBIAS_EN       PM8058_GPIO(26)
 #endif
 #if defined(CONFIG_USA_MODEL_SGH_I957)
+#define PMIC_GPIO_MAIN_MICBIAS_EN PM8058_GPIO(28)
+#endif
+#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
 #define PMIC_GPIO_MAIN_MICBIAS_EN PM8058_GPIO(28)
 #endif
 
@@ -1313,6 +1318,7 @@ static struct regulator *snddev_reg_l10;
 
 static atomic_t preg_ref_cnt;
 
+#if !defined (CONFIG_TARGET_SERIES_P4LTE)
 static int msm_snddev_voltage_on(void)
 {
 	int rc=0;
@@ -1416,6 +1422,16 @@ static void msm_snddev_voltage_off(void)
 
 	snddev_reg_l10 = NULL;
 }
+#else // dummy functions
+static int msm_snddev_voltage_on(void)
+{
+	return 0;
+}
+static void msm_snddev_voltage_off(void)
+{
+	return;
+}
+#endif
 
 #ifdef CONFIG_VP_A2220
 static int msm_snddev_setting_audience_call_connect(void)
@@ -1553,6 +1569,20 @@ static int msm_snddev_enable_amic_power(void)
 #if defined(CONFIG_USA_MODEL_SGH_I957)
 	
 		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 1);
+
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+
+#if defined(CONFIG_KOR_MODEL_SHV_E140L)
+		if(system_rev >= 0x06){
+#else 
+		if(system_rev >= 0x07){
+#endif
+				gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 1);
+		}
+        else{
+		        ret = pm8058_micbias_enable(OTHC_MICBIAS_0,
+			    	OTHC_SIGNAL_ALWAYS_ON);
+        }
 #else	
 		ret = pm8058_micbias_enable(OTHC_MICBIAS_0,
 				OTHC_SIGNAL_ALWAYS_ON);
@@ -1596,6 +1626,22 @@ static int msm_snddev_enable_voip_amic_power(void)
 			if (ret)
 				pr_err("%s: Enabling amic power failed\n", __func__);
 		}
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+
+#if defined(CONFIG_KOR_MODEL_SHV_E140L)
+		if(system_rev >= 0x06){
+#else 
+		if(system_rev >= 0x07){
+#endif
+				gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 1);
+		}
+        else{
+		        ret = pm8058_micbias_enable(OTHC_MICBIAS_0,
+			    	OTHC_SIGNAL_ALWAYS_ON);
+				if (ret)
+					pr_err("%s: Enabling amic power failed\n", __func__);
+        }
+		
 #else
 		ret = pm8058_micbias_enable(OTHC_MICBIAS_0,
 				OTHC_SIGNAL_ALWAYS_ON);
@@ -1627,10 +1673,18 @@ static void msm_snddev_disable_amic_power(void)
 			if (ret)
 				pr_err("%s: Disabling amic power failed\n", __func__);
 		}
-#else
-#if defined(CONFIG_USA_MODEL_SGH_I957)
+#elif defined(CONFIG_USA_MODEL_SGH_I957)
 
 		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 0);
+
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+#if defined(CONFIG_KOR_MODEL_SHV_E140L)
+		if(system_rev >= 0x06){
+#else 
+		if(system_rev >= 0x07){
+#endif
+			gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MAIN_MICBIAS_EN), 0);
+        }
 #else
 	ret = pm8058_micbias_enable(OTHC_MICBIAS_0, OTHC_SIGNAL_OFF);
 	if (ret)
@@ -1638,7 +1692,6 @@ static void msm_snddev_disable_amic_power(void)
 #endif		
 #endif
 
-#endif
 
 #ifdef CONFIG_VP_A2220
 	if (machine_is_msm8x60_fluid()) {
@@ -1882,7 +1935,12 @@ static struct adie_codec_action_unit headset_rx_48KHz_osr256_actions[] =
 ADIE_HEADSET_RX_48000_256;
 static struct adie_codec_action_unit headset_tx_48KHz_osr256_actions[] =
 ADIE_HEADSET_TX_48000_256;
-
+#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+static struct adie_codec_action_unit headset_loopback_rx_48KHz_osr256_actions[] =
+ADIE_HEADSET_LOOPBACK_RX_48000_256;
+static struct adie_codec_action_unit headset_loopback_tx_48KHz_osr256_actions[] =
+ADIE_HEADSET_LOOPBACK_TX_48000_256;
+#endif
 
 // ------- DEFINITION OF VT CALL PAIRED DEVICES ------ 
 #if defined(CONFIG_TARGET_LOCALE_KOR)
@@ -2175,6 +2233,24 @@ static struct adie_codec_hwsetting_entry headset_tx_settings[] = {
 	}
 };
 
+#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+static struct adie_codec_hwsetting_entry headset_loopback_rx_settings[] = {
+	{
+		.freq_plan = 48000,
+		.osr = 256,
+		.actions = headset_loopback_rx_48KHz_osr256_actions,
+		.action_sz = ARRAY_SIZE(headset_loopback_rx_48KHz_osr256_actions),
+	}
+};
+static struct adie_codec_hwsetting_entry headset_loopback_tx_settings[] = {
+	{
+		.freq_plan = 48000,
+		.osr = 256,
+		.actions = headset_loopback_tx_48KHz_osr256_actions,
+		.action_sz = ARRAY_SIZE(headset_loopback_tx_48KHz_osr256_actions),
+	}
+};
+#endif
 
 // ------- DEFINITION OF VT CALL PAIRED DEVICES ------ 
 static struct adie_codec_hwsetting_entry handset_vt_rx_settings[] = {
@@ -2599,6 +2675,18 @@ static struct adie_codec_dev_profile headset_tx_profile = {
 	.setting_sz = ARRAY_SIZE(headset_tx_settings),
 };
 
+#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+static struct adie_codec_dev_profile headset_loopback_rx_profile = {
+	.path_type = ADIE_CODEC_RX,
+	.settings = headset_loopback_rx_settings,
+	.setting_sz = ARRAY_SIZE(headset_loopback_rx_settings),
+};
+static struct adie_codec_dev_profile headset_loopback_tx_profile = {
+	.path_type = ADIE_CODEC_TX,
+	.settings = headset_loopback_tx_settings,
+	.setting_sz = ARRAY_SIZE(headset_loopback_tx_settings),
+};
+#endif
 
 // ------- DEFINITION OF VT CALL PAIRED DEVICES ------ 
 static struct adie_codec_dev_profile handset_vt_rx_profile = {
@@ -3207,8 +3295,8 @@ static struct snddev_icodec_data speaker_voip_tx_data = {
 	//	.profile = &idmic_mono_profile,
 	.channel_mode = 1,
 	.default_sample_rate = 48000,
-	.pamp_on = msm_snddev_enable_submic_power,
-	.pamp_off = msm_snddev_disable_submic_power,
+	.pamp_on = msm_snddev_enable_amic_power, //msm_snddev_enable_submic_power,
+	.pamp_off = msm_snddev_disable_amic_power, //msm_snddev_disable_submic_power,
 };
 
 static struct snddev_icodec_data headset_voip_rx_data = {
@@ -3472,6 +3560,29 @@ static struct snddev_icodec_data headset_call_tx_data = {
 #endif
 };
 
+#if defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+static struct snddev_icodec_data headset_loopback_rx_data = {
+	.capability = (SNDDEV_CAP_RX | SNDDEV_CAP_VOICE),
+	.name = "headset_loopback_rx",
+	.copp_id = 0,
+	.profile = &headset_loopback_rx_profile,
+	.channel_mode = 2,
+	.default_sample_rate = 48000,
+	.pamp_on = msm_snddev_amp_on_headset,
+	.pamp_off = msm_snddev_amp_off_headset,
+	.voltage_on = msm_snddev_voltage_on,
+	.voltage_off = msm_snddev_voltage_off,
+};
+
+static struct snddev_icodec_data headset_loopback_tx_data = {
+	.capability = (SNDDEV_CAP_TX | SNDDEV_CAP_VOICE),
+	.name = "headset_loopback_tx",
+	.copp_id = PRIMARY_I2S_TX,
+	.profile = &headset_loopback_tx_profile,
+	.channel_mode = 1,
+	.default_sample_rate = 48000,
+};
+#else
 static struct snddev_icodec_data headset_loopback_rx_data = {
 	.capability = (SNDDEV_CAP_RX | SNDDEV_CAP_VOICE),
 	.name = "headset_loopback_rx",
@@ -3509,7 +3620,7 @@ static struct snddev_icodec_data headset_loopback_tx_data = {
 	.channel_mode = 1,
 	.default_sample_rate = AUDIO_FREQUENCY,
 };
-
+#endif
 
 static struct snddev_ecodec_data bt_sco_mono_call_rx_data = {
 	.capability = (SNDDEV_CAP_RX | SNDDEV_CAP_VOICE),
@@ -3690,6 +3801,9 @@ static struct snddev_icodec_data lineout_rx_data = {
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 	.pamp_on = msm_snddev_vpsamp_on_headset,
 	.pamp_off = msm_snddev_vpsramp_off_headset,
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+	.pamp_on = msm_snddev_amp_on_cradle,
+	.pamp_off = msm_snddev_amp_off_cradle,
 #elif defined(CONFIG_TARGET_LOCALE_KOR)
 	.pamp_on = msm_snddev_poweramp_on_lineout,
 	.pamp_off = msm_snddev_poweramp_off_lineout,	

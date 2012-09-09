@@ -779,7 +779,7 @@ static struct dsi_cmd_desc_LCD lcd_acl_table[MAX_GAMMA_VALUE+1] = {
 { 55, "290", &DSI_CMD_ACL_55},	 // 30= 290,
 };
 #else
-#ifdef S6E8AA0_WXGA_Q1_57p2HZ_480MBPS // ±¹ÆÇ ¿Ü
+#ifdef S6E8AA0_WXGA_Q1_57p2HZ_480MBPS // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
 static struct dsi_cmd_desc_LCD lcd_acl_table[MAX_GAMMA_VALUE+1] = {
 { 0, "30", NULL},   // 1 = 30_dimming,
 { 0, "40", NULL},   // 4 =  (Normal Range is From 4~31)

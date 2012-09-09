@@ -2592,7 +2592,7 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 	       long (*ioctl)(struct file *, unsigned int, unsigned long),
 	       int (*release)(struct inode *, struct file *))
 {
-	int i, index = 0, id;
+	int i, index = 0, cnt=0, id;
 	struct vm_struct *pmem_vma = NULL;
 	struct page *page;
 
@@ -2715,9 +2715,9 @@ int pmem_setup(struct android_pmem_platform_data *pdata,
 				"%s", pdata->name))
 			goto out_put_kobj;
 
-		for (i = 0; i < PMEM_INITIAL_NUM_BITMAP_ALLOCATIONS; i++) {
-			pmem[id].allocator.bitmap.bitm_alloc[i].bit = -1;
-			pmem[id].allocator.bitmap.bitm_alloc[i].quanta = 0;
+		for (cnt = 0; cnt < PMEM_INITIAL_NUM_BITMAP_ALLOCATIONS; cnt++) {
+			pmem[id].allocator.bitmap.bitm_alloc[cnt].bit = -1;
+			pmem[id].allocator.bitmap.bitm_alloc[cnt].quanta = 0;
 		}
 
 		pmem[id].allocator.bitmap.bitmap_allocs =

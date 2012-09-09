@@ -22,8 +22,13 @@ config ATH_DEBUG
 	  Say Y, if you want to debug atheros wireless drivers.
 	  Right now only ath9k makes use of this.
 
+choice
 config KOR_MODEL_SHV_E150S
 	bool "KOR MODEL SHV E150S"
+
+config JPN_MODEL_SC_01E
+	bool "JPN NTT SC-01E"
+endchoice
 
 source "drivers/net/wireless/ath/ath5k/Kconfig"
 source "drivers/net/wireless/ath/ath9k/Kconfig"

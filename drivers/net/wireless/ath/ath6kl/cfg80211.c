@@ -26,7 +26,7 @@
 #include "cfg80211_btcoex.h"
 #include "pm.h"
 
-#ifdef CONFIG_KOR_MODEL_SHV_E150S   // CONFIG_MACH_PX
+#if defined(CONFIG_KOR_MODEL_SHV_E150S) || defined(CONFIG_JPN_MODEL_SC_01E)   // CONFIG_MACH_PX
 #include <mach/gpio.h>
 #define GPIO_WLAN_nRST   158   //WLAN_nRST   //EXYNOS4_GPL0(4)
 #else
@@ -506,6 +506,11 @@ static int ath6kl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 	memset(vif->ssid, 0, sizeof(vif->ssid));
 	vif->ssid_len = sme->ssid_len;
 	memcpy(vif->ssid, sme->ssid, sme->ssid_len);
+		
+#ifdef CONFIG_MACH_PX
+	if (sme->ssid_len != 0)
+		ar->connect_ctrl_flags |= CONNECT_IGNORE_BSSID_HINT;	
+#endif	
 
 	if (sme->channel)
 		vif->ch_hint = sme->channel->center_freq;
@@ -2264,6 +2269,11 @@ int ath6kl_cfg80211_suspend(struct ath6kl *ar,
 	int ret;
 	struct ath6kl_vif *vif;
 	
+	vif = ath6kl_vif_first(ar);	
+	if (!vif)
+	return -EIO;
+	ath6kl_cfg80211_scan_complete_event(vif, true);
+	
 	switch (mode) {
 	case ATH6KL_CFG_SUSPEND_WOW:
 
@@ -2271,10 +2281,6 @@ int ath6kl_cfg80211_suspend(struct ath6kl *ar,
 
 		/* Flush all non control pkts in TX path */
 		ath6kl_tx_data_cleanup(ar);
-
-		vif = ath6kl_vif_first(ar);
-		if (!vif)
-			return -EIO;
 
 		ret = ath6kl_wmi_mcast_filter_cmd(vif->ar->wmi, vif->fw_vif_idx,
 							false);

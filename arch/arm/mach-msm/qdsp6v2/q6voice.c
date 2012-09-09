@@ -54,7 +54,7 @@
 #endif
 #if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) \
 || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D) \
-|| defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
+|| defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D) || defined (CONFIG_KOR_MODEL_SHV_E150S) || defined(CONFIG_JPN_MODEL_SC_01E)
 #define CONFIG_VPCM_INTERFACE_ON_CSFB
 #endif
 
@@ -1590,6 +1590,9 @@ static int voice_setup_modem_voice(struct voice_data *v)
 	struct cvp_create_full_ctl_session_cmd cvp_session_cmd;
 	int ret = 0;
 	struct msm_snddev_info *dev_tx_info;
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	struct msm_snddev_info *dev_rx_info;
+#endif
 	void *apr_cvp = voice_get_apr_cvp();
 
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
@@ -1620,6 +1623,13 @@ static int voice_setup_modem_voice(struct voice_data *v)
 		pr_err("bad dev_id %d\n", v->dev_tx.dev_id);
 		goto fail;
 	}
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)	
+	dev_rx_info = audio_dev_ctrl_find_dev(v->dev_rx.dev_id);
+	if (IS_ERR(dev_rx_info)) {
+		pr_err("bad dev_id %d\n", v->dev_rx.dev_id);
+		goto fail;
+	}
+#endif
 
 	/* Use default topology if invalid value in ACDB */
 	cvp_session_cmd.cvp_session.tx_topology_id =
@@ -1693,13 +1703,15 @@ if(wb_handle==VPCM_PATH_NARROWBAND)
 {
 #endif
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989)||defined (CONFIG_USA_MODEL_SGH_T769)
 // (39 tty) (43 hac) (49 loopback) do not apply the diamond solution
 if((v->dev_rx.dev_id != 39) && (v->dev_rx.dev_id != 43) && (v->dev_rx.dev_id != 49)) 
 #elif defined(CONFIG_USA_MODEL_SGH_I727)
 if((v->dev_rx.dev_id!=39)) 
 #elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
 if((v->dev_rx.dev_acdb_id != 104) && (v->dev_rx.dev_acdb_id != 102)) 
+#else
+	if(!(dev_rx_info->capability & SNDDEV_CAP_TTY))
 #endif
 {
 /* BEGIN: VPCM */
@@ -1974,6 +1986,9 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 	void *apr_cvp = voice_get_apr_cvp();
 	u16 mvm_handle = voice_get_mvm_handle(v);
 	u16 cvp_handle = voice_get_cvp_handle(v);
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	struct msm_snddev_info *dev_rx_info;
+#endif
 
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
 	//printk("%s \n", __func__);
@@ -2013,18 +2028,27 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 		goto fail;
 	}
 
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)	
+	dev_rx_info = audio_dev_ctrl_find_dev(v->dev_rx.dev_id);
+	if (IS_ERR(dev_rx_info)) {
+		pr_err("bad dev_id %d\n", v->dev_rx.dev_id);
+		goto fail;
+	}
+#endif	
+
 #if defined(CONFIG_EUR_MODEL_GT_I9210)
 if(wb_handle==VPCM_PATH_NARROWBAND)
 {
 #endif
 #if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) ||defined (CONFIG_USA_MODEL_SGH_T769)
 if((v->dev_rx.dev_id!=39)&&(v->dev_rx.dev_id!=43)&&(v->dev_rx.dev_id!=48)) 
 #elif defined(CONFIG_USA_MODEL_SGH_I727)
 if((v->dev_rx.dev_id!=39)) 
 #elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
 if((v->dev_rx.dev_acdb_id != 104) && (v->dev_rx.dev_acdb_id != 102)) 
-
+#else
+	if(!(dev_rx_info->capability & SNDDEV_CAP_TTY))
 #endif
 {
 /* BEGIN: VPCM */
@@ -2632,7 +2656,7 @@ static void voice_auddev_cb_function(u32 evt_id,
 		//printk("%s AUDDEV_EVT_START_VOICE \n", __func__);
 
 #if defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_KOR_MODEL_SHV_E120L) || defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) \
-|| defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D) //kks_111020 // Qualcomm Gon's workaround code to solve the sound mute problem after subsystem reset(SSR) during voice call(QC case 645569)
+|| defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D) || defined(CONFIG_USA_MODEL_SGH_T769) //kks_111020 // Qualcomm Gon's workaround code to solve the sound mute problem after subsystem reset(SSR) during voice call(QC case 645569)
 		if( (v->voc_state == VOC_RUN) && (NULL == voice_get_apr_mvm())) 
 		{
 			v->voc_state = VOC_RELEASE;

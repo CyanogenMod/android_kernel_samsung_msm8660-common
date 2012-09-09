@@ -28,7 +28,7 @@
 #include <linux/mfd/wm8994/pdata.h>
 #include <linux/mfd/wm8994/gpio.h>
 
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030 beacause of amp off while speaker call / Kenel suspend
+#if defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)) //kks_111030 beacause of amp off while speaker call / Kenel suspend
 #include <linux/wakelock.h>
 static struct wake_lock wm8994_wake_lock;
 #endif
@@ -951,7 +951,7 @@ void wm8994_set_spk_cradle(int onoff)
 	}
 }
 
-#elif defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
+#elif defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN))
 /*
  FOR ONLY P8_LTE_SKT WM8994
 */
@@ -966,8 +966,8 @@ int audio_power(int en)
 	u8	nServo4Low = 0;
 	u8	nServo4High = 0;
 
-	if(en == 1) {
-		printk("%s: audio_power on\n",__func__);
+	if(en == 1 || en == 2) {
+		printk("%s: audio_power on en = %d\n",__func__, en);
 		CompensationCAL = 0;
 		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_AMP_EN), 1);
 		msleep(50);
@@ -981,8 +981,11 @@ int audio_power(int en)
 		
 		wm8994_reg_write(amp,0x39, 0x6C);
 		wm8994_reg_write(amp,0x1, 0x3);
-		wm8994_reg_write(amp,0x15, 0x40);		
-		msleep(650);	//kkuram 2011.11.30 50 -> 650 request by H/W
+		wm8994_reg_write(amp,0x15, 0x40);	
+		if(en == 2)
+			msleep(650);	//kkuram 2011.11.30 50 -> 650 request by H/W
+		else
+			msleep(50);
 
 		wm8994_reg_write(amp, 0x220, 0x0002);
 		wm8994_reg_write(amp, 0x221, 0x0700);
@@ -5232,7 +5235,7 @@ static int wm8994_amp_probe(struct i2c_client *i2c,
 
 	mutex_init(&wm8994->io_lock);
 
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030
+#if defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)) //kks_111030
 	/* wake lock init */
 	wake_lock_init(&wm8994_wake_lock, WAKE_LOCK_SUSPEND, "wm8994_wake_lock");
 #endif
@@ -5293,8 +5296,11 @@ static int wm8994_amp_probe(struct i2c_client *i2c,
                        "ASoC: Failed to create codec register debugfs file\n");
 #endif
 
-
+#if defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN))
+	audio_power(2);
+#else
 	audio_power(1);
+#endif
 	return 0;
 
 	err:
@@ -5303,7 +5309,7 @@ static int wm8994_amp_probe(struct i2c_client *i2c,
 
 }
 
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
+#if 0//defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
 static struct work_struct wm8994_amp_on_work;
 
 static void wm8994_amp_on_work_func(struct work_struct *work)
@@ -5328,7 +5334,7 @@ static int wm8994_suspend(struct i2c_client *i2c)
 
 static int wm8994_resume(struct i2c_client *i2c)
 {
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR)
+#if 0//defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
 	schedule_work(&wm8994_amp_on_work);
 #else
 	audio_power(1);
@@ -5367,7 +5373,7 @@ static __init int wm8994_amp_init(void)
 			return;
 	#endif
 
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030
+#if 0//defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR) //kks_111030
     INIT_WORK(&wm8994_amp_on_work, wm8994_amp_on_work_func);
 #endif
 
@@ -5395,7 +5401,7 @@ module_exit(wm8994_amp_exit);
 //EXPORT_SYMBOL(wm8994_set_common);
 EXPORT_SYMBOL(wm8994_set_headset);
 EXPORT_SYMBOL(wm8994_set_speaker);
-#if defined(CONFIG_TARGET_SERIES_P8LTE)  && defined(CONFIG_TARGET_LOCALE_KOR) //kks_110915_1
+#if defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN))//kks_110915_1
 EXPORT_SYMBOL(wm8994_set_normal_headset); //kks_110916_1
 EXPORT_SYMBOL(wm8994_set_normal_speaker);
 #endif

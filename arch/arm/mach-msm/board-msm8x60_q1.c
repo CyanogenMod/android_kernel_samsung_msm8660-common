@@ -11,7 +11,7 @@
  *
  */
 
-#include <linux/kernel.h>
+#include <linux/kernel.h> 
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
@@ -172,6 +172,16 @@ static struct wacom_g5_callbacks *wacom_callbacks;
 #include <mach/tdmb_pdata.h>
 #endif
 
+#if defined(CONFIG_ISDBT)
+#include <mach/isdbt_pdata.h>
+#endif
+
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+	#if !defined(CONFIG_JPN_MODEL_SC_05D)	
+		#include <linux/video/sec_mipi_lcd_esd_refresh.h>
+	#endif
+#endif
+
 #define MSM_SHARED_RAM_PHYS 0x40000000
 
 #ifdef CONFIG_OPTICAL_GP2A
@@ -228,6 +238,9 @@ static struct wacom_g5_callbacks *wacom_callbacks;
 #define PMIC_GPIO_EAR_DET		PM8058_GPIO(27)  	/* PMIC GPIO Number 27 */
 #define PMIC_GPIO_SHORT_SENDEND	PM8058_GPIO(28)  	/* PMIC GPIO Number 28 */
 #define PMIC_GPIO_EAR_MICBIAS_EN PM8058_GPIO(29) /* PMIC GPIO Number 29  */
+#if defined (CONFIG_JPN_MODEL_SC_05D)
+#define PMIC_GPIO_EAR_SEND_END PM8058_GPIO(25) /* PMIC GPIO Number 25  */
+#endif
 #ifdef CONFIG_KOR_MODEL_SHV_E160L	// add EAR_VOL_KEY
 #define PMIC_GPIO_EAR_SENDEND_STATE PM8058_GPIO(28)
 #define PMIC_GPIO_VOLUME_KEY	PM8058_GPIO(25)
@@ -316,6 +329,16 @@ enum {
 	TDMB_PMIC_CLK_ON,
 	TDMB_PMIC_CLK_OFF,
 };
+#endif
+
+#if defined(CONFIG_ISDBT)
+#define GPIO_ISDBT_EN    130
+#define GPIO_ISDBT_RST   126
+#define GPIO_ISDBT_INT   128
+#define GPIO_ISDBT_SPI_MOSI	  33
+#define GPIO_ISDBT_SPI_MISO	  34
+#define GPIO_ISDBT_SPI_CS 	  35
+#define GPIO_ISDBT_SPI_CLK	  36
 #endif
 
 enum {
@@ -515,6 +538,7 @@ typedef struct _hw_rev_mapping {
 
 } hw_rev_mapping;
 #endif
+
 
 unsigned int get_hw_rev(void)
 {
@@ -2094,7 +2118,7 @@ static int camera_power_maincam(int onoff)
 		gpio_set_value_cansleep(GPIO_CAM_IO_EN, 1);
 		usleep(1*1000);  //min 20us
 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_JPN_MODEL_SC_05D) // flash select
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) // flash select
 		if (get_hw_rev()>=0x0A) {
 			if (gpio_get_value(62)==0)
 				gpio_set_value_cansleep(GPIO_FLASH_SEL, 1);
@@ -2106,6 +2130,10 @@ static int camera_power_maincam(int onoff)
 				gpio_set_value_cansleep(GPIO_FLASH_SEL, 1);
 			usleep(1*1000);
 		}
+#elif defined(CONFIG_JPN_MODEL_SC_05D)		
+			if (gpio_get_value(62)==0)
+				gpio_set_value_cansleep(GPIO_FLASH_SEL, 1);
+			usleep(1*1000);		
 #endif
 
 		//DVDD 1.5V (sub)
@@ -3408,7 +3436,60 @@ static struct platform_device msm_camera_sensor_s5k5bafx = {
 };
 #endif
 
+///
+#ifdef CONFIG_SENSOR_SR200PC20M
+static struct msm_camera_sensor_platform_info sr200pc20m_sensor_8660_info = {
+	.mount_angle 	= 0,
+	.sensor_reset	= GPIO_CAM_SUB_RST,
+	.sensor_pwd	= GPIO_CAM_IO_EN,
+	.vcm_pwd	= 0,
+	.vcm_enable	= 0,
+	.sensor_power_control = camera_power_vtcam,
+};
 
+static struct msm_camera_sensor_flash_data flash_sr200pc20m = {
+//	.flash_type = MSM_CAMERA_FLASH_LED,
+	.flash_type = MSM_CAMERA_FLASH_NONE,
+	.flash_src  = &msm_flash_src
+};
+
+#ifndef CONFIG_CAMERA_VE
+struct msm_camera_device_platform_data msm_camera_device_data_sub_cam = {
+	.camera_gpio_on  = config_camera_on_gpios,
+	.camera_gpio_off = config_camera_off_gpios,
+	.ioext.csiphy = 0x04900000,
+	.ioext.csisz  = 0x00000400,
+	.ioext.csiirq = CSI_1_IRQ,
+	.ioclk.mclk_clk_rate = 24000000,
+	.ioclk.vfe_clk_rate  = 228570000,
+#ifdef CONFIG_MSM_BUS_SCALING
+	.cam_bus_scale_table = &cam_bus_client_pdata,
+#endif
+};
+#endif
+
+static struct msm_camera_sensor_info msm_camera_sensor_sr200pc20m_data = {
+	.sensor_name    = "sr200pc20m",
+	.sensor_reset   = 41,
+	.sensor_pwd     = 37,
+	.vcm_pwd        = 1,
+	.vcm_enable	= 0,
+	.mclk		= 24000000,
+	.pdata          = &msm_camera_device_data_sub_cam,
+	.resource       = msm_camera_resources,
+	.num_resources  = ARRAY_SIZE(msm_camera_resources),
+	.flash_data     = &flash_sr200pc20m,
+	.sensor_platform_info = &sr200pc20m_sensor_8660_info,
+	.csi_if         = 1
+};
+static struct platform_device msm_camera_sensor_sr200pc20m = {
+	.name  	= "msm_camera_sr200pc20m",
+	.dev   	= {
+		.platform_data = &msm_camera_sensor_sr200pc20m_data,
+	},
+};
+#endif
+///
 
 static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
 	#ifdef CONFIG_SENSOR_M5MO
@@ -3426,6 +3507,13 @@ static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
 		I2C_BOARD_INFO("s5k5bafx_i2c", 0x5A>>1),
 	},
 	#endif
+///
+	#ifdef CONFIG_SENSOR_SR200PC20M
+	{
+		I2C_BOARD_INFO("sr200pc20m_i2c", 0x40>>1),
+	},
+	#endif
+///
 };
 
 static struct i2c_board_info msm_camera_dragon_boardinfo[] __initdata = {
@@ -3834,6 +3922,132 @@ static int __init tdmb_dev_init(void)
 }
 #endif
 
+#if defined(CONFIG_ISDBT)
+static uint32_t isdbt_on_gpio_table[] = {
+	GPIO_CFG(GPIO_ISDBT_EN,  GPIOMUX_FUNC_GPIO, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	GPIO_CFG(GPIO_ISDBT_RST,  GPIOMUX_FUNC_GPIO, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	GPIO_CFG(GPIO_ISDBT_INT,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_MOSI,  GPIOMUX_FUNC_1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_MISO,  GPIOMUX_FUNC_1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_CS,  GPIOMUX_FUNC_1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_CLK,  GPIOMUX_FUNC_1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+
+};
+static uint32_t isdbt_off_gpio_table[] = {
+	GPIO_CFG(GPIO_ISDBT_EN,  GPIOMUX_FUNC_GPIO, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+	GPIO_CFG(GPIO_ISDBT_RST,  GPIOMUX_FUNC_GPIO, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+	GPIO_CFG(GPIO_ISDBT_INT,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_MOSI,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_MISO,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_CS,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+	GPIO_CFG(GPIO_ISDBT_SPI_CLK,  GPIOMUX_FUNC_GPIO, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
+};
+
+static void isdbt_gpio_on(void)
+{
+	int n, rc;
+	printk(KERN_DEBUG "isdbt_gpio_on\n");
+
+	for (n = 0; n < ARRAY_SIZE(isdbt_on_gpio_table); n++) {
+		rc = gpio_tlmm_config(isdbt_on_gpio_table[n], GPIO_CFG_ENABLE);
+		if (rc)
+			break;
+	}
+
+	gpio_set_value(GPIO_ISDBT_EN, 1);
+	usleep_range(40000, 40000);
+	gpio_set_value(GPIO_ISDBT_RST, 0);
+	usleep_range(2000, 2000);
+	gpio_set_value(GPIO_ISDBT_RST, 1);
+	usleep_range(10000, 10000);
+
+	return;
+}
+
+static void isdbt_gpio_off(void)
+{
+	int n, rc;
+	printk(KERN_DEBUG "isdbt_gpio_off\n");
+
+	gpio_set_value(GPIO_ISDBT_RST, 0);
+	usleep_range(1000, 1000);
+	gpio_set_value(GPIO_ISDBT_EN, 0);
+
+	for (n = 0; n < ARRAY_SIZE(isdbt_off_gpio_table); n++) {
+		rc = gpio_tlmm_config(isdbt_off_gpio_table[n], GPIO_CFG_ENABLE);
+		if (rc)
+			break;
+	}
+}
+
+static struct isdbt_platform_data isdbt_pdata = {
+	.gpio_on = isdbt_gpio_on,
+	.gpio_off = isdbt_gpio_off,
+	.irq = MSM_GPIO_TO_INT(GPIO_ISDBT_INT),
+};
+
+static struct platform_device isdbt_device = {
+	.name			= "isdbt",
+	.id 			= -1,
+	.dev			= {
+		.platform_data = &isdbt_pdata,
+	},
+};
+
+static struct spi_board_info isdbt_spi_info[] __initdata = {	
+    {	
+        .modalias       = "isdbtspi",
+        .mode           = SPI_MODE_0,
+        .bus_num        = 0,
+        .chip_select    = 0,
+        .max_speed_hz   = 5400000,// 8500000,
+    }
+};
+
+static int __init isdbt_dev_init(void)
+{
+	int n, rc;
+
+#ifdef CONFIG_BATTERY_SEC
+	if(is_lpm_boot)
+		return 0;
+#endif
+	platform_device_register(&isdbt_device);
+
+	rc = gpio_request(GPIO_ISDBT_EN, "ISDBT_EN");
+	if (rc < 0) {
+		printk(KERN_ERR "%s: GPIO_ISDBT_EN gpio %d request"
+			" failed\n", __func__, GPIO_ISDBT_EN);
+		return 1;
+	}
+	gpio_direction_output(GPIO_ISDBT_EN, 0);
+
+	rc = gpio_request(GPIO_ISDBT_RST, "ISDBT_RST");
+	if (rc < 0) {
+		printk(KERN_ERR "%s: GPIO_ISDBT_RST gpio %d request"
+			" failed\n", __func__, GPIO_ISDBT_RST);
+		return 1;
+	}
+	gpio_direction_output(GPIO_ISDBT_RST, 0);
+
+	gpio_free(GPIO_ISDBT_EN);
+	gpio_free(GPIO_ISDBT_RST);
+
+	for (n = 0; n < ARRAY_SIZE(isdbt_off_gpio_table); n++) {
+		rc = gpio_tlmm_config(isdbt_off_gpio_table[n], GPIO_CFG_ENABLE);
+		if (rc)
+			break;
+	}
+
+	if (spi_register_board_info(isdbt_spi_info, ARRAY_SIZE(isdbt_spi_info))
+		!= 0)
+		pr_err("%s: spi_register_board_info returned error\n",
+			__func__);
+
+	return 0;
+}
+#endif //end of "CONFIG_ISDBT"
+
 #ifdef CONFIG_I2C_SSBI
 /* CODEC/TSSC SSBI */
 static struct msm_i2c_ssbi_platform_data msm_ssbi3_pdata = {
@@ -4090,7 +4304,12 @@ unsigned char hdmi_is_primary;
     && !defined (CONFIG_USA_MODEL_SGH_T879)
 #define MSM_ION_SF_BASE		0x7a000000
 #endif
+#if defined(CONFIG_JPN_MODEL_SC_05D)
+#define MSM_ION_SF_BASE 0x7a800000
+#define MSM_ION_SF_SIZE 0x05800000 
+#else
 #define MSM_ION_SF_SIZE		0x06000000 /* 64MB -> 96MB same as Gingerbread of ATT Quincy */
+#endif
 #define MSM_ION_CAMERA_SIZE     MSM_PMEM_ADSP_SIZE
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
 #define MSM_ION_MM_SIZE		0x3600000 /* (54MB) */
@@ -5739,7 +5958,7 @@ static struct i2c_board_info cy8ctma340_dragon_board_info[] = {
 };
 #endif
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_JPN_MODEL_SC_05D)
 #define JACK_WATERPROOF
 #endif
 
@@ -7410,6 +7629,11 @@ static struct platform_device *rumi_sim_devices[] __initdata = {
 #ifdef CONFIG_SENSOR_S5K5BAFX
 	&msm_camera_sensor_s5k5bafx,
 #endif
+///
+#ifdef CONFIG_SENSOR_SR200PC20M
+	&msm_camera_sensor_sr200pc20m,
+#endif
+///
 #endif
 #ifdef CONFIG_MSM_GEMINI
 	&msm_gemini_device,
@@ -8633,7 +8857,7 @@ static struct wacom_g5_platform_data wacom_platform_data = {
 	.max_y = WACOM_POSY_MAX,
 	.min_pressure = 0,
 	.max_pressure = WACOM_PRESSURE_MAX,
-#ifdef WACOM_PDCT_WORK_AROUND
+#ifdef WACOM_PDCT_WORK_AROUND	
 	.gpio_pendct = GPIO_PEN_PDCT,
 #endif
 	.init_platform_hw = wacom_init_hw,
@@ -9110,6 +9334,11 @@ static struct platform_device *surf_devices[] __initdata = {
 #ifdef CONFIG_SENSOR_S5K5BAFX
 	&msm_camera_sensor_s5k5bafx,
 #endif
+///
+#ifdef CONFIG_SENSOR_SR200PC20M
+	&msm_camera_sensor_sr200pc20m,
+#endif
+///
 #endif
 #ifdef CONFIG_MSM_GEMINI
 	&msm_gemini_device,
@@ -9168,6 +9397,11 @@ static struct platform_device *surf_devices[] __initdata = {
 	&msm8660_device_watchdog,
 #ifdef CONFIG_SAMSUNG_JACK
 	&sec_device_jack,
+#endif
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+	#if !defined(CONFIG_JPN_MODEL_SC_05D)	
+		&sec_device_mipi_esd,
+	#endif
 #endif
 #if defined (CONFIG_OPTICAL_GP2A)
 	&opt_i2c_gpio_device,
@@ -9274,6 +9508,9 @@ static struct ion_platform_data ion_pdata = {
     && !defined (CONFIG_USA_MODEL_SGH_T879)
 			.base = MSM_ION_SF_BASE,
 #endif
+#if defined(CONFIG_JPN_MODEL_SC_05D)
+			.base = MSM_ION_SF_BASE,
+#endif
 			.size	= MSM_ION_SF_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = (void *)&co_ion_pdata,
@@ -9364,6 +9601,7 @@ static void reserve_ion_memory(void)
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 #if !defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) || !defined(CONFIG_USA_MODEL_SGH_I717) \
     || defined (CONFIG_USA_MODEL_SGH_T879)
+#if !defined(CONFIG_JPN_MODEL_SC_05D)
 	unsigned int i;
 
 	if (hdmi_is_primary) {
@@ -9379,6 +9617,7 @@ static void reserve_ion_memory(void)
 	}
 
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += msm_ion_sf_size;
+#endif
 #endif
 	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_FW_SIZE;
 	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_SIZE;
@@ -9696,6 +9935,17 @@ static struct pm_gpio ear_det_new = {
 		.function       = PM_GPIO_FUNC_NORMAL,
 		.inv_int_pol    = 0,
 };
+
+#if defined (CONFIG_JPN_MODEL_SC_05D)
+static struct pm_gpio ear_send_end = {
+		.direction      = PM_GPIO_DIR_IN,
+		.pull           = PM_GPIO_PULL_NO,
+		.vin_sel        = PM8058_GPIO_VIN_L5,
+		.function       = PM_GPIO_FUNC_NORMAL,
+		.inv_int_pol    = 0,
+};
+#endif
+
 static struct pm_gpio short_sendend = {
 	.direction      = PM_GPIO_DIR_IN,
 	.pull           = PM_GPIO_PULL_NO,
@@ -10181,6 +10431,11 @@ static struct pm_gpio chg_stat = {
 	{
 		pr_info("%s PMIC_GPIO_EAR_DET : ear_det_new\n", __func__);
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET), &ear_det_new);
+
+#if defined (CONFIG_JPN_MODEL_SC_05D)
+		pr_info("%s PMIC_GPIO_EAR_SEND_END: ear_send_end\n", __func__);
+		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_SEND_END), &ear_send_end);
+#endif		
 	}
 #else
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET), &ear_det);
@@ -10216,6 +10471,16 @@ static struct pm_gpio chg_stat = {
 	}
 
 	sec_jack_gpio_init();
+#endif
+
+#ifdef CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH
+	#if !defined(CONFIG_JPN_MODEL_SC_05D)
+		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_ESD_DET), &sec_mipi_esd_det_gpio_cfg);
+		if (rc) {
+			pr_err("%s PMIC_GPIO_ESD_DET config failed\n", __func__);
+			return rc;
+		}
+	#endif
 #endif
 
 #if defined (CONFIG_USA_MODEL_SGH_I717)
@@ -12948,6 +13213,10 @@ static unsigned int msm8x60_sdcc_slot_status(struct device *dev)
 				PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SDC3_DET - 1)));
 		gpio_free(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SDC3_DET - 1));
 	}
+
+#if defined(CONFIG_JPN_MODEL_SC_05D)
+        return (unsigned int) status;
+#endif
 
 #if defined (CONFIG_USA_MODEL_SGH_I717)
 	if (HWREV < 0x04)
@@ -16067,7 +16336,7 @@ void yda165_avdd_power_on(void)
 	{
 		if(!amp_reg) {
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_JPN_MODEL_SC_05D)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K)
 			amp_reg = regulator_get(NULL, "8901_l3");
 #elif defined (CONFIG_KOR_MODEL_SHV_E160L)
 			amp_reg = regulator_get(NULL, "8058_l5");
@@ -16075,7 +16344,11 @@ void yda165_avdd_power_on(void)
 			amp_reg = regulator_get(NULL, "8058_l2");
 #endif /* CONFIG_KOR_MODEL_SHV_E160S */
 #else
+#if defined (CONFIG_JPN_MODEL_SC_05D)
+			amp_reg = regulator_get(NULL, "8901_l3");
+#else
 			amp_reg = regulator_get(NULL, "8058_l2");
+#endif
 #endif
 			if (IS_ERR(amp_reg)) {
 				pr_err("%s: regulator get failed (%ld)\n", __func__, PTR_ERR(amp_reg));
@@ -16553,6 +16826,11 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
     tdmb_dev_init();
 #endif
+
+#if defined(CONFIG_ISDBT)
+	isdbt_dev_init();
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_CYTTSP_I2C) || \
 		defined(CONFIG_TOUCHSCREEN_CYTTSP_I2C_MODULE)
 	if (machine_is_msm8x60_fluid())

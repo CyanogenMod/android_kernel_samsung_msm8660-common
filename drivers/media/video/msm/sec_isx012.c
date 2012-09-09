@@ -173,7 +173,7 @@ static int isx012_i2c_write_multi_temp(unsigned short addr, unsigned int w_data,
 	unsigned char buf[w_len+2];
 	struct i2c_msg msg = {0x3C, 0, w_len+2, buf};
 
-	int retry_count = 5;
+	int retry_count = 1;	//for Factory test
 	int err = 0;
 
 	if (!isx012_client->adapter) {
@@ -223,7 +223,7 @@ static int isx012_i2c_write_multi(unsigned short addr, unsigned int w_data, unsi
 	unsigned char buf[w_len+2];
 	struct i2c_msg msg = {isx012_client->addr, 0, w_len+2, buf};
 
-	int retry_count = 5;
+	int retry_count = 3;
 	int err = 0;
 
 	if (!isx012_client->adapter) {
@@ -273,7 +273,7 @@ static int isx012_i2c_burst_write_list(isx012_short_t regs[], int size, char *na
 {
 	int i = 0;
 	int iTxDataIndex = 0;
-	int retry_count = 5;
+	int retry_count = 3;
 	int err = 0;
 
 
@@ -704,10 +704,12 @@ static int isx012_get_LowLightCondition()
 	return err;
 }
 
-void isx012_mode_transition_OM(void)
+int isx012_mode_transition_OM(void)
 {
 	int timeout_cnt = 0;
+	int factory_timeout_cnt = 0;
 	int om_status = 0;
+	int ret = 0;
 	short unsigned int r_data[2] = {0,0};
 
 	printk("[isx012] %s/%d\n", __func__, __LINE__);
@@ -718,9 +720,17 @@ void isx012_mode_transition_OM(void)
 			mdelay(1);
 		}
 		timeout_cnt++;
-		isx012_i2c_read_multi(0x000E, r_data, 1);
+		ret = isx012_i2c_read_multi(0x000E, r_data, 1);
 		om_status = r_data[0];
 		//printk("%s [isx012] 0x000E (1) read : 0x%x / om_status & 0x1 : 0x%x(origin:0x1)\n", __func__, om_status, om_status & 0x1);
+		if (ret != 1) {
+			factory_timeout_cnt++;
+			if (factory_timeout_cnt > 5) {
+				pr_info("factory test1 error(%d)\n", ret);
+				return -EIO; /*factory test*/
+			}
+			
+		}
 		if (timeout_cnt > ISX012_DELAY_RETRIES_OM) {
 			pr_err("%s: %d :Entering OM_1 delay timed out \n", __func__, __LINE__);
 			break;
@@ -728,6 +738,11 @@ void isx012_mode_transition_OM(void)
 	} while (((om_status & 0x01) != 0x01));
 
 	timeout_cnt = 0;
+
+	if (ret != 1) {
+		pr_info("factory test2 error(%d)\n", ret);
+		return -EIO; /*factory test*/
+	}
 
 	do {
 		if (timeout_cnt > 0){
@@ -743,6 +758,8 @@ void isx012_mode_transition_OM(void)
 			break;
 		}
 	} while (((om_status & 0x01) != 0x00));
+
+	return 0; /*factory test*/
 }
 
 void isx012_mode_transition_CM(void)
@@ -2217,7 +2234,11 @@ static int isx012_sensor_init_probe(const struct msm_camera_sensor_info *data)
 
 	//printk("[isx012] Mode Trandition 1\n");
 
-	isx012_mode_transition_OM();
+	err = isx012_mode_transition_OM();
+	if (err == -EIO) {
+		printk("[isx012] start1 fail!\n");
+		return -EIO;
+	}
 
 	mdelay(10);
 
@@ -2225,7 +2246,11 @@ static int isx012_sensor_init_probe(const struct msm_camera_sensor_info *data)
 	//printk("[isx012] Mode Trandition 2\n");
 
 	mdelay(10);
-	isx012_mode_transition_OM();
+	err = isx012_mode_transition_OM();
+	if (err == -EIO) {
+		printk("[isx012] start2 fail!\n");
+		return -EIO;
+	}
 
 
 	//printk("[isx012] MIPI write\n");
@@ -2240,7 +2265,11 @@ static int isx012_sensor_init_probe(const struct msm_camera_sensor_info *data)
 	//printk("[isx012] CAM_5M_ISP_STNBY : %d\n", temp);
 
 	mdelay(20);
-	isx012_mode_transition_OM();
+	err = isx012_mode_transition_OM();
+	if (err == -EIO) {
+		printk("[isx012] start3 fail!\n");
+		return -EIO;
+	}
 
 	isx012_mode_transition_CM();
 
@@ -2632,6 +2661,7 @@ static int isx012_set_touch_auto_focus(int value1)
 	{
 		if (iscapture != 1) {
 			ISX012_WRITE_LIST(ISX012_AF_TouchSAF_OFF);
+			isx012_ctrl->status.touchaf=0;	  /* Have to set Zero, otherwise in Touch AF followed by Shutter AF(long press) , AE and AWB locking will not work */
 
 			//wait 1V time (66ms)
 			mdelay(66);

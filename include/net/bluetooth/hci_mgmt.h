@@ -37,7 +37,7 @@
 #define HCI_DEV_DOWN			4
 #define HCI_DEV_SUSPEND			5
 #define HCI_DEV_RESUME			6
-#ifdef CONFIG_KOR_MODEL_SHV_E150S
+#if defined(CONFIG_KOR_MODEL_SHV_E150S) || defined(CONFIG_JPN_MODEL_SC_01E)
 #define HCI_DEV_WRITE			7
 #define HCI_DEV_READ			8
 #endif

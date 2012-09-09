@@ -10,8 +10,8 @@
  * GNU General Public License for more details.
  *
  */
-
-#include <linux/kernel.h>
+     
+#include <linux/kernel.h>  
 #include <linux/platform_device.h>
 #include <linux/gpio.h>
 #include <linux/irq.h>
@@ -146,6 +146,10 @@
 #include <linux/ion.h>
 #include <mach/ion.h>
 
+#if defined (CONFIG_JPN_MODEL_SC_01D) && defined (CONFIG_TOUCHSCREEN_QT602240)
+#include <linux/atmel_mxt1386.h>
+#endif
+
 
 #ifdef CONFIG_BROADCOM_WIFI_RESERVED_MEM
 #include <linux/wlan_plat.h>
@@ -212,6 +216,25 @@
 
 #ifdef CONFIG_ION_MSM
 static struct platform_device ion_dev;
+#endif
+
+
+#if defined (CONFIG_JPN_MODEL_SC_01D) && defined (CONFIG_TOUCHSCREEN_QT602240)
+static struct mxt_callbacks *charger_callbacks;
+#if 0
+
+#define GPIO_TOUHCH_EN		62
+#define GPIO_TOUHCH_RST 	63
+#define GPIO_TOUCH_INT		125  
+
+#else
+
+#define GPIO_TOUCH_EN		62
+#define GPIO_TOUCH_RST 	        63
+#define GPIO_TOUCH_INT		125 
+
+#endif
+
 #endif
 
 #define GPIO_WLAN_HOST_WAKE 105	//WLAN_HOST_WAKE
@@ -1062,6 +1085,24 @@ static int msm_hsusb_ldo_enable(int on)
 	pr_debug("reg (%s)\n", on ? "HPM" : "LPM");
 	return ret < 0 ? ret : 0;
  }
+
+static int msm_hsusb_ldo_set_voltage(int mV)
+{
+	static int cur_voltage = 3600000;
+
+	if (!ldo6_3p3 || IS_ERR(ldo6_3p3))
+		return -ENODEV;
+
+	if (cur_voltage == mV)
+		return 0;
+
+	cur_voltage = mV;
+
+	pr_debug("%s: (%d)\n", __func__, mV);
+
+	return regulator_set_voltage(ldo6_3p3, mV,mV);
+}
+
 #endif
 #ifdef CONFIG_USB_EHCI_MSM_72K
 #if defined(CONFIG_SMB137B_CHARGER) || defined(CONFIG_SMB137B_CHARGER_MODULE)
@@ -1318,9 +1359,7 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 	 */
 	.pemp_level		 = PRE_EMPHASIS_WITH_20_PERCENT,
 	.cdr_autoreset		 = CDR_AUTO_RESET_DISABLE,
-#if defined(CONFIG_KOR_OPERATOR_LGU)	
 	.drv_ampl		 = HS_DRV_AMPLITUDE_75_PERCENT,
-#endif	
 	.se1_gating		 = SE1_GATING_DISABLE,
 	.bam_disable		 = 1,
 #ifdef CONFIG_USB_EHCI_MSM_72K
@@ -1340,6 +1379,7 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 #ifdef CONFIG_BATTERY_MSM8X60
 	.chg_vbus_draw = msm_charger_vbus_draw,
 #endif
+	.ldo_set_voltage=msm_hsusb_ldo_set_voltage,
 #ifdef CONFIG_USB_HOST_NOTIFY
 //	.otg_en = qc_otg_en,
 #endif
@@ -2675,6 +2715,13 @@ void stmpe811_init(void)
 		stmpe811_i2c_gpio_data.scl_pin = GPIO_ADC_SCL_OLD;
 		stmpe811_i2c_gpio_data.sda_pin = GPIO_ADC_SDA_OLD;	
 	}
+#elif defined (CONFIG_TARGET_LOCALE_JPN_NTT)
+	pr_info("%s : gpio i2c init\r\n", __func__);
+
+	if (system_rev ==0x00) {
+		stmpe811_i2c_gpio_data.scl_pin = GPIO_ADC_SCL_OLD;
+		stmpe811_i2c_gpio_data.sda_pin = GPIO_ADC_SDA_OLD;
+	}
 #endif
 }
 
@@ -2687,6 +2734,14 @@ void stmpe811_gpio_init(void)
 		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SCL_OLD,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
 		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SDA_OLD,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
 	} else if (system_rev >= 0x03) {	
+		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
+		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
+	}
+#elif defined(CONFIG_JPN_OPERATOR_NTT)
+	if (system_rev == 0x00) {
+                gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SCL_OLD,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
+                gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SDA_OLD,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
+        } else {
 		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
 		gpio_tlmm_config(GPIO_CFG(GPIO_ADC_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),GPIO_CFG_ENABLE);
 	}
@@ -2708,7 +2763,7 @@ static int check_using_stmpe811(void)
 {
 	int ret =0 ;
 #ifdef CONFIG_STMPE811_ADC
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_TARGET_LOCALE_JPN_NTT)
 	ret = (system_rev >= 0x0003) ? 1 : 0;
 #elif defined(CONFIG_KOR_OPERATOR_LGU)
 #if 1	/* Using STMPE811 */
@@ -2735,7 +2790,12 @@ static struct mutex adc_lock;
 atomic_t charger_checking = ATOMIC_INIT(0);
 
 #if defined(CONFIG_KOR_OPERATOR_LGU)
-static void __init usb_switch_init(void);
+static void reset_usb_switch(void)
+{
+	gpio_request(USB_SEL_2, "usb_sel_2");
+	gpio_tlmm_config(GPIO_CFG(USB_SEL_2, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
+	gpio_direction_output(USB_SEL_2, 0); // set to MSM USB
+}
 #endif
 static bool check_samsung_charger(void)
 {
@@ -2753,7 +2813,7 @@ static bool check_samsung_charger(void)
 #if defined(CONFIG_KOR_OPERATOR_LGU)
 	/* check usb path */
 	if (USB_SEL_ADC != get_usb_path()) {
-		usb_switch_init();
+		reset_usb_switch();
 		set_usb_path(USB_SEL_ADC);
 	}
 #endif
@@ -3525,8 +3585,14 @@ static void __init msm8x60_allocate_memory_regions(void)
 	int ret;
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
-	ram_console_resources[0].start = RAM_CONSOLE_BASE_ADDR;
-	ram_console_resources[0].end = RAM_CONSOLE_BASE_ADDR + SZ_512K - 1;
+#if defined(CONFIG_SAMSUNG_MEMORY_LAYOUT_ARRANGE)
+ 	ram_console_resources[0].start = RAM_CONSOLE_BASE_ADDR;
+ 	ram_console_resources[0].end = RAM_CONSOLE_BASE_ADDR + SZ_512K - 1;
+#else
+ 	addr = alloc_bootmem_align(SZ_512K, 0x1000);
+ 	ram_console_resources[0].start = __pa(addr);
+ 	ram_console_resources[0].end = ram_console_resources[0].start + SZ_512K - 1;
+#endif
 #endif	
 
 	size = MSM_FB_SIZE;
@@ -3545,6 +3611,7 @@ static void __init msm8x60_allocate_memory_regions(void)
 
 }
 
+#if !defined (CONFIG_JPN_MODEL_SC_01D)
 static void p3_touch_init_hw(void)
 {
 	printk("[TSP] %s, %d\n",__func__,__LINE__);
@@ -3568,6 +3635,543 @@ static void p3_register_touch_callbacks(struct mxt_callbacks *cb)
 {
 	printk("[TSP] %s, %d\n",__func__,__LINE__);
 }
+#endif
+
+#if defined (CONFIG_JPN_MODEL_SC_01D) && defined (CONFIG_TOUCHSCREEN_QT602240)
+
+#if 0
+static void p4lte_touch_init_hw(void) 
+{
+	int ret;
+	printk("[TSP] %s, %d\n",__func__,__LINE__);
+	
+	ret = gpio_request(GPIO_TOUHCH_EN, "TOUCH_EN");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUHCH_EN, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUHCH_EN,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+		gpio_direction_output(GPIO_TOUHCH_EN, 0);
+	}
+
+	ret = gpio_request(GPIO_TOUHCH_RST, "TOUCH_RST");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUHCH_RST, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUHCH_RST,	0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+		gpio_direction_output(GPIO_TOUHCH_RST, 0);
+	}
+
+	ret = gpio_request(GPIO_TOUCH_INT, "TOUCH_INT");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUCH_INT, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	}
+
+	return;
+}
+
+static void p4lte_touch_exit_hw(void)
+{
+	printk("[TSP] %s, %d\n",__func__,__LINE__);
+
+	gpio_free(GPIO_TOUHCH_EN);
+	gpio_free(GPIO_TOUHCH_RST);
+	gpio_free(GPIO_TOUCH_INT);
+
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUHCH_EN,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUHCH_RST,	0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+
+	return;
+}
+
+static void p4lte_touch_suspend_hw(void)
+{
+	printk("[TSP] %s, %d\n",__func__,__LINE__);
+
+	gpio_direction_output(GPIO_TOUHCH_RST, 0);	
+	gpio_direction_output(GPIO_TOUHCH_EN, 0);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+
+	return;
+}
+
+static void p4lte_touch_resume_hw(void)
+{
+	printk("[TSP] %s, %d\n",__func__,__LINE__);
+
+	gpio_direction_output(GPIO_TOUHCH_EN, 1);
+	gpio_direction_output(GPIO_TOUHCH_RST, 1);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	msleep(120);
+
+	return;
+}
+
+static void p4lte_register_touch_callbacks(struct mxt_callbacks *cb)
+{
+	printk("[TSP] %s, %d\n", __func__, __LINE__);
+
+	charger_callbacks = cb;
+
+	return;
+}
+
+
+static struct mxt_platform_data p4lte_touch_platform_data = {
+	.numtouch = 10,
+	.max_x  = 1279,
+	.max_y  = 799,
+	.init_platform_hw  = p4lte_touch_init_hw,
+	.exit_platform_hw  = p4lte_touch_exit_hw,
+	.suspend_platform_hw = p4lte_touch_suspend_hw,
+	.resume_platform_hw = p4lte_touch_resume_hw,
+	.register_cb = p4lte_register_touch_callbacks,
+	/*mxt_power_config*/
+	/* Set Idle Acquisition Interval to 32 ms. */
+	.power_config.idleacqint = 32,
+	.power_config.actvacqint = 255,
+	/* Set Active to Idle Timeout to 4 s (one unit = 200ms). */
+	.power_config.actv2idleto = 50,
+	/*acquisition_config*/
+	/* Atmel: 8 -> 10*/
+	.acquisition_config.chrgtime = 10,
+	.acquisition_config.reserved = 0,
+	.acquisition_config.tchdrift = 5,
+	/* Atmel: 0 -> 10*/
+	.acquisition_config.driftst = 10,
+	/* infinite*/
+	.acquisition_config.tchautocal = 0,
+	/* disabled*/
+	.acquisition_config.sync = 0,
+#ifdef MXT_CALIBRATE_WORKAROUND
+	/*autocal config at wakeup status*/
+	.acquisition_config.atchcalst = 9,
+	.acquisition_config.atchcalsthr = 48,
+	/* Atmel: 50 => 10 : avoid wakeup lockup : 2 or 3 finger*/
+	.acquisition_config.atchcalfrcthr = 10,
+	.acquisition_config.atchcalfrcratio = 215,
+#else
+	/* Atmel: 5 -> 0 -> 9  (to avoid ghost touch problem)*/
+	.acquisition_config.atchcalst = 9,
+	/* Atmel: 50 -> 55 -> 48 ->10 (to avoid ghost touch problem)*/
+	.acquisition_config.atchcalsthr = 10,
+	/*Atmel: 50 -> 6-> 20->50(to avoid  calibration repetition lockup)-> 20 (To avoid  wakeup touch lockup)*/
+	.acquisition_config.atchcalfrcthr = 20,
+	/*180=>0=>25(to avoid  calibration repetition lockup)-> 0  (To avoid  wakeup touch lockup */
+	.acquisition_config.atchcalfrcratio = 0,
+#endif
+	/*multitouch_config*/
+	/* enable + message-enable*/
+	.touchscreen_config.ctrl = 0x8b,
+	.touchscreen_config.xorigin = 0,
+	.touchscreen_config.yorigin = 0,
+	.touchscreen_config.xsize = 27,
+	.touchscreen_config.ysize = 42,
+	.touchscreen_config.akscfg = 0,
+	/* Atmel: 0x11 -> 0x21 -> 0x11*/
+	.touchscreen_config.blen = 0x11,
+	/* Atmel: 50 -> 55 -> 48,*/
+	.touchscreen_config.tchthr = 48,
+	.touchscreen_config.tchdi = 2,
+	/* orient : Horizontal flip */
+	.touchscreen_config.orient = 1,
+	.touchscreen_config.mrgtimeout = 0,
+	.touchscreen_config.movhysti = 10,
+	.touchscreen_config.movhystn = 1,
+	 /* Atmel  0x20 ->0x21 -> 0x2e(-2)*/
+	.touchscreen_config.movfilter = 0x2f,
+	.touchscreen_config.numtouch = MXT_MAX_NUM_TOUCHES,
+	.touchscreen_config.mrghyst = 5, /*Atmel 10 -> 5*/
+	.touchscreen_config.mrgthr = 50,/* Atmel 20 -> 5 -> 50 (To avoid One finger Pinch Zoom) */
+	.touchscreen_config.amphyst = 10,
+	.touchscreen_config.xrange = 799,
+	.touchscreen_config.yrange = 1279,
+	.touchscreen_config.xloclip = 0,
+	.touchscreen_config.xhiclip = 0,
+	.touchscreen_config.yloclip = 0,
+	.touchscreen_config.yhiclip = 0,
+	.touchscreen_config.xedgectrl = 0,
+	.touchscreen_config.xedgedist = 0,
+	.touchscreen_config.yedgectrl = 0,
+	.touchscreen_config.yedgedist = 0,
+	.touchscreen_config.jumplimit = 18,
+	.touchscreen_config.tchhyst = 10,
+	.touchscreen_config.xpitch = 1,
+	.touchscreen_config.ypitch = 3,
+	/*noise_suppression_config*/
+	.noise_suppression_config.ctrl = 0x87,		//5,
+	.noise_suppression_config.reserved = 0,
+	.noise_suppression_config.reserved1 = 0,
+	.noise_suppression_config.reserved2 = 0,
+	.noise_suppression_config.reserved3 = 0,
+	.noise_suppression_config.reserved4 = 0,
+	.noise_suppression_config.reserved5 = 0,
+	.noise_suppression_config.reserved6 = 0,
+	.noise_suppression_config.noisethr = 40,
+	.noise_suppression_config.reserved7 = 0,/*1;*/
+	.noise_suppression_config.freq[0] = 10,
+	.noise_suppression_config.freq[1] = 18,
+	.noise_suppression_config.freq[2] = 23,
+	.noise_suppression_config.freq[3] = 30,
+	.noise_suppression_config.freq[4] = 36,
+	.noise_suppression_config.reserved8 = 0, /* 3 -> 0*/
+	/*cte_config*/
+	.cte_config.ctrl = 0,
+	.cte_config.cmd = 0,
+	.cte_config.mode = 0,
+	/*16 -> 4 -> 8*/
+	.cte_config.idlegcafdepth = 8,
+	/*63 -> 16 -> 54(16ms sampling)*/
+	.cte_config.actvgcafdepth = 54,
+	.cte_config.voltage = 0x3c,
+	/* (enable + non-locking mode)*/
+	.gripsupression_config.ctrl = 0,
+	.gripsupression_config.xlogrip = 0, /*10 -> 0*/
+	.gripsupression_config.xhigrip = 0, /*10 -> 0*/
+	.gripsupression_config.ylogrip = 0, /*10 -> 15*/
+	.gripsupression_config.yhigrip = 0,/*10 -> 15*/
+	.palmsupression_config.ctrl = 1,
+	.palmsupression_config.reserved1 = 0,
+	.palmsupression_config.reserved2 = 0,
+/* 40 -> 20(For PalmSuppression detect) */
+	.palmsupression_config.largeobjthr = 20,
+/* 5 -> 50(For PalmSuppression detect) */
+	.palmsupression_config.distancethr = 50,
+	.palmsupression_config.supextto = 5,
+
+	/*config change for ta connected*/
+	.tchthr_for_ta_connect = 80,
+//	.tchdi_for_ta_connect = 2,
+	.noisethr_for_ta_connect = 50,	//55,
+	.idlegcafdepth_ta_connect = 32,
+//	.actvgcafdepth_ta_connect = 63,
+
+//	.freq_for_ta_connect[0] = 45,
+//	.freq_for_ta_connect[1] = 49,
+//	.freq_for_ta_connect[2] = 55,
+//	.freq_for_ta_connect[3] = 59,
+//	.freq_for_ta_connect[4] = 63,
+
+	.fherr_cnt = 0,
+	.tch_blen_for_fherr = 0,
+	.tchthr_for_fherr = 45,
+	.noisethr_for_fherr = 30,	//40,
+	.movefilter_for_fherr = 0,
+	.freq_for_fherr1[0] = 45,
+	.freq_for_fherr1[1] = 49,
+	.freq_for_fherr1[2] = 55,
+	.freq_for_fherr1[3] = 59,
+	.freq_for_fherr1[4] = 63,
+	.freq_for_fherr2[0] = 10,
+	.freq_for_fherr2[1] = 12,
+	.freq_for_fherr2[2] = 18,
+	.freq_for_fherr2[3] = 40,
+	.freq_for_fherr2[4] = 72,
+	.freq_for_fherr3[0] = 7,
+	.freq_for_fherr3[1] = 33,
+	.freq_for_fherr3[2] = 39,
+	.freq_for_fherr3[3] = 52,
+	.freq_for_fherr3[4] = 64,
+#ifdef MXT_CALIBRATE_WORKAROUND
+	/*autocal config at idle status*/
+	.atchcalst_idle = 9,
+	.atchcalsthr_idle = 10,
+	.atchcalfrcthr_idle = 50,
+	/* Atmel: 25 => 55 : avoid idle palm on lockup*/
+	.atchcalfrcratio_idle = 55,
+#endif
+};
+static const struct i2c_board_info sec_i2c_touch_info[] = {
+	{
+		I2C_BOARD_INFO("sec_touch", 0x4C),
+		.irq		   =  MSM_GPIO_TO_INT(GPIO_TOUCH_INT),			
+#if defined(CONFIG_TOUCHSCREEN_MELFAS)
+		.platform_data =&melfas_touch_platform_data,
+#else
+		.platform_data = &p4lte_touch_platform_data,
+#endif
+	},
+};
+
+#else    //from KOR
+
+static void p3_touch_exit_hw(void)
+{
+	pr_info("p3_touch_exit_hw\n");
+	gpio_free(GPIO_TOUCH_INT);
+	gpio_free(GPIO_TOUCH_RST);
+	gpio_free(GPIO_TOUCH_EN);
+
+/*
+	tegra_gpio_disable(GPIO_TOUCH_INT);
+	tegra_gpio_disable(GPIO_TOUCH_RST);
+	tegra_gpio_disable(GPIO_TOUCH_EN);
+*/
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_EN,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_RST,	0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+}
+
+
+static void p3_touch_suspend_hw(void)
+{
+	gpio_direction_output(GPIO_TOUCH_RST, 0);
+	gpio_direction_output(GPIO_TOUCH_INT, 0);
+	gpio_direction_output(GPIO_TOUCH_EN, 0);
+}
+
+static void p3_touch_resume_hw(void)
+{
+	gpio_direction_output(GPIO_TOUCH_RST, 1);
+	gpio_direction_output(GPIO_TOUCH_EN, 1);
+	gpio_direction_input(GPIO_TOUCH_INT);
+	msleep(120);
+}
+
+static void p3_register_touch_callbacks(struct mxt_callbacks *cb)
+{
+	charger_callbacks = cb;
+}
+
+/*p3 touch : atmel_mxt1386*/
+static void p3_touch_init_hw(void)
+{
+int ret;
+	pr_info("p3_touch_init_hw\n");
+/*
+	
+	gpio_request(GPIO_TOUCH_EN, "TOUCH_EN");
+	gpio_request(GPIO_TOUCH_RST, "TOUCH_RST");
+	gpio_request(GPIO_TOUCH_INT, "TOUCH_INT");
+
+	gpio_direction_output(GPIO_TOUCH_EN, 1);
+	gpio_direction_output(GPIO_TOUCH_RST, 1);
+	gpio_direction_input(GPIO_TOUCH_INT);
+
+	tegra_gpio_enable(GPIO_TOUCH_EN);
+	tegra_gpio_enable(GPIO_TOUCH_RST);
+	tegra_gpio_enable(GPIO_TOUCH_INT);
+*/
+
+
+	printk("[TSP] %s, %d\n",__func__,__LINE__);
+	
+	ret = gpio_request(GPIO_TOUCH_EN, "TOUCH_EN");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUCH_EN, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_EN,  0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+		gpio_direction_output(GPIO_TOUCH_EN, 0);
+	}
+	
+	ret = gpio_request(GPIO_TOUCH_RST, "TOUCH_RST");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUCH_RST, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_RST,	0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+		gpio_direction_output(GPIO_TOUCH_RST, 0);
+	}
+	
+	ret = gpio_request(GPIO_TOUCH_INT, "TOUCH_INT");
+	if (ret != 0) 
+		pr_err("[TSP] %s GPIO(%d) request FAIL error = %d", __func__, GPIO_TOUCH_INT, ret);
+	else {
+		gpio_tlmm_config(GPIO_CFG(GPIO_TOUCH_INT,  0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	}
+
+
+
+}
+
+static struct mxt_platform_data p3_touch_platform_data = {
+	.numtouch = 10,
+	.max_x	= 1279,
+	.max_y	= 799,
+	.init_platform_hw  = p3_touch_init_hw,
+	.exit_platform_hw  = p3_touch_exit_hw,
+	.suspend_platform_hw = p3_touch_suspend_hw,
+	.resume_platform_hw = p3_touch_resume_hw,
+	.register_cb = p3_register_touch_callbacks,
+	/*mxt_power_config*/
+	/* Set Idle Acquisition Interval to 32 ms. */
+	.power_config.idleacqint = 32,
+	.power_config.actvacqint = 255,
+	/* Set Active to Idle Timeout to 4 s (one unit = 200ms). */
+	.power_config.actv2idleto = 50,
+	/*acquisition_config*/
+	/* Atmel: 8 -> 10*/
+	.acquisition_config.chrgtime = 10,
+	.acquisition_config.reserved = 0,
+	.acquisition_config.tchdrift = 5,
+	/* Atmel: 0 -> 10*/
+	.acquisition_config.driftst = 10,
+	/* infinite*/
+	.acquisition_config.tchautocal = 0,
+	/* disabled*/
+	.acquisition_config.sync = 0,
+#ifdef MXT_CALIBRATE_WORKAROUND
+	/*autocal config at wakeup status*/
+	.acquisition_config.atchcalst = 9,
+	.acquisition_config.atchcalsthr = 48,
+	/* Atmel: 50 => 10 : avoid wakeup lockup : 2 or 3 finger*/
+	.acquisition_config.atchcalfrcthr = 10,
+	.acquisition_config.atchcalfrcratio = 215,
+#else
+	/* Atmel: 5 -> 0 -> 9  (to avoid ghost touch problem)*/
+	.acquisition_config.atchcalst = 9,
+	/* Atmel: 50 -> 55 -> 48 ->10 (to avoid ghost touch problem)*/
+	.acquisition_config.atchcalsthr = 10,
+	/* 50-> 20 (To avoid  wakeup touch lockup)	*/
+	.acquisition_config.atchcalfrcthr = 20,
+	/* 25-> 0  (To avoid  wakeup touch lockup */
+	.acquisition_config.atchcalfrcratio = 0,
+#endif
+	/*multitouch_config*/
+	/* enable + message-enable*/
+	.touchscreen_config.ctrl = 0x8b,
+	.touchscreen_config.xorigin = 0,
+	.touchscreen_config.yorigin = 0,
+	.touchscreen_config.xsize = 27,
+	.touchscreen_config.ysize = 42,
+	.touchscreen_config.akscfg = 0,
+	/* Atmel: 0x11 -> 0x21 -> 0x11*/
+	.touchscreen_config.blen = 0x11,
+	/* Atmel: 50 -> 55 -> 48,*/
+	.touchscreen_config.tchthr = 48,
+	.touchscreen_config.tchdi = 2,
+	/* orient : Horizontal flip */
+	.touchscreen_config.orient = 1,
+	.touchscreen_config.mrgtimeout = 0,
+	.touchscreen_config.movhysti = 10,
+	.touchscreen_config.movhystn = 1,
+	 /* Atmel  0x20 ->0x21 -> 0x2e(-2)*/
+	.touchscreen_config.movfilter = 0x50,
+	.touchscreen_config.numtouch = MXT_MAX_NUM_TOUCHES,
+	.touchscreen_config.mrghyst = 5, /*Atmel 10 -> 5*/
+	 /* Atmel 20 -> 5 -> 50 (To avoid One finger Pinch Zoom) */
+	.touchscreen_config.mrgthr = 50,
+	.touchscreen_config.amphyst = 10,
+	.touchscreen_config.xrange = 799,
+	.touchscreen_config.yrange = 1279,
+	.touchscreen_config.xloclip = 0,
+	.touchscreen_config.xhiclip = 0,
+	.touchscreen_config.yloclip = 0,
+	.touchscreen_config.yhiclip = 0,
+	.touchscreen_config.xedgectrl = 0,
+	.touchscreen_config.xedgedist = 0,
+	.touchscreen_config.yedgectrl = 0,
+	.touchscreen_config.yedgedist = 0,
+	.touchscreen_config.jumplimit = 18,
+	.touchscreen_config.tchhyst = 10,
+	.touchscreen_config.xpitch = 1,
+	.touchscreen_config.ypitch = 3,
+	/*noise_suppression_config*/
+	.noise_suppression_config.ctrl = 0x87,
+	.noise_suppression_config.reserved = 0,
+	.noise_suppression_config.reserved1 = 0,
+	.noise_suppression_config.reserved2 = 0,
+	.noise_suppression_config.reserved3 = 0,
+	.noise_suppression_config.reserved4 = 0,
+	.noise_suppression_config.reserved5 = 0,
+	.noise_suppression_config.reserved6 = 0,
+	.noise_suppression_config.noisethr = 40,
+	.noise_suppression_config.reserved7 = 0,/*1;*/
+	.noise_suppression_config.freqhopscale = 0,
+	.noise_suppression_config.freq[0] = 10,
+	.noise_suppression_config.freq[1] = 18,
+	.noise_suppression_config.freq[2] = 23,
+	.noise_suppression_config.freq[3] = 30,
+	.noise_suppression_config.freq[4] = 36,
+	.noise_suppression_config.reserved8 = 0, /* 3 -> 0*/
+	/*cte_config*/
+	.cte_config.ctrl = 0,
+	.cte_config.cmd = 0,
+	.cte_config.mode = 0,
+	/*16 -> 4 -> 8*/
+	.cte_config.idlegcafdepth = 8,
+	/*63 -> 16 -> 54(16ms sampling)*/
+	.cte_config.actvgcafdepth = 54,
+	.cte_config.voltage = 0x3c,
+	/* (enable + non-locking mode)*/
+	.gripsupression_config.ctrl = 0,
+	.gripsupression_config.xlogrip = 0, /*10 -> 0*/
+	.gripsupression_config.xhigrip = 0, /*10 -> 0*/
+	.gripsupression_config.ylogrip = 0, /*10 -> 15*/
+	.gripsupression_config.yhigrip = 0,/*10 -> 15*/
+	.palmsupression_config.ctrl = 1,
+	.palmsupression_config.reserved1 = 0,
+	.palmsupression_config.reserved2 = 0,
+	/* 40 -> 20(For PalmSuppression detect) */
+	.palmsupression_config.largeobjthr = 20,
+	/* 5 -> 50(For PalmSuppression detect) */
+	.palmsupression_config.distancethr = 50,
+	.palmsupression_config.supextto = 5,
+	/*config change for ta connected*/
+	.idleacqint_for_ta_connect = 255,
+	.tchthr_for_ta_connect = 80,
+	.noisethr_for_ta_connect = 50,
+	.idlegcafdepth_ta_connect = 32,
+	.fherr_cnt = 0,
+	.fherr_chg_cnt = 10,
+	.tch_blen_for_fherr = 0x11,
+	.tchthr_for_fherr = 85,
+	.noisethr_for_fherr = 50,
+	.movefilter_for_fherr = 0x57,
+	.jumplimit_for_fherr = 30,
+	.freqhopscale_for_fherr = 1,
+	.freq_for_fherr1[0] = 45,
+	.freq_for_fherr1[1] = 49,
+	.freq_for_fherr1[2] = 55,
+	.freq_for_fherr1[3] = 59,
+	.freq_for_fherr1[4] = 63,
+	.freq_for_fherr2[0] = 10,
+	.freq_for_fherr2[1] = 12,
+	.freq_for_fherr2[2] = 18,
+	.freq_for_fherr2[3] = 40,
+	.freq_for_fherr2[4] = 72,
+	.freq_for_fherr3[0] = 7,
+	.freq_for_fherr3[1] = 33,
+	.freq_for_fherr3[2] = 39,
+	.freq_for_fherr3[3] = 52,
+	.freq_for_fherr3[4] = 64,
+	.fherr_cnt_no_ta = 0,
+	.fherr_chg_cnt_no_ta = 1,
+	.tch_blen_for_fherr_no_ta = 0,
+	.tchthr_for_fherr_no_ta = 45,
+	.movfilter_fherr_no_ta = 0,
+	.noisethr_for_fherr_no_ta = 40,
+#ifdef MXT_CALIBRATE_WORKAROUND
+	/*autocal config at idle status*/
+	.atchcalst_idle = 9,
+	.atchcalsthr_idle = 10,
+	.atchcalfrcthr_idle = 50,
+	/* Atmel: 25 => 55 : avoid idle palm on lockup*/
+	.atchcalfrcratio_idle = 55,
+#endif
+};
+
+static const struct i2c_board_info sec_i2c_touch_info[] = {
+	{
+		I2C_BOARD_INFO("sec_touch", 0x4c),
+		.irq		= MSM_GPIO_TO_INT(GPIO_TOUCH_INT),
+		.platform_data = &p3_touch_platform_data,
+
+	},
+};
+
+static int __init p3_touch_init(void)
+{
+	p3_touch_init_hw();
+	i2c_register_board_info(1, sec_i2c_touch_info,
+					ARRAY_SIZE(sec_i2c_touch_info));
+
+	return 0;
+}
+
+#endif
+#endif      //(CONFIG_JPN_MODEL_SC_01D) && (CONFIG_TOUCHSCREEN_QT602240)
 
 #if defined(CONFIG_TOUCHSCREEN_MELFAS)
 static void register_tsp_callbacks(struct tsp_callbacks *cb)
@@ -3592,6 +4196,8 @@ static struct melfas_tsi_platform_data melfas_touch_platform_data = {
 };
 #endif
 
+#if !defined (CONFIG_JPN_MODEL_SC_01D)
+
 static const struct i2c_board_info sec_i2c_touch_info[] = {
 	{
 #if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
@@ -3605,6 +4211,8 @@ static const struct i2c_board_info sec_i2c_touch_info[] = {
 //#endif
 	},
 };
+
+#endif
 
 static struct i2c_gpio_platform_data amp_i2c_gpio_data = {
 	.sda_pin   = GPIO_AMP_I2C_SDA,
@@ -3672,8 +4280,10 @@ static void ambient_light_sensor_reset(void)
 {
 	printk("[ALC] %s, %d - start\n", __func__,__LINE__);
 
+#if !defined (CONFIG_JPN_MODEL_SC_01D)
 	gpio_free(PM8058_GPIO_PM_TO_SYS(ALC_RST));
 	msleep(20);
+#endif
 
 	gpio_request(PM8058_GPIO_PM_TO_SYS(ALC_RST), "alc_rst");
 	gpio_direction_output(PM8058_GPIO_PM_TO_SYS(ALC_RST), 0);
@@ -3737,6 +4347,9 @@ static struct max17042_platform_data max17042_pdata = {
 #elif defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
 	.sdi_capacity = 0x2FA8, //6100*2
 	.sdi_vfcapacity = 0x3F8A, //8133*2
+#elif defined(CONFIG_JPN_OPERATOR_NTT)
+	.sdi_capacity = 0x340A,
+	.sdi_vfcapacity = 0x478A,
 #else
 	.sdi_capacity = 0x2EE0,
 	.sdi_vfcapacity = 0x3E80,
@@ -4913,10 +5526,10 @@ static struct rpm_regulator_init_data rpm_regulator_init_data[] = {
 	RPM_LDO(PM8058_L2,  0, 1, 0, 3300000, 3300000, LDO300HMIN),
 	RPM_LDO(PM8058_L3,  0, 1, 0, 1800000, 1800000, LDO150HMIN),
 	RPM_LDO(PM8058_L4,  0, 1, 0, 2850000, 2850000,  LDO50HMIN),
-	RPM_LDO(PM8058_L5,  0, 1, 0, 2850000, 2850000, LDO300HMIN),
+	RPM_LDO(PM8058_L5,  1, 1, 0, 2850000, 2850000, LDO300HMIN),
 	RPM_LDO(PM8058_L6,  0, 1, 0, 3000000, 3600000,  LDO50HMIN),
 	RPM_LDO(PM8058_L7,  0, 1, 0, 1800000, 1800000,  LDO50HMIN),
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN) || defined(CONFIG_JPN_OPERATOR_NTT)
 	RPM_LDO(PM8058_L8,  0, 1, 0, 3300000, 3300000, LDO300HMIN),
 #else
 	RPM_LDO(PM8058_L8,  0, 1, 0, 2900000, 3050000, LDO300HMIN),
@@ -4924,12 +5537,13 @@ static struct rpm_regulator_init_data rpm_regulator_init_data[] = {
 
 #if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
 	RPM_LDO(PM8058_L9,  0, 1, 0, 1500000, 3000000, LDO300HMIN),
+#elif defined(CONFIG_JPN_OPERATOR_NTT)
+	RPM_LDO(PM8058_L9,  0, 1, 0, 1800000, 3000000, LDO300HMIN),
 #else
 	RPM_LDO(PM8058_L9,  0, 1, 0, 1800000, 1800000, LDO300HMIN),
 #endif
-//	RPM_LDO(PM8058_L10, 0, 1, 0, 2600000, 2600000, LDO300HMIN),
 	RPM_LDO(PM8058_L10, 0, 1, 0, 1500000, 2600000, LDO300HMIN),
-#if defined(CONFIG_EUR_MODEL_GT_P7320) || defined(CONFIG_USA_MODEL_SGH_I957) || defined(CONFIG_KOR_MODEL_SHV_E140S) || defined(CONFIG_KOR_MODEL_SHV_E140K) || defined(CONFIG_KOR_MODEL_SHV_E140L)
+#if defined(CONFIG_EUR_MODEL_GT_P7320) || defined(CONFIG_USA_MODEL_SGH_I957) || defined(CONFIG_KOR_MODEL_SHV_E140S) || defined(CONFIG_KOR_MODEL_SHV_E140K) || defined(CONFIG_KOR_MODEL_SHV_E140L)  || defined(CONFIG_JPN_MODEL_SC_01D)
 	RPM_LDO(PM8058_L11, 0, 1, 0, 2850000, 2850000, LDO150HMIN),
 #else
 	RPM_LDO(PM8058_L11, 0, 1, 0, 1500000, 1500000, LDO150HMIN),
@@ -4939,7 +5553,7 @@ static struct rpm_regulator_init_data rpm_regulator_init_data[] = {
 	RPM_LDO(PM8058_L14, 0, 0, 0, 2850000, 2850000, LDO300HMIN),
 	RPM_LDO(PM8058_L15, 0, 1, 0, 2850000, 2850000, LDO300HMIN),
 	RPM_LDO(PM8058_L16, 1, 1, 0, 1800000, 1800000, LDO300HMIN),
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_EUR_OPERATOR_OPEN) || defined(CONFIG_JPN_OPERATOR_NTT)
 	RPM_LDO(PM8058_L17, 0, 1, 0, 1800000, 2850000, LDO150HMIN),
 #else
 	RPM_LDO(PM8058_L17, 0, 1, 0, 2600000, 2600000, LDO150HMIN),
@@ -6039,6 +6653,9 @@ static int check_jig_gpio(void)
 #if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
 	if(system_rev >= 0x2)
 		return 1;
+#elif defined(CONFIG_TARGET_LOCALE_JPN_NTT)
+	if(system_rev >= 0x1)
+		return 1;
 #else
 	if(system_rev >= 0x2)
 		return 1;
@@ -6070,7 +6687,7 @@ int check_jig_on(void)
 		pr_debug("%s : jig on = %d\r\n", __func__, ret);
 	}
 
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN) || defined(CONFIG_TARGET_LOCALE_JPN_NTT)
 	if(system_rev>=0x03)
 		return !ret; //jig on=low 
 #endif
@@ -6453,7 +7070,7 @@ struct pm_gpio main_micbiase = {
 		return rc;
 	}
 
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT)  || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT)  || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN) || defined(CONFIG_JPN_OPERATOR_NTT)
 	if(system_rev >= 0x4)
         {
 	 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN), &ear_micbiase);
@@ -8447,7 +9064,8 @@ int sdc2_register_status_notify(void (*callback)(int, void *),
  * to get SDIO detection when the GPIO is rising and SDIO removal
  * when the GPIO is falling */
 
-#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))) || \
+		(defined(CONFIG_JPN_OPERATOR_NTT) || defined(CONFIG_TARGET_SERIES_P4LTE))
 extern int mdm_bootloader_done;
 extern int get_charm_ready(void);
 #endif
@@ -8460,7 +9078,8 @@ static irqreturn_t msm8x60_multi_sdio_slot_status_irq(int irq, void *dev_id)
 	pr_info("%s: MDM2AP_SYNC Status = %d\n",
 		 __func__, status);
 
-#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))) || \
+		(defined(CONFIG_JPN_OPERATOR_NTT) || defined(CONFIG_TARGET_SERIES_P4LTE))
 	if (( status == 0 ) && ( mdm_bootloader_done && !get_charm_ready() )){
 		if ((gpio_get_value(MDM2AP_STATUS) == 0)) {			
 			pr_info("%s : MDM2AP_SYNC went low after mdm bootloader done\n", __func__);
@@ -9244,7 +9863,7 @@ usb_path_type get_usb_path(void)
 	usb_path_type curr_usb = USB_SEL_MSM ;
 	int usb_sel2 = gpio_get_value_cansleep(USB_SEL_2);
 	
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)  || defined(CONFIG_JPN_OPERATOR_NTT)
 	curr_usb = (usb_sel2 == 0) ? USB_SEL_MSM : USB_SEL_ADC;
 #endif
 
@@ -9257,7 +9876,7 @@ void set_usb_path(usb_path_type usb_path)
 	int val=0;
 	printk("%s : set usb path to %d\r\n", __func__, usb_path);
 	
-#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN)
+#if defined(CONFIG_USA_OPERATOR_ATT) || defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_EUR_OPERATOR_OPEN) || defined(CONFIG_JPN_OPERATOR_NTT)
 	val = (usb_path == USB_SEL_MSM) ? 0: 1 ;
 #endif
 	pr_debug("%s: GPIO37_CONFIG(0x%x),\r\n",  __func__, readl(GPIO_CONFIG(USB_SEL_2)));

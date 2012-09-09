@@ -47,13 +47,13 @@
 #if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))\
 	&& defined(CONFIG_USA_OPERATOR_ATT)
 #define OOB_INTR_ONLY
-#define RDWR_MACADDR
+#define READ_MACADDR
 #endif
 
 #if defined(CONFIG_TARGET_SERIES_CELOX)\
 	&& defined(CONFIG_TARGET_LOCALE_USA)
 #if defined(CONFIG_USA_MODEL_SGH_I577)
-#define RDWR_MACADDR
+#define READ_MACADDR
 #else
 #define WRITE_MACADDR
 #endif
@@ -61,7 +61,7 @@
 
 #if defined(CONFIG_USA_OPERATOR_TMO)\
         && defined(CONFIG_USA_MODEL_SGH_T769)
-#define RDWR_MACADDR
+#define READ_MACADDR
 #endif
 
 #if defined(CONFIG_TARGET_SERIES_Q1)\
@@ -70,6 +70,19 @@
 #define RSSI_OFFSET 7
 #define WRITE_MACADDR
 #define HW_OOB
+#endif
+
+#if defined(CONFIG_TARGET_SERIES_P4LTE) && defined(CONFIG_JPN_OPERATOR_NTT)
+#define READ_MACADDR
+#undef RDWR_MACADDR
+#undef WRITE_MACADDR
+#endif
+
+#if defined(CONFIG_TARGET_SERIES_Q1)\
+	&& defined(CONFIG_JPN_OPERATOR_NTT)
+#undef READ_MACADDR
+#undef RDWR_MACADDR
+#define WRITE_MACADDR
 #endif
 
 /* REGION CODE */
@@ -107,7 +120,8 @@
 #undef WRITE_MACADDR
 #undef READ_MACADDR
 #ifdef CONFIG_BCM4334
-#define RDWR_KORICS_MACADDR
+//#define RDWR_KORICS_MACADDR
+#define READ_MACADDR
 #else
 #define RDWR_MACADDR
 #endif
@@ -130,3 +144,5 @@
 #define BCMWAPI_WAI
 #endif
 
+#if (WLAN_REGION_CODE >= 400) && (WLAN_REGION_CODE < 500) /* JPN */
+#endif

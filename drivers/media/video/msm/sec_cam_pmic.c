@@ -22,7 +22,7 @@ CAMERA Power control
 struct regulator *l8, *l15, *l10, *lvs0, *lvs1, *l9; //temp
 struct regulator *s2, *s3;
 
-#if defined(CONFIG_MACH_P8_LTE) && !defined(CONFIG_TARGET_LOCALE_KOR_SKT)
+#if defined(CONFIG_MACH_P8_LTE) && (!defined(CONFIG_TARGET_LOCALE_KOR_SKT) && !defined(CONFIG_TARGET_LOCALE_JPN_NTT))
 struct regulator *l14;	// before DV version
 #endif
 
@@ -44,7 +44,7 @@ void cam_ldo_power_on(const char *sensor_name)
 	printk("%s: system_rev %d\n", __func__, system_rev);
 
 // CAM_A_2.8V 
-#if defined(CONFIG_MACH_P8_LTE) && !defined(CONFIG_TARGET_LOCALE_KOR_SKT)
+#if defined(CONFIG_MACH_P8_LTE) && (!defined(CONFIG_TARGET_LOCALE_KOR_SKT) && !defined(CONFIG_TARGET_LOCALE_JPN_NTT))
 	printk("Enable CAM_A_2.8V for P8LTE");
 	l14 = regulator_get(NULL, "8058_l14"); //AF 2.8V
 	ret = regulator_set_voltage(l14, 2850000, 2850000);
@@ -76,9 +76,9 @@ void cam_ldo_power_on(const char *sensor_name)
 
 	
 //VT_CORE_1.5V(sub)
-#if defined(CONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN) 
+#if defined(CONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
 
-#if defined(CONFIG_MACH_P8_LTE) && defined(CONFIG_TARGET_LOCALE_KOR_SKT)
+#if defined(CONFIG_MACH_P8_LTE) && (defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_JPN_NTT))
 	if(system_rev>0x00)
 #else
 	if(system_rev>0x03)
@@ -181,7 +181,7 @@ void cam_ldo_power_off(void)
 	//VT_CORE_1.5V(sub)
 //HC-original   #if defined(CONFIG_TARGET_LOCALE_USA_ATT) || defined(CONFIG_TARGET_LOCALE_EUR_OPEN)	|| defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
 #if defined(ONFIG_TARGET_LOCALE_USA) || defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
-#if defined(CONFIG_MACH_P8_LTE) && defined(CONFIG_TARGET_LOCALE_KOR_SKT)
+#if defined(CONFIG_MACH_P8_LTE) && (defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_JPN_NTT))
 	if(system_rev>0x00)
 #else
 	if(system_rev>0x03)
@@ -220,7 +220,7 @@ void cam_ldo_power_off(void)
 	mdelay(2);	// 5-> 2
 	
 	// CAM_A_2.8V 
-#if defined(CONFIG_MACH_P8_LTE) && !defined(CONFIG_TARGET_LOCALE_KOR_SKT)
+#if defined(CONFIG_MACH_P8_LTE) && (!defined(CONFIG_TARGET_LOCALE_KOR_SKT) && !defined(CONFIG_TARGET_LOCALE_JPN_NTT))
 	printk("Disable CAM_A_2.8V for P8LTE");
 	if (l14) {
 		ret = regulator_disable(l14);

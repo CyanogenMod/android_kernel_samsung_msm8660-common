@@ -39,6 +39,8 @@ ath6kl_sdio-y += wmi_btcoex.o
 ath6kl_sdio-y += sdio.o
 ifeq ($(CONFIG_KOR_MODEL_SHV_E150S),y)
 ath6kl_sdio-y += msm.o
+else ifeq ($(CONFIG_JPN_MODEL_SC_01E),y)
+ath6kl_sdio-y += msm.o
 else
 ath6kl_sdio-y += c210.o
 endif

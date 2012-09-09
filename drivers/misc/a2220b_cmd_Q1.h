@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  *
  */
-#if defined(CONFIG_USA_MODEL_SGH_T879)
+#if defined(CONFIG_USA_MODEL_SGH_T879) || defined(CONFIG_HKTW_MODEL_GT_N7005) 
 unsigned char phonecall_receiver_nson[] = {
 	/* for preset firmware */
 	0x80, 0x00, 0x00, 0x00, //SYNC write / read 

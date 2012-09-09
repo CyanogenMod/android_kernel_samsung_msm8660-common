@@ -1975,7 +1975,7 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!err && !mmc_card_keep_power(host))
 		mmc_power_off(host);
     
-#if defined(CONFIG_TARGET_SERIES_P8LTE)
+#if defined(CONFIG_TARGET_SERIES_P8LTE) || defined(CONFIG_USA_MODEL_SGH_T769)
     if (host->card && host->index == 2)// T-FLASH card
         mdelay(50);
 #endif

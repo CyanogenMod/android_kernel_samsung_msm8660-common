@@ -120,4 +120,18 @@ source "drivers/media/dvb/Kconfig"
 
 source "drivers/media/tdmb/Kconfig"
 
+source "drivers/media/nmi326/Kconfig"
+
+config ISDBT_NMI
+        boolean "ISDBT one seg NMI"
+                ---help---
+                        This allows ISDBT NMI326.    
+        default y
+
+config ISDBT
+        boolean "ISDBT one seg"
+                ---help---
+                        This allows ISDBT.   
+        default y
+
 endif # MEDIA_SUPPORT

@@ -137,6 +137,7 @@ enum m5mo_cap_frmsize {
 	M5MO_CAPTURE_HD4MP,	/* 2560 x 1440*/
 	M5MO_CAPTURE_3MP,	/* QXGA - 2048 x 1536 */
 	M5MO_CAPTURE_W2MP,	/* 2048 x 1232 */
+	M5MO_CAPTURE_1MP,	/* 1280 x 960 */
 	M5MO_CAPTURE_HD1MP,	/* 1280 x 720*/
 	M5MO_CAPTURE_WVGA,	/* 800 x 480 */
 	M5MO_CAPTURE_VGA,	/* 640 x 480 */
@@ -223,9 +224,14 @@ struct m5mo_frmsizeenum {
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 #define M5MOS_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_S_TMO.bin"	/* SEMKO */
 #define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_O_TMO.bin"	/* Optical communication */
+#elif defined(CONFIG_JPN_MODEL_SC_05D)
+#define M5MOS_FW_REQUEST_PATH	"/system/etc/firmware/RS_M5LS_S.bin"
+#define M5MOO_FW_REQUEST_PATH	"/system/etc/firmware/RS_M5LS_OO.bin"
 #elif defined (CONFIG_TARGET_SERIES_Q1)
 #define M5MOS_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_S.bin"	/* Samsung Electro-Mechanics */
-#define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_OO.bin"	/* Optical communication */
+//for Q1, M5MOO FW path is /system/etc/firmware/RS_M5LS_OO.bin
+//#define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_OO.bin"	/* Optical communication */
+#define M5MOO_FW_REQUEST_PATH	"/system/etc/firmware/RS_M5LS_OO.bin"	/* Optical communication */
 #else
 #define M5MOS_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_S.bin"	/* Samsung Electro-Mechanics */
 #define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_O.bin"	/* Optical communication */

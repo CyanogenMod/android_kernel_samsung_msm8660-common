@@ -16,7 +16,11 @@ CAMERA DRIVER FOR 2M CAM (SYS.LSI)
 #include <mach/camera.h>
 
 #include "sec_sr200pc20m.h"
+#if defined (CONFIG_TARGET_SERIES_Q1) && defined (CONFIG_CAMERA_VE)
+#include "sec_sr200pc20m_reg_q1_ve.h"	
+#else
 #include "sec_sr200pc20m_reg.h"	
+#endif
 
 //#include "sec_cam_pmic.h"
 #include "sec_cam_dev.h"
@@ -492,6 +496,14 @@ static int sr200pc20m_write_regs_from_sd(char *name)
 }
 #endif
 
+#ifdef CONFIG_CAMERA_VE
+static int sr200pc20m_check_sensor(void)
+{
+	int err = 0;
+	err = sr200pc20m_i2c_write_16bit(0x0320);;
+	return err;
+}
+#endif
 static void  sr200pc20m_get_exif(void)
 {
 	u8 read_value1, read_value2, read_value3;	
@@ -981,7 +993,24 @@ int sr200pc20m_sensor_open_init(const struct msm_camera_sensor_info *data)
 	sr200pc20m_ctrl->blur = BLUR_LEVEL_0;
 	sr200pc20m_ctrl->exif_exptime = 0; 
 	sr200pc20m_ctrl->exif_iso = 0;
+#ifdef CONFIG_CAMERA_VE
+	rc = sr200pc20m_check_sensor();
+	if (rc < 0) {
+		cam_err(" Front sensor is not sr200pc20m [rc : %d]", rc );
 
+#if 0	// -> msm_io_8x60.c, board-msm8x60_XXX.c
+		gpio_set_value_cansleep(CAM_VGA_RST, LOW);
+		mdelay(1);
+
+		sub_cam_ldo_power(OFF);	// have to turn off MCLK before PMIC
+#endif
+#ifdef CONFIG_LOAD_FILE
+		sr200pc20m_regs_table_exit();
+#endif
+
+		goto init_fail;
+	}
+#endif 
 	CAM_DEBUG("X");
 init_done:
 	return rc;

@@ -36,7 +36,7 @@
 #include <linux/hrtimer.h>
 #include <linux/ion.h>
 
-#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE) || defined(CONFIG_TARGET_SERIES_P4LTE))
 #include "sec_cam_pmic.h"
 #endif
 
@@ -3064,7 +3064,7 @@ static int __msm_release(struct msm_sync *sync)
 			sync->sctrl.s_release();
 			CDBG("%s, msm_camio_sensor_clk_off\n", __func__);
 			msm_camio_sensor_clk_off(sync->pdev);
-#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE) || defined(CONFIG_TARGET_SERIES_P4LTE))
 			cam_ldo_power_off();
 #endif
 			if (sync->sfctrl.strobe_flash_release) {
@@ -3768,7 +3768,7 @@ static int __msm_open(struct msm_cam_device *pmsm, const char *const apps_id,
 			sync->pp_frame_avail = 0;
 			sync->get_pic_abort = 0;
 
-#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE) || defined(CONFIG_TARGET_SERIES_P4LTE))
 			// have to enable CAM LDOs before MCLK
 			cam_ldo_power_on(sync->sdata->sensor_name);
 #endif

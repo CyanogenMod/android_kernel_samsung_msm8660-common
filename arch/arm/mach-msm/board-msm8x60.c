@@ -5206,7 +5206,7 @@ static struct sec_jack_zone jack_zones[] = {
         },
 };
 
-static int get_sec_det_jack_state(void)
+int get_sec_det_jack_state(void)
 {
 #if defined (CONFIG_JPN_MODEL_SC_03D)
 	if(get_hw_rev() == 0x04){ // only for JPN_NTT REV03
@@ -6057,6 +6057,82 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.hp_gainup = 1,
 		.sp_att = 31,
 		.sp_gainup = 1,
+	},	
+#elif defined (CONFIG_USA_MODEL_SGH_T769)
+    // SPK
+	[0] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 0,
+		.hp_gainup = 0,
+		.sp_att = 23,
+		.sp_gainup = 1,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+    // HEADSET
+	[1] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 29,
+		.hp_gainup = 0,
+		.sp_att = 0,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+    // SPK + HEADSET
+	[2] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 1,
+		.hp_gainup = 2,
+		.sp_att = 24,
+		.sp_gainup = 1,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+	// SPK_CALL
+	[3] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 0,
+		.hp_gainup = 0,
+		.sp_att = 27,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 1,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+	// HEADSET_CALL
+	[4] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 25,
+		.hp_gainup = 2,
+		.sp_att = 0,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 1,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
 	},	
 #else
 	    // SPK

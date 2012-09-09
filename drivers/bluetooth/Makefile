@@ -40,4 +40,8 @@ msm_bt_sleep-objs                       := bluesleep.o
 obj-$(CONFIG_MSM_BT_POWER)		+= bluetooth-power.o
 endif
 
-
+ifeq ($(CONFIG_JPN_MODEL_SC_01E),y)
+obj-$(CONFIG_BT_MSM_SLEEP)              += msm_bt_sleep.o
+msm_bt_sleep-objs                       := bluesleep.o
+obj-$(CONFIG_MSM_BT_POWER)		+= bluetooth-power.o
+endif

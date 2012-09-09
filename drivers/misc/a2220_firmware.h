@@ -10899,7 +10899,7 @@ static u8 a2220_firmware_buf[]= {
 }; 
 
 #elif CONFIG_USA_MODEL_SGH_I717
-#if defined(CONFIG_USA_MODEL_SGH_T879)
+#if defined(CONFIG_USA_MODEL_SGH_T879) || defined(CONFIG_HKTW_MODEL_GT_N7005) 
 	/*Q1 TMO Audience Firmware*/
 	/*Audience Firmware Version: M70.4.0.13_B11621_SEC_Q1TMO_NB_I2C_STREAM_MCFFillIn_STREAM */
 	static u8 a2220_firmware_buf[]= {

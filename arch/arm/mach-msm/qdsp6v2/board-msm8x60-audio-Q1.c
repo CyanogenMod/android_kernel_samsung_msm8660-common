@@ -55,7 +55,7 @@
 #elif defined(CONFIG_KOR_MODEL_SHV_E160L)/*QUINCY-LGT */
 #include "timpani_profile_quincy_lgt.h"
 #elif defined(CONFIG_JPN_MODEL_SC_05D)/*QUINCY-JPN equal to SKT*/
-#include "timpani_profile_quincy_skt.h"
+#include "timpani_profile_quincy_ntt.h"
 #elif defined(CONFIG_USA_MODEL_SGH_I717) /*QUINCY-ATT */
 #include "timpani_profile_quincy_att.h"
 #endif
@@ -535,6 +535,29 @@ void msm_snddev_vpsamp_off_headset(void)
 	fsa9480_audiopath_control(0);
 
 	return 0;
+}
+
+int msm_snddev_spkvpsamp_on_together(void)
+{
+	pr_info("%s\n", __func__);
+	
+#ifdef CONFIG_SENSORS_YDA165
+	yda165_speaker_headset_onoff(1);
+#endif
+
+	fsa9480_audiopath_control(1);
+	
+	return 0;
+}
+void msm_snddev_spkvpsamp_off_together(void)
+{
+	pr_info("%s\n", __func__);
+	
+#ifdef CONFIG_SENSORS_YDA165
+	yda165_speaker_headset_onoff(0);
+#endif
+	
+	fsa9480_audiopath_control(0);
 }
 
 int msm_snddev_poweramp_on_together(void)
@@ -2534,8 +2557,8 @@ static struct snddev_icodec_data speaker_lineout_rx_data = {
 	.profile = &speaker_lineout_rx_profile,
 	.channel_mode = 2,
 	.default_sample_rate = 48000,
-	.pamp_on = msm_snddev_poweramp_on_together,
-	.pamp_off = msm_snddev_poweramp_off_together,
+	.pamp_on = msm_snddev_spkvpsamp_on_together,
+	.pamp_off = msm_snddev_spkvpsamp_off_together,
 	.voltage_on = msm_snddev_voltage_on,
 	.voltage_off = msm_snddev_voltage_off,
 };
