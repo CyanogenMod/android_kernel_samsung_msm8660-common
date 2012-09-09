@@ -360,7 +360,7 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 			     size_t align, unsigned int flags)
 {
 	struct rb_node *n;
-	struct ion_handle *handle;
+	struct ion_handle *handle=NULL;
 	struct ion_device *dev = client->dev;
 	struct ion_buffer *buffer = NULL;
 	unsigned long secure_allocation = flags & ION_SECURE;
@@ -379,6 +379,8 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	mutex_lock(&dev->lock);
 	for (n = rb_first(&dev->heaps); n != NULL; n = rb_next(n)) {
 		struct ion_heap *heap = rb_entry(n, struct ion_heap, node);
+		if(!heap)
+			return handle ;
 		/* if the client doesn't support this heap type */
 		if (!((1 << heap->type) & client->heap_mask))
 			continue;

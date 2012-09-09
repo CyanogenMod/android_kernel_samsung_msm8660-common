@@ -39,8 +39,9 @@
 #define TAOS_INT_GPIO PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(14))
 
 
-#define TAOS_DEBUG 1
+#define TAOS_DEBUG 0
 #define IRQ_WAKE 1
+#define OFFSET_FILE_PATH	"/efs/prox_cal"
 
 /* Triton register offsets */
 #define CNTRL				0x00
@@ -146,7 +147,7 @@
 #define ABS_STATUS                      (ABS_BRAKE)
 #define ABS_WAKE                        (ABS_MISC)
 #define ABS_CONTROL_REPORT              (ABS_THROTTLE)
-
+#define OFFSET_ARRAY_LENGTH		32
 /* global var */
 struct taos_data *taos;
 static struct i2c_client *opt_i2c_client = NULL;
@@ -167,6 +168,8 @@ static TAOS_ALS_FOPS_STATUS taos_als_status = TAOS_ALS_CLOSED;
 static TAOS_PRX_FOPS_STATUS taos_prx_status = TAOS_PRX_CLOSED;
 static TAOS_CHIP_WORKING_STATUS taos_chip_status = TAOS_CHIP_UNKNOWN;
 static TAOS_PRX_DISTANCE_STATUS taos_prox_dist = TAOS_PRX_DIST_UNKNOWN;
+static void set_prox_pulsecnt(struct taos_data *taos, u8 pulse_cnt);
+static int proximity_open_pulsecnt(struct taos_data *taos);
 
 /*  i2c write routine for taos */
 static int opt_i2c_write( u8 reg, u8 *val )
@@ -361,6 +364,7 @@ static ssize_t proximity_enable_store(struct device *dev,
 {
 	struct taos_data *taos = dev_get_drvdata(dev);
 	int value;
+	int ret = 0;
     sscanf(buf, "%d", &value);
 #if TAOS_DEBUG
 	printk(KERN_INFO "[TAOS_PROXIMITY] %s: input value = %d \n",__func__, value);
@@ -396,6 +400,9 @@ static ssize_t proximity_enable_store(struct device *dev,
 		i2c_smbus_write_byte(opt_i2c_client,(CMD_REG|CMD_SPL_FN|CMD_PROXALS_INTCLR));
 		
 		taos_on(taos,TAOS_PROXIMITY);
+		ret = proximity_open_pulsecnt(taos);
+		if (ret < 0 && ret != -ENOENT)
+			pr_err("%s: proximity_open_pulsecnt() failed\n", __func__);
 		input_report_abs(taos->proximity_input_dev,ABS_DISTANCE,!proximity_value);
 		input_sync(taos->proximity_input_dev);
 		printk("[TAOS_PROXIMITY] Temporary : Power ON, chip ID = %X\n", chipID);
@@ -494,7 +501,141 @@ static ssize_t proximity_adc_show(struct device *dev,	struct device_attribute *a
 		proximity_value = TAOS_PROX_MAX;
 	return sprintf(buf,"%d\n", proximity_value);
 }
+static void set_prox_pulsecnt(struct taos_data *taos, u8 pulse_cnt)
+{
+	int ret = 0;
 
+	ret = opt_i2c_write((CMD_REG|PRX_COUNT), &pulse_cnt);
+	if (ret < 0)
+		pr_err("%s: opt_i2c_write to prx_count reg failed\n", __func__);
+}
+
+static int proximity_open_pulsecnt(struct taos_data *taos)
+{
+	struct file *offset_filp = NULL;
+	int err = 0;
+	mm_segment_t old_fs;
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	offset_filp = filp_open(OFFSET_FILE_PATH, O_RDONLY, 0666);
+	if (IS_ERR(offset_filp)) {
+		err = PTR_ERR(offset_filp);
+		if (err != -ENOENT)
+			pr_err("%s: Can't open cancelation file\n", __func__);
+		set_fs(old_fs);
+		return err;
+	}
+
+	err = offset_filp->f_op->read(offset_filp,
+		(char *)&taos->calibrated_pulse_count, sizeof(u8), &offset_filp->f_pos);
+	if (err != sizeof(u8)) {
+		pr_err("%s: Can't read the cancel data from file\n", __func__);
+		err = -EIO;
+	}
+
+	set_prox_pulsecnt(taos, taos->calibrated_pulse_count);
+	pr_err("%s: pulsecnt = %d\n", __func__, taos->calibrated_pulse_count);
+	filp_close(offset_filp, current->files);
+	set_fs(old_fs);
+
+	return err;
+
+}
+
+static int proximity_store_pulsecnt(struct device *dev, bool do_calib)
+{
+	struct taos_data *taos = dev_get_drvdata(dev);
+	struct file *offset_filp = NULL;
+	mm_segment_t old_fs;
+	int err = 0;
+	int i = 0;
+	int sum = 0;
+	int avg = 0;
+	int target_xtalk = 0;
+
+	target_xtalk = 300;
+	taos->calibrated_pulse_count = 7;
+	
+	if (do_calib) {
+		pr_err("%s\n", __func__);
+		do {
+			sum = 0;
+			set_prox_pulsecnt(taos, taos->calibrated_pulse_count);
+			mutex_lock(&taos->power_lock);
+			for (i = 0; i < OFFSET_ARRAY_LENGTH; i++) {
+				sum += i2c_smbus_read_word_data(opt_i2c_client,
+					CMD_REG | PRX_LO);
+			}
+			mutex_unlock(&taos->power_lock);
+			avg = sum / OFFSET_ARRAY_LENGTH;
+			if (avg > target_xtalk)
+				taos->calibrated_pulse_count -= 1;
+			pr_err("%s: pulsecnt = 0x%x, adc = %d\n", __func__, taos->calibrated_pulse_count, avg);
+		} while(avg > target_xtalk && taos->calibrated_pulse_count > 0);
+	} else {
+		taos->calibrated_pulse_count = 7;
+		set_prox_pulsecnt(taos, taos->calibrated_pulse_count);
+		pr_err("%s: pulsecnt = 0x%x\n", __func__, taos->calibrated_pulse_count);
+	}
+
+	old_fs = get_fs();
+	set_fs(KERNEL_DS);
+
+	offset_filp = filp_open(OFFSET_FILE_PATH,
+			O_CREAT | O_TRUNC | O_WRONLY, 0666);
+	if (IS_ERR(offset_filp)) {
+		pr_err("%s: Can't open cancelation file\n", __func__);
+		set_fs(old_fs);
+		err = PTR_ERR(offset_filp);
+		return err;
+	}
+
+	err = offset_filp->f_op->write(offset_filp,
+		(char *)&taos->calibrated_pulse_count, sizeof(u8), &offset_filp->f_pos);
+	if (err != sizeof(u8)) {
+		pr_err("%s: Can't write the cancel data to file\n", __func__);
+		err = -EIO;
+	}
+	pr_err("%s: offset success. offset = %d\n", __func__, taos->calibrated_pulse_count);
+	filp_close(offset_filp, current->files);
+	set_fs(old_fs);
+
+	return err;
+}
+
+static ssize_t proximity_cal_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t size)
+{
+	bool do_calib;
+	int err;
+	if (sysfs_streq(buf, "1")) { /* calibrate prox_offset value */
+		do_calib = true;
+	} else if (sysfs_streq(buf, "0")) { /* reset prox_offset value */
+		do_calib = false;
+	} else {
+		pr_err("%s: invalid value %d\n", __func__, *buf);
+		return -EINVAL;
+	}
+
+	err = proximity_store_pulsecnt(dev, do_calib);
+	if (err < 0) {
+		pr_err("%s: proximity_store_offset() failed\n", __func__);
+		return err;
+	}
+
+	return size;
+}
+
+static ssize_t proximity_cal_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct taos_data *taos = dev_get_drvdata(dev);
+	pr_err("%s: offset = %d\n", __func__, taos->calibrated_pulse_count);
+	return sprintf(buf, "%d,%d\n", taos->calibrated_pulse_count, PRX_THRSH_HI_PARAM);
+}
 static ssize_t proximity_avg_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct input_dev *input_data = to_input_dev(dev);
@@ -507,7 +648,8 @@ static ssize_t proximity_avg_store(struct device *dev, struct device_attribute *
 {
 	return proximity_enable_store(dev, attr, buf, size);
 }	
-
+static DEVICE_ATTR(prox_cal, 0644, proximity_cal_show,
+	proximity_cal_store);
 static DEVICE_ATTR(poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
 		   poll_delay_show, poll_delay_store);
 
@@ -551,6 +693,7 @@ static struct attribute *proximity_sysfs_attrs[] = {
 	&dev_attr_proximity_data.attr,
 	&dev_attr_proximity_state.attr,
 	&dev_attr_proximity_avg.attr,
+	&dev_attr_prox_cal.attr,
 	NULL
 };
 
@@ -995,7 +1138,7 @@ taos_chip_on(void)
 	if (chipID == 0x39)
 		value = 0x08;
 	else if(chipID == 0x29)
-		value = 0x0A;
+		value = 0x07;
 	else
 		value = 0x08;
 #elif defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
@@ -1378,6 +1521,11 @@ if(pdata) {
 		&dev_attr_proximity_avg) < 0) {
 		pr_err("%s: could not create device file(%s)!\n", __func__,
 			dev_attr_proximity_avg.attr.name);
+	}
+	if (device_create_file(taos->proximity_dev,
+		&dev_attr_prox_cal) < 0) {
+		pr_err("%s: could not create device file(%s)!\n", __func__,
+			dev_attr_prox_cal.attr.name);
 	}
 	dev_set_drvdata(taos->proximity_dev, taos);
 	

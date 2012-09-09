@@ -332,6 +332,8 @@ static void acc_check_dock_detection(struct acc_con_info *acc)
 			return;
 		ACC_CONDEV_DBG("docking station detached!!!");
 		switch_set_state(&acc->dock_switch, UEVENT_DOCK_NONE);
+		acc_dock_uevent(acc, false);
+		
 #ifdef CONFIG_SEC_KEYBOARD_DOCK
 		if (acc->pdata->check_keyboard)
 			acc->pdata->check_keyboard(false);
@@ -342,11 +344,8 @@ static void acc_check_dock_detection(struct acc_con_info *acc)
 		hdmi_msm_hpd_switch(false);
 		/*TVout_LDO_ctrl(false); */
 #endif
-		acc_dock_uevent(acc, false);
+
 	}
-
-
-	
 }
 
 static irqreturn_t acc_dock_isr(int irq, void *ptr)
@@ -360,38 +359,16 @@ static irqreturn_t acc_dock_isr(int irq, void *ptr)
 	return IRQ_HANDLED;
 }
 
-#define DET_CHECK_TIME_MS 100
-#define DET_SLEEP_TIME_MS 10
 #define DETECTION_DELAY_MS	200
 
 static irqreturn_t acc_accessory_isr(int irq, void *dev_id)
 {
 	struct acc_con_info *acc = (struct acc_con_info *)dev_id;
-//	int acc_ID_val=0, pre_acc_ID_val=0;
-//	int time_left_ms = DET_CHECK_TIME_MS;
 
 	ACC_CONDEV_DBG("");
-/*
-	while (time_left_ms > 0){
-		acc_ID_val = acc->pdata->get_acc_state();
 
-		if (acc_ID_val == pre_acc_ID_val) {
-			time_left_ms -= DET_SLEEP_TIME_MS;
-		} else {
-			time_left_ms = DET_CHECK_TIME_MS;
-		}
-		pre_acc_ID_val = acc_ID_val;
-		msleep (DET_SLEEP_TIME_MS) ;
-	}
-
-	ACC_CONDEV_DBG("IRQ_DOCK_GPIO is %d", acc_ID_val);
-	if (acc_ID_val == 1) {
-		ACC_CONDEV_DBG("Accessory detached");
-		acc_accessory_uevent(acc, false);
-	} else
-*/
 	cancel_delayed_work_sync(&acc->acc_id_dwork);
-		schedule_delayed_work(&acc->acc_id_dwork,
+	schedule_delayed_work(&acc->acc_id_dwork,
 			msecs_to_jiffies(DETECTION_DELAY_MS));
 	return IRQ_HANDLED;
 }

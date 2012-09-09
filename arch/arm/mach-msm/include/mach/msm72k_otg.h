@@ -174,6 +174,10 @@ struct msm_otg {
 	int accessory_irq;
 	int accessory_irq_gpio;
 #endif
+	/* USB vbus blocking is set
+	 * when security policy request usb disabled.
+	 */
+	int  disable_peripheral;
 };
 
 static inline int can_phy_power_collapse(struct msm_otg *dev)

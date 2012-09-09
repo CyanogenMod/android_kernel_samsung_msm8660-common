@@ -790,6 +790,13 @@ unsigned int msm_hs_tx_empty(struct uart_port *uport)
 	data = msm_hs_read(uport, UARTDM_SR_ADDR);
 	if (data & UARTDM_SR_TXEMT_BMSK)
 		ret = TIOCSER_TEMT;
+	
+	#if defined(CONFIG_KOR_MODEL_SHV_E150S) || defined(CONFIG_JPN_MODEL_SC_01E)
+	if(ret == TIOCSER_TEMT && (data & UARTDM_SR_RXRDY_BMSK) == 0)
+             ret = TIOCSER_TEMT;
+	else
+	      ret = 0;
+	#endif
 
 	clk_disable(msm_uport->clk);
 

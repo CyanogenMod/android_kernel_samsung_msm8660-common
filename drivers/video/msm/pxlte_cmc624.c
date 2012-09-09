@@ -74,7 +74,7 @@ static int Cmc624_TuneSeqLen = 0;
 static int current_gamma_level = CMC624_BRIGHTNESS_MAX_LEVEL;
 static int current_cabc_onoff = 1;
 
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU) || defined(CONFIG_TARGET_LOCALE_JPN_NTT)
 //static int cmc624_current_region_enable = false; //region mode added
 #endif
 
@@ -265,7 +265,7 @@ bool cmc624_I2cWrite16(unsigned char Addr, unsigned long Data)
 		return -ENODEV;
 	}
 	
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT)|| defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR_SKT)|| defined(CONFIG_TARGET_LOCALE_KOR_LGU) || defined(CONFIG_TARGET_LOCALE_JPN_NTT)
 		if(Addr == 0x0000)
 		{
 		if(Data == last_cmc624_Bank)

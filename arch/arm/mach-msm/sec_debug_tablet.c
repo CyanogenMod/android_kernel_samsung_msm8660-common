@@ -638,6 +638,8 @@ void sec_debug_check_crash_key(unsigned int code, int value)
 					pr_info("Level is row. Can not process force dump mode.\n");
 					return;
 				} else {		
+					dump_all_task_info();
+					dump_cpu_stat();
 					panic("Crash Key");
 				}
 			}
@@ -1090,6 +1092,32 @@ static int __init sec_debug_user_fault_init(void)
 	if (!entry)
 		return -ENOMEM;
 	return 0;
-#endif	
+#endif
 }
+#ifdef CONFIG_SEC_DEBUG_POWERCOLLAPSE_LOG
+
+void sec_debug_powercollapse_log(unsigned int value1, unsigned int value2)
+{
+    unsigned int i;
+    int cpu = smp_processor_id();
+
+	if (sec_debug_nocache_log)
+	{
+		i = atomic_inc_return(&(sec_debug_nocache_log->gExcpPowerCollapseLogIdx)) & (POWERCOLLAPSE_LOG_MAX - 1);
+		sec_debug_nocache_log->gExcpPowerCollapseLog[i].time = cpu_clock(cpu);
+		sec_debug_nocache_log->gExcpPowerCollapseLog[i].value1 = value1;
+		sec_debug_nocache_log->gExcpPowerCollapseLog[i].value2 = value2;
+	}
+/*  not to log when DEBUG_LEVEL_LOW */
+/*
+	else
+	{
+		i = atomic_inc_return(&gExcpPowerCollapseLogIdx) & (POWERCOLLAPSE_LOG_MAX - 1);
+		gExcpPowerCollapseLog[i].time = cpu_clock(cpu);
+		gExcpPowerCollapseLog[i].value1 = value1;
+		gExcpPowerCollapseLog[i].value2 = value2;
+	}
+*/
+}
+#endif
 device_initcall(sec_debug_user_fault_init);

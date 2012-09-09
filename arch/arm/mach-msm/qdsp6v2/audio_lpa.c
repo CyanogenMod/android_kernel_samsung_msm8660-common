@@ -1009,6 +1009,8 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case AUDIO_DEREGISTER_PMEM: {
 			struct msm_audio_pmem_info info;
 			pr_debug("%s: AUDIO_DEREGISTER_PMEM\n", __func__);
+			if(arg==NULL)
+				return -1;
 			if (copy_from_user(&info, (void *) arg, sizeof(info)))
 				rc = -EFAULT;
 			else

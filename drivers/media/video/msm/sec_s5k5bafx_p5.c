@@ -36,7 +36,7 @@
 #include "sec_cam_pmic.h"
 
 
-#if defined(CONFIG_TARGET_SERIES_P5LTE)
+#if defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P4LTE)
 #include "sec_s5k5bafx_reg_p5.h"
 #elif defined(CONFIG_TARGET_SERIES_P8LTE)
 #include "sec_s5k5bafx_reg_p8_skt.h"
@@ -44,7 +44,6 @@
 #include "s5k5bafx_regs.h"
 #endif
 
-#define SENSOR_DEBUG 0
 
 //#define CONFIG_LOAD_FILE	
 
@@ -124,7 +123,7 @@ static int s5k5bafx_sensor_write_list(const u32 *list, int size, char *name)
 	unsigned short value = 0;
 	int i = 0;
 
-	printk("s5k5bafx_sensor_write_list : %s\n", name);
+	cam_info(": %s", name);
 	
 #ifdef CONFIG_LOAD_FILE	
 	ret = s5k5bafx_regs_table_write(name);
@@ -138,7 +137,7 @@ static int s5k5bafx_sensor_write_list(const u32 *list, int size, char *name)
 			msleep(value);
 		} else {
 		    if(s5k5bafx_sensor_write(subaddr, value) < 0)   {
-			    printk("<=PCAM=> sensor_write_list fail...-_-\n");
+			    cam_err("sensor_write_list fail...");
 			    return -1;
 		    }
 		}
@@ -161,11 +160,11 @@ static int s5k5bafx_sensor_burst_write_list(const u32 *list, int size, char *nam
 
 	struct i2c_msg msg = {  s5k5bafx_client->addr, 0, 0, s5k5bafx_buf_for_burstmode};
 	
-	printk("s5k5bafx_sensor_burst_write_list : %s\n", name);
+	cam_info(": %s", name);
 
 	for (i = 0; i < size; i++) {
 		if(idx > (BURST_MODE_BUFFER_MAX_SIZE-10)) {
-			printk("<=PCAM=> BURST MODE buffer overflow!!!\n");
+			cam_err("err : BURST MODE buffer overflow!!!");
 			return err;
 		}
 
@@ -206,7 +205,7 @@ static int s5k5bafx_sensor_burst_write_list(const u32 *list, int size, char *nam
 	}
 
 	if (unlikely(err < 0)) {
-		printk("<=PCAM=>%s: register set failed\n",__func__);
+		cam_err("err : register set failed");
 		return err;
 	}
 	
@@ -219,47 +218,38 @@ int s5k5bafx_set_brightness(int brightness)
 	
 	switch(brightness) {
 	case S5K5BAFX_BR_PLUS_4 :
-		CAM_DEBUG("S5K5BAFX_BR_PLUS_4");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_p4);
 		break;
 		
 	case S5K5BAFX_BR_PLUS_3 :
-		CAM_DEBUG("S5K5BAFX_BR_PLUS_3");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_p3);
 		break;
 
 	case S5K5BAFX_BR_PLUS_2 :
-		CAM_DEBUG("S5K5BAFX_BR_PLUS_2");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_p2);
 		break;
 
 	case S5K5BAFX_BR_PLUS_1 :
-		CAM_DEBUG("S5K5BAFX_BR_PLUS_1");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_p1);
 		break;
 
 	case S5K5BAFX_BR_DEFAULT :
-		CAM_DEBUG("S5K5BAFX_BR_DEFAULT");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_default);		
 		break;
 
 	case S5K5BAFX_BR_MINUS_1 :
-		CAM_DEBUG("S5K5BAFX_BR_MINUS_1");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_m1);
 		break;
 
 	case S5K5BAFX_BR_MINUS_2 :
-		CAM_DEBUG("S5K5BAFX_BR_MINUS_2");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_m2);
 		break;
 
 	case S5K5BAFX_BR_MINUS_3 :
-		CAM_DEBUG("S5K5BAFX_BR_MINUS_3");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_m3);
 		break;
 
 	case S5K5BAFX_BR_MINUS_4 :
-		CAM_DEBUG("S5K5BAFX_BR_MINUS_4");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_bright_m4);
 		break;
 
@@ -384,21 +374,17 @@ int s5k5bafx_set_preview_size(int size)
 
 	switch(size) {
 	case S5K5BAFX_PREVIEW_VGA:	// 640x480
-		CAM_DEBUG("640x480");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_640_480);		
 		break;
 		
 	case S5K5BAFX_PREVIEW_SVGA:	// 800x600
-		CAM_DEBUG("800x600");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_800_600);
 		break;
 #if defined(CONFIG_TARGET_SERIES_P8LTE)
 	case S5K5BAFX_PREVIEW_528x432:	// 528x432
-		CAM_DEBUG("528x432");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_528_432);
 		break;
 	case S5K5BAFX_PREVIEW_XGA:	// 1024x768
-		CAM_DEBUG("1024x768");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_preview_1024_768);
 		break;
 #endif
@@ -454,7 +440,7 @@ int s5k5bafx_mipi_mode(int mode)
 	int rc = 0;
 	struct msm_camera_csi_params s5k5bafx_csi_params;
 	
-	CAM_DEBUG("%s E\n", __FUNCTION__);
+	CAM_DEBUG("E");
 
 	if (!config_csi2) {
 		s5k5bafx_csi_params.lane_cnt = 1;
@@ -468,7 +454,7 @@ int s5k5bafx_mipi_mode(int mode)
 		config_csi2 = 1;
 	}
 	
-	CAM_DEBUG("%s X\n", __FUNCTION__);
+	CAM_DEBUG("X");
 	
 	return rc;
 }
@@ -478,15 +464,14 @@ static int s5k5bafx_start(void)
 	int rc=0;
 	unsigned short	id = 0;
 	
-	CAM_DEBUG("%s E\n", __FUNCTION__);
-	CAM_DEBUG("I2C address : 0x%x\n", s5k5bafx_client->addr);
+	CAM_DEBUG("E");
 	
 #if defined(CONFIG_TARGET_SERIES_P8LTE)
 	if(s5k5bafx_ctrl->started && s5k5bafx_ctrl->vtcall_mode == 0 ) { // don't skip during VT test mode (*#7353#)
 #else
 	if(s5k5bafx_ctrl->started) {
 #endif
-		CAM_DEBUG("%s X : already started\n", __FUNCTION__);
+		CAM_DEBUG("X : already started");
 		return rc;
 	}
 
@@ -497,20 +482,15 @@ static int s5k5bafx_start(void)
 	s5k5bafx_sensor_write(0x002C, 0x0000);
 	s5k5bafx_sensor_write(0x002E, 0x0040);
 	s5k5bafx_sensor_read(0x0F12, &id);
-	printk("CURRENT SENSOR FW => id 0x%x \n", id);
 
 	if (s5k5bafx_ctrl->cam_mode == S5K5BAFX_MOVIE_MODE || s5k5bafx_ctrl->cam_mode == S5K5BAFX_MMS_MODE) {
-		CAM_DEBUG("SELF RECORD");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_recording_60Hz_common);
 	} else {
 		if(s5k5bafx_ctrl->vtcall_mode == 0) {
-			CAM_DEBUG("SELF CAMERA");
 			S5K5BAFX_WRITE_LIST(s5k5bafx_common);
 		} else if(s5k5bafx_ctrl->vtcall_mode == 1) {
-			CAM_DEBUG("VT CALL");
 			S5K5BAFX_WRITE_LIST(s5k5bafx_vt_common);
 		} else {
-			CAM_DEBUG("WIFI VT CALL");
 			S5K5BAFX_WRITE_LIST(s5k5bafx_vt_wifi_common);
 		}	
 	}
@@ -522,7 +502,7 @@ static int s5k5bafx_start(void)
 
 void s5k5bafx_set_preview(void)
 {
-	CAM_DEBUG("s5k5bafx_ctrl->settings.preview_size_idx = %d", s5k5bafx_ctrl->settings.preview_size_idx);
+	CAM_DEBUG(":preview_size_idx = %d", s5k5bafx_ctrl->settings.preview_size_idx);
 	if(s5k5bafx_ctrl->dtp_mode == 0) {
 		s5k5bafx_ctrl->op_mode = S5K5BAFX_MODE_PREVIEW;	
 #if defined(CONFIG_TARGET_SERIES_P8LTE)
@@ -543,7 +523,6 @@ void s5k5bafx_set_preview(void)
 			}
 		}
 	} else {
-		printk("start DTP mode!\n");
 		s5k5bafx_ctrl->op_mode = S5K5BAFX_MODE_DTP;	
 		S5K5BAFX_WRITE_LIST(s5k5bafx_pattern_on);
 	}	
@@ -551,7 +530,7 @@ void s5k5bafx_set_preview(void)
 
 void s5k5bafx_set_capture(void)
 {
-	CAM_DEBUG("");	
+	CAM_DEBUG("E");	
 	s5k5bafx_ctrl->op_mode = S5K5BAFX_MODE_CAPTURE;	
 	S5K5BAFX_WRITE_LIST(s5k5bafx_capture);
 
@@ -560,7 +539,7 @@ void s5k5bafx_set_capture(void)
 
 static long s5k5bafx_set_sensor_mode(int mode)
 {
-	CAM_DEBUG("s5k5bafx_set_sensor_mode : %d\n", mode);
+	CAM_DEBUG(": %d", mode);
 	switch (mode) {
 	case SENSOR_PREVIEW_MODE:
 		s5k5bafx_start();
@@ -586,13 +565,11 @@ int s5k5bafx_set_dtp(int* onoff)
 	int rc = 0;
 	switch(*onoff) {
 	case S5K5BAFX_DTP_OFF:
-		printk("DTP OFF\n");
 		S5K5BAFX_WRITE_LIST(s5k5bafx_pattern_off);
 		s5k5bafx_ctrl->dtp_mode = 0;
 		break;
 
 	case S5K5BAFX_DTP_ON:
-		printk("DTP ON\n");
 		//S5K5BAFX_WRITE_LIST(s5k5bafx_pattern_on);
 		/* set ACK value */
 		(*onoff) = DTP_ON_ACK;
@@ -633,7 +610,7 @@ int s5k5bafx_sensor_ext_config(void __user *arg)
 	sensor_ext_cfg_data cfg_data;
 	
 	if(copy_from_user((void *)&cfg_data, (const void *)arg, sizeof(cfg_data))) {
-		printk("%s fail copy_from_user!\n", __func__);
+		cam_err("err : fail copy_from_user!");
 	}
 
 	switch(cfg_data.cmd) {
@@ -658,17 +635,17 @@ int s5k5bafx_sensor_ext_config(void __user *arg)
 		break;
 
 	case EXT_CFG_SET_VT_MODE:
-		CAM_DEBUG("VTCall mode : %d",cfg_data.value_1);
+		cam_info("VTCall mode : %d",cfg_data.value_1);
 		s5k5bafx_ctrl->vtcall_mode = cfg_data.value_1;
 		break;
 		
 	case EXT_CFG_SET_MOVIE_MODE:						
-		CAM_DEBUG("Movie mode : %d",cfg_data.value_1);
+		cam_info("Movie mode : %d",cfg_data.value_1);
 		s5k5bafx_ctrl->cam_mode = cfg_data.value_1;
 		break;
 
 	case EXT_CFG_SET_VENDOR:						
-		CAM_DEBUG("Vendor app mode : %d",cfg_data.value_1);
+		cam_info("Vendor app mode : %d",cfg_data.value_1);
 		s5k5bafx_ctrl->app_mode = cfg_data.value_1;
 		break;
 
@@ -682,7 +659,6 @@ int s5k5bafx_sensor_ext_config(void __user *arg)
 		break;
 
 	case EXT_CFG_SET_PREVIEW_SIZE:	
-		CAM_DEBUG("set preview size index = %dx%d", cfg_data.value_1, cfg_data.value_2);
 		s5k5bafx_set_preview_index(cfg_data.value_1, cfg_data.value_2);	//just set index
 		break;
 
@@ -691,7 +667,7 @@ int s5k5bafx_sensor_ext_config(void __user *arg)
 	}
 	
 	if(copy_to_user((void *)arg, (const void *)&cfg_data, sizeof(cfg_data))) {
-		printk(" %s : copy_to_user Failed \n", __func__);
+		cam_err("err : fail copy_from_user!");
 	}
 
 	return rc;
@@ -705,7 +681,7 @@ static int s5k5bafx_sensor_pre_init(const struct msm_camera_sensor_info *data)
 #ifndef CONFIG_LOAD_FILE
 	rc = S5K5BAFX_WRITE_LIST(s5k5bafx_pre_init0);
 	if(rc < 0)
-		printk("Error in s5k5bafx_sensor_pre_init!\n");
+		cam_err("Error in s5k5bafx_sensor_pre_init");
 #endif
 	mdelay(10);
 
@@ -940,9 +916,6 @@ int s5k5bafx_sensor_config(void __user *argp)
 			(void *)argp,
 			sizeof(struct sensor_cfg_data)))
 		return -EFAULT;
-
-	CDBG("s5k5bafx_ioctl, cfgtype = %d, mode = %d\n",
-		cfg_data.cfgtype, cfg_data.mode);
 
 	switch (cfg_data.cfgtype) {
 	case CFG_SET_MODE:

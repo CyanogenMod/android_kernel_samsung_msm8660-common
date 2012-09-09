@@ -627,7 +627,10 @@ static void msm_otg_start_peripheral(struct otg_transceiver *xceiv, int on)
 		if (dev->pdata->pclk_required_during_lpm)
 			clk_enable(dev->iface_clk);
 
-		usb_gadget_vbus_connect(xceiv->gadget);
+		if (!dev->disable_peripheral)
+			usb_gadget_vbus_connect(xceiv->gadget);
+		else
+			pr_info("USBLOCK: peripheral mode is blocked!!\n");
 	} else {
 		atomic_set(&dev->chg_type, USB_CHG_TYPE__INVALID);
 		usb_gadget_vbus_disconnect(xceiv->gadget);
@@ -1438,6 +1441,7 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 		 */
 		if ((state >= OTG_STATE_A_IDLE) &&
 			!test_bit(ID_A, &dev->inputs)) {
+#ifndef CONFIG_30PIN_CONN
 #ifdef CONFIG_USB_HOST_NOTIFY
 			if (otgsc & OTGSC_BSV) {
 				the_msm_otg->ndev.booster = NOTIFY_POWER_ON;
@@ -1455,6 +1459,7 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 				}
 				the_msm_otg->ndev.booster = NOTIFY_POWER_OFF;
 			}
+#endif
 #endif
 			goto out;
 		}	
@@ -2633,6 +2638,59 @@ static struct attribute_group msm_otg_attr_grp = {
 };
 #endif
 
+
+static void msm_otg_enable_peripheral(struct msm_otg *motg, bool enable)
+{
+	if (!motg) {
+		pr_err("Unable to get msm_otg\n");
+		return;
+	}
+
+	if (enable) {
+		pr_info("USBLOCK: enable peripheral\n");
+		motg->disable_peripheral = false;
+	} else {
+		pr_info("USBLOCK: disable peripheral\n");
+		usb_gadget_vbus_disconnect(motg->otg.gadget);
+		motg->disable_peripheral = true;
+	}
+}
+
+/*
+ * Lock/unlock usb device in sysfs
+ */
+static ssize_t show_usb_device_lock_state(struct device *pdev,
+		struct device_attribute *attr, char *buf)
+{
+	struct msm_otg *motg = the_msm_otg;
+
+	if (!motg)
+		return snprintf(buf, PAGE_SIZE, "0\n");
+
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+			!!(motg->disable_peripheral));
+}
+
+static ssize_t store_usb_device_lock_state(struct device *pdev,
+		struct device_attribute *attr, const char *buff, size_t size)
+{
+	struct msm_otg *motg = the_msm_otg;
+	int enable = 0;
+
+	sscanf(buff, "%d", &enable);
+
+	pr_info("USBLOCK: %s usb lock\n",
+			enable ? "enabling" : "disabling");
+
+	msm_otg_enable_peripheral(motg, !enable);
+
+	return size;
+}
+
+static DEVICE_ATTR(usb_device_lock, S_IRUGO | S_IWUSR,
+		show_usb_device_lock_state, store_usb_device_lock_state);
+
+
 #ifdef CONFIG_DEBUG_FS
 static int otg_open(struct inode *inode, struct file *file)
 {
@@ -3086,6 +3144,11 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 	}
 #endif
 
+	/* Create sysfs to control usb device lock/unlock */
+	if (device_create_file(&pdev->dev, &dev_attr_usb_device_lock) < 0)
+		dev_dbg(&pdev->dev, " Failed to create device file(%s)!\n",
+				dev_attr_usb_device_lock.attr.name);
+
 #ifdef CONFIG_30PIN_CONN
 	if (dev->pdata->accessory_irq_gpio && dev->pdata->accessory_irq) {
 		the_msm_otg->accessory_irq_gpio =
@@ -3199,6 +3262,8 @@ static int __exit msm_otg_remove(struct platform_device *pdev)
 #ifdef CONFIG_USB_OTG
 	sysfs_remove_group(&pdev->dev.kobj, &msm_otg_attr_grp);
 #endif
+	device_remove_file(&pdev->dev, &dev_attr_usb_device_lock);
+
 	destroy_workqueue(dev->wq);
 	wake_lock_destroy(&dev->wlock);
 #ifdef CONFIG_USB_HOST_NOTIFY

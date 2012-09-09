@@ -78,7 +78,7 @@ static struct gpiomux_setting gsbi4 = {
 	.pull = GPIOMUX_PULL_DOWN, // GPIOMUX_PULL_NONE
 };
 
-#if defined(CONFIG_KOR_OPERATOR_SKT)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT)
 static struct gpiomux_setting gsbi4_p8 = {
 	.func = GPIOMUX_FUNC_1, 
 	.drv = GPIOMUX_DRV_10MA,
@@ -552,7 +552,8 @@ static struct gpiomux_setting gyro_suspend_cfg = {
 	.pull = GPIOMUX_PULL_DOWN,
 };
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) ||defined(CONFIG_KOR_OPERATOR_LGU)||defined(CONFIG_KOR_OPERATOR_KT)
+#if defined(CONFIG_KOR_OPERATOR_SKT) ||defined(CONFIG_KOR_OPERATOR_LGU)||defined(CONFIG_KOR_OPERATOR_KT) \
+	|| defined(CONFIG_JPN_OPERATOR_NTT)
 static struct gpiomux_setting gyro_fifo_int_active_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -902,7 +903,7 @@ static struct msm_gpiomux_config msm8x60_ebi2_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &ps_hold,
 		},
 	},
-#if defined(CONFIG_KOR_OPERATOR_SKT) /*  123 ~ 130 is normal gpio */
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT)/*  123 ~ 130 is normal gpio */
 	{
 		.gpio      = 123,
 		.settings = {
@@ -2090,7 +2091,7 @@ static struct msm_gpiomux_config msm8x60_cam_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &cam_suspend_cfg,
 		},
 	},
-#if defined(CONFIG_KOR_OPERATOR_SKT)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT)
 		// cam sda
 	{
 		.gpio      = 47,
@@ -2591,13 +2592,13 @@ msm8x60_p8_lte_gpiomux_cfgs[] __initdata = {
 #ifdef CONFIG_MSM_GSBI9_UART
 	{msm8x60_charm_uart_configs, ARRAY_SIZE(msm8x60_charm_uart_configs)},
 #endif
-#if !defined(CONFIG_KOR_OPERATOR_SKT)	
+#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_JPN_OPERATOR_NTT)
 	{msm8x60_aux_pcm_configs, ARRAY_SIZE(msm8x60_aux_pcm_configs)},
 #endif	
 	{msm8x60_sdc_configs, ARRAY_SIZE(msm8x60_sdc_configs)},
 	{msm8x60_snd_configs, ARRAY_SIZE(msm8x60_snd_configs)},
 	{msm8x60_mi2s_configs, ARRAY_SIZE(msm8x60_mi2s_configs)},
-#if !defined(CONFIG_KOR_OPERATOR_SKT)	
+#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_JPN_OPERATOR_NTT)
 	{msm8x60_lcdc_configs, ARRAY_SIZE(msm8x60_lcdc_configs)},
 #endif	
 //	{msm8x60_mdp_vsync_configs, ARRAY_SIZE(msm8x60_mdp_vsync_configs)},

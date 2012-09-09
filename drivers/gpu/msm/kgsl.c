@@ -1661,9 +1661,25 @@ static long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 	kgsl_check_idle(dev_priv->device);
 	return result;
 
- error_put_file_ptr:
+error_put_file_ptr:
+#if defined (CONFIG_USA_MODEL_SGH_I757) || defined (CONFIG_KOR_MODEL_SHV_E150S) || defined(CONFIG_JPN_MODEL_SC_01E)
+	switch (entry->memtype) {
+		case KGSL_MEM_ENTRY_PMEM:
+		case KGSL_MEM_ENTRY_ASHMEM:
+			if (entry->priv_data)
+				fput(entry->priv_data);
+			break;
+		case KGSL_MEM_ENTRY_ION:
+			ion_unmap_dma(kgsl_ion_client, entry->priv_data);
+			ion_free(kgsl_ion_client, entry->priv_data);
+			break;
+		default:
+			break;
+	}
+#else
 	if (entry->priv_data)
 		fput(entry->priv_data);
+#endif
 
 error:
 	kfree(entry);

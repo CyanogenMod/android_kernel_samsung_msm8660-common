@@ -253,10 +253,10 @@ int mdp_lcdc_on(struct platform_device *pdev)
 #endif
 	mdp_histogram_ctrl_all(TRUE);
 
+    MDP_OUTP(MDP_BASE + LCDC_BASE, 1);
 	ret = panel_next_on(pdev);
 	if (ret == 0) {
 		/* enable LCDC block */
-		MDP_OUTP(MDP_BASE + LCDC_BASE, 1);
 		mdp_pipe_ctrl(MDP_OVERLAY0_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	}
 	/* MDP cmd block disable */
@@ -396,7 +396,13 @@ static void mdp4_overlay_lcdc_dma_busy_wait(struct msm_fb_data_type *mfd)
 	if (need_wait) {
 		/* wait until DMA finishes the current job */
 		pr_debug("%s: pending pid=%d\n", __func__, current->pid);
+#if defined(CONFIG_USA_MODEL_SGH_T769)  || defined(CONFIG_USA_MODEL_SGH_I577)
+		wait_for_completion_timeout(&mfd->dma->comp,
+			msecs_to_jiffies(VSYNC_PERIOD*2));
+#else
+
 		wait_for_completion(&mfd->dma->comp);
+#endif
 	}
 	pr_debug("%s: done pid=%d\n", __func__, current->pid);
 }

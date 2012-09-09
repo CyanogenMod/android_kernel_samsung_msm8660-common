@@ -98,7 +98,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {
 //ISX012_Initial_Setting_sensor_111218_V3.08.ini//
 /////////////////////////////////////
-//AF driver setting//³»ºÎ AF driver//
+//AF driver setting//ï¿½ï¿½ï¿½ï¿½ AF driver//
 /////////////////////////////////////
 {0x66C2,0x0C,0x01},//AF_INTERNAL_LENSDRV_ADRS
 {0x66C3,0x02,0x01},//AF_INTERNAL_LENSDRV_SIZE
@@ -222,7 +222,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x6D90,0x0026,0x02},    // HPF_VHBPF_CORH_Y3 :
 {0x6D92,0x004D,0x02},    // HPF_VHBPF_CORH_Y4 :
 
-// CAF Ãß°¡ºÎºÐ
+// CAF ï¿½ß°ï¿½ï¿½Îºï¿½
 {0x6622,0x0004,0x02},    // AF_CAF_PARAM_WOBBLE_STEP :
 {0x6624,0x0008,0x02},    // AF_CAF_CLIMB_STEP :
 {0x6687,0x01,0x01},    // AF_CAF_CLIMB_PEAK_BACK_STEP_ENABLE :
@@ -255,7 +255,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x661E,0x00C8,0x02},    //AF_CAF_FAR_POSITION
 {0x6620,0x02A8,0x02},    //AF_CAF_NEAR_POSITION
 
-//Ãß°¡¼ÂÆÃºÎºÐ SAFºÎºÐ
+//ï¿½ß°ï¿½ï¿½ï¿½ï¿½ÃºÎºï¿½ SAFï¿½Îºï¿½
 {0x00B2,0x02,0x01},    // AFMODE_MONI : manual AF mode
 {0x028E,0x00,0x01},    // AF_SN1_2 :
 {0x028F,0x00,0x01},    // AF_SN3_4 :
@@ -269,8 +269,8 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x661C,0x00,0x01},    // AF_MONOTONY_POS :
 {0x663E,0x01,0x01},    // AF_SEARCH_SECOND_DIR :
 {0x663F,0x01,0x01},    // AF_DIRECTBACK_SECOND_F :
-{0x6674,0x00,0x01},    // AF_MONICHG_MOVE_F : AF off½Ã zero positionÀ¸·Î °¥Áö(01) ÇöÀ§Ä¡¿¡ ÀÖÀ»Áö(00) Á¤ÇÔ
-{0x6675,0x01,0x01},    // CAP_AF_CANCEL_F : 1·Î ¼³Á¤½Ã capture¸ðµå¿¡¼­ AFÀÚµ¿ Äµ½½
+{0x6674,0x00,0x01},    // AF_MONICHG_MOVE_F : AF offï¿½ï¿½ zero positionï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½(01) ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½(00) ï¿½ï¿½ï¿½
+{0x6675,0x01,0x01},    // CAP_AF_CANCEL_F : 1ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ captureï¿½ï¿½ï¿½å¿¡ï¿½ï¿½ AFï¿½Úµï¿½ Äµï¿½ï¿½
 {0x6676,0x02,0x01},    // AF_SAxF_MODE :
 {0x669E,0x02,0x01},    // AF_SECOND_WND_CHK :
 {0x6600,0x00C8,0x02},    // AF_SEARCH_AREA_LOW :
@@ -375,14 +375,14 @@ isx012_short_t ISX012_Init_Reg[] =
 //S,66BE,0F,8,    //AF_JUDGE_CONF
 //S,669A,01F4,16,    //AF_OPD_MONOTONYUP_HBPF_TH
 //S,669C,03E8,16,    //AF_OPD_MONOTONYUP_LBPF_TH
-{0x673D,0x01,0x01},    //AF_MANUAL_MOVE_TYTPE : manual mode½Ã AF_MANUAL_POS·Î ÀÌµ¿ÇÒÁö ¼³Á¤
+{0x673D,0x01,0x01},    //AF_MANUAL_MOVE_TYTPE : manual modeï¿½ï¿½ AF_MANUAL_POSï¿½ï¿½ ï¿½Ìµï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 {0x6648,0x00C8,0x02},    //AF_MANUAL_POS
 {0x66E0,0x00C8,0x02},    //AF_POS_INF_SET
 {0x66E2,0x02A8,0x02},    //AF_POS_MACRO_SET
 {0x00B2,0x02,0x01}, //AFMODE_MONI : Manual AF mode
 
 
-//Ãß°¡ ¼¼ÆÃ ºÎºÐ
+//ï¿½ß°ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Îºï¿½
 {0x00F7,0x52,0x01},    // INIT_QLTY0 : Standard 82
 {0x00F8,0x59,0x01},    // INIT_QLTY1 : Fine 89
 {0x00F9,0x5F,0x01},    // INIT_QLTY2 : SuperFine 95
@@ -1074,9 +1074,9 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x64A3,0x10,0x01},    // INAIM_FLBOTM : 
 
 //AWB setting
-{0x629A,0x13,0x01},    // CAT_AWB_2 : OPDG ±â´É off
-{0x629B,0x41,0x01},    // CAT_AWB_3 : outdoor_°¡ÁßÄ¡ on
-{0x625F,0x15,0x01},    // CAT_AWB_1 : MWB½Ã userÁÂÇ¥·Î ÁÂÇ¥ °íÁ¤(AWB½Ã¿¡´Â ¿µÇâ ¹«)
+{0x629A,0x13,0x01},    // CAT_AWB_2 : OPDG ï¿½ï¿½ï¿½ï¿½ off
+{0x629B,0x41,0x01},    // CAT_AWB_3 : outdoor_ï¿½ï¿½ï¿½ï¿½Ä¡ on
+{0x625F,0x15,0x01},    // CAT_AWB_1 : MWBï¿½ï¿½ userï¿½ï¿½Ç¥ï¿½ï¿½ ï¿½ï¿½Ç¥ ï¿½ï¿½ï¿½(AWBï¿½Ã¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½)
 {0x629C,0x80,0x01},    // FRMOUT_RATIO_BLEND1_OUT
 {0x6224,0x04,0x01},    // ATW_DELAY
 {0x6226,0x08,0x01},    // ATW_GAINS_IN_NR : 
@@ -1084,7 +1084,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x6228,0x08,0x01},    // ATW_GAINS_OUT_NR : 
 {0x6229,0x04,0x01},    // ATW_GAINS_OUT : 
 
-//Bluesky threshold º¯°æ
+//Bluesky threshold ï¿½ï¿½ï¿½ï¿½
 {0x6548,0x18F7,0x02},    // OUTAIM_TOP_BLUESKY :
 
 //Hue, Gain setting
@@ -1264,169 +1264,169 @@ isx012_short_t ISX012_Init_Reg[] =
 
 ////////////////////////////////////////////////////////////////
 
-{0x941F,0x00,0x01},    // AP_N_GC_POS_CORE_A : <<N´ë¿ª Coring ¾ç¼öÃø ÄÚ¾î¸µ ¹üÀ§ A¼³Á¤°ª
+{0x941F,0x00,0x01},    // AP_N_GC_POS_CORE_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ú¾î¸µ ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9420,0x00,0x01},    // AP_N_GC_POS_CORE_B :
 {0x9421,0x02,0x01},    // AP_N_GC_POS_CORE_C1 :
 {0x9422,0x01,0x01},    // AP_N_GC_POS_CORE_C2 :
-{0x9423,0x20,0x01},    // AP_N_GC_POS_SLOPE_A : <<N´ë¿ª Coring ¾ç¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x9423,0x20,0x01},    // AP_N_GC_POS_SLOPE_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9424,0x0D,0x01},    // AP_N_GC_POS_SLOPE_B :
 {0x9425,0x0F,0x01},    // AP_N_GC_POS_SLOPE_C1 :
 {0x9426,0x08,0x01},    // AP_N_GC_POS_SLOPE_C2 :
-{0x9427,0x00,0x01},    // AP_N_GC_NEG_CORE_A : <<N´ë¿ª Coring À½¼öÃøÄÚ¾î¸µ¹üÀ§ A¼³Á¤°ª
+{0x9427,0x00,0x01},    // AP_N_GC_NEG_CORE_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¾î¸µï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9428,0x00,0x01},    // AP_N_GC_NEG_CORE_B :
 {0x9429,0x02,0x01},    // AP_N_GC_NEG_CORE_C1 :
 {0x942A,0x01,0x01},    // AP_N_GC_NEG_CORE_C2 :
-{0x942B,0x20,0x01},    // AP_N_GC_NEG_SLOPE_A : <<N´ë¿ª Coring À½¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x942B,0x20,0x01},    // AP_N_GC_NEG_SLOPE_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x942C,0x13,0x01},    // AP_N_GC_NEG_SLOPE_B :
 {0x942D,0x10,0x01},    // AP_N_GC_NEG_SLOPE_C1 :
 {0x942E,0x08,0x01},    // AP_N_GC_NEG_SLOPE_C2 :
-{0x942F,0x20,0x01},    // AP_N_GAIN_POS_A : <<N´ë¿ª POST Gain ¾ç¼öÃø A¼³Á¤°ª
+{0x942F,0x20,0x01},    // AP_N_GAIN_POS_A : <<Nï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9430,0x3C,0x01},    // AP_N_GAIN_POS_B :
 {0x9431,0x33,0x01},    // AP_N_GAIN_POS_C1 :
 {0x9432,0x30,0x01},    // AP_N_GAIN_POS_C2 :
-{0x9433,0x20,0x01},    // AP_N_GAIN_NEG_A : <<N´ë¿ª POST Gain À½¼öÃø A¼³Á¤°ª
+{0x9433,0x20,0x01},    // AP_N_GAIN_NEG_A : <<Nï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9434,0x48,0x01},    // AP_N_GAIN_NEG_B :
 {0x9435,0x37,0x01},    // AP_N_GAIN_NEG_C1 :
 {0x9436,0x38,0x01},    // AP_N_GAIN_NEG_C2 :
 ////////////////////////////////////////////////////////////////
 
-{0x9437,0x01,0x01},    // AP_H_GC_POS_CORE_A : <<H´ë¿ª Coring ¾ç¼öÃøÄÚ¾î¸µ¹üÀ§ A¼³Á¤°ª
+{0x9437,0x01,0x01},    // AP_H_GC_POS_CORE_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¾î¸µï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9438,0x01,0x01},    // AP_H_GC_POS_CORE_B :
 {0x9439,0x00,0x01},    // AP_H_GC_POS_CORE_C1 :
 {0x943A,0x00,0x01},    // AP_H_GC_POS_CORE_C2 :
-{0x943B,0x38,0x01},    // AP_H_GC_POS_SLOPE_A : <<H´ë¿ª Coring ¾ç¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x943B,0x38,0x01},    // AP_H_GC_POS_SLOPE_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x943C,0x3F,0x01},    // AP_H_GC_POS_SLOPE_B :
 {0x943D,0x30,0x01},    // AP_H_GC_POS_SLOPE_C1 :
 {0x943E,0x13,0x01},    // AP_H_GC_POS_SLOPE_C2 :
-{0x943F,0x00,0x01},    // AP_H_GC_NEG_CORE_A : <<H´ë¿ª Coring À½¼öÃøÄÚ¾î¸µ¹üÀ§ A¼³Á¤°ª
+{0x943F,0x00,0x01},    // AP_H_GC_NEG_CORE_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¾î¸µï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9440,0x01,0x01},    // AP_H_GC_NEG_CORE_B :
 {0x9441,0x00,0x01},    // AP_H_GC_NEG_CORE_C1 :
 {0x9442,0x00,0x01},    // AP_H_GC_NEG_CORE_C2 :
-{0x9443,0x38,0x01},    // AP_H_GC_NEG_SLOPE_A : <<H´ë¿ª Coring À½¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x9443,0x38,0x01},    // AP_H_GC_NEG_SLOPE_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9444,0x09,0x01},    // AP_H_GC_NEG_SLOPE_B :
 {0x9445,0x2D,0x01},    // AP_H_GC_NEG_SLOPE_C1 :
 {0x9446,0x0A,0x01},    // AP_H_GC_NEG_SLOPE_C2 :
-{0x9447,0x50,0x01},    // AP_H_GAIN_POS_A : <<H´ë¿ª POST Gain ¾ç¼öÃø A¼³Á¤°ª
+{0x9447,0x50,0x01},    // AP_H_GAIN_POS_A : <<Hï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9448,0x38,0x01},    // AP_H_GAIN_POS_B :
 {0x9449,0x72,0x01},    // AP_H_GAIN_POS_C1 :
 {0x944A,0x72,0x01},    // AP_H_GAIN_POS_C2 :
-{0x944B,0x50,0x01},    // AP_H_GAIN_NEG_A : <<H´ë¿ª POST Gain À½¼öÃø A¼³Á¤°ª
+{0x944B,0x50,0x01},    // AP_H_GAIN_NEG_A : <<Hï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x944C,0x40,0x01},    // AP_H_GAIN_NEG_B :
 {0x944D,0x66,0x01},    // AP_H_GAIN_NEG_C1 :
 {0x944E,0x96,0x01},    // AP_H_GAIN_NEG_C2 :
-{0x944F,0x01,0x01},    // AP_L_GC_POS_CORE_A : <<L´ë¿ª Coring ¾ç¼öÃøÄÚ¾î¸µ¹üÀ§ A¼³Á¤°ª
+{0x944F,0x01,0x01},    // AP_L_GC_POS_CORE_A : <<Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¾î¸µï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9450,0x00,0x01},    // AP_L_GC_POS_CORE_B :
 {0x9451,0x00,0x01},    // AP_L_GC_POS_CORE_C1 :
 {0x9452,0x04,0x01},    // AP_L_GC_POS_CORE_C2
-{0x9453,0x24,0x01},    // AP_L_GC_POS_SLOPE_A : <<L´ë¿ª Coring ¾ç¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x9453,0x24,0x01},    // AP_L_GC_POS_SLOPE_A : <<Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9454,0x20,0x01},    // AP_L_GC_POS_SLOPE_B :
 {0x9455,0x08,0x01},    // AP_L_GC_POS_SLOPE_C1 :
 {0x9456,0x08,0x01},    // AP_L_GC_POS_SLOPE_C2 :
-{0x9457,0x01,0x01},    // AP_L_GC_NEG_CORE_A : <L´ë¿ª Coring À½¼öÃøÄÚ¾î¸µ¹üÀ§ A¼³Á¤°ª
+{0x9457,0x01,0x01},    // AP_L_GC_NEG_CORE_A : <Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¾î¸µï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9458,0x00,0x01},    // AP_L_GC_NEG_CORE_B :
 {0x9459,0x00,0x01},    // AP_L_GC_NEG_CORE_C1
 {0x945A,0x04,0x01},    // AP_L_GC_NEG_CORE_C2
-{0x945B,0x24,0x01},    // AP_L_GC_NEG_SLOPE_A : <<L´ë¿ª Coring À½¼öÃø °íÁøÆøÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x945B,0x24,0x01},    // AP_L_GC_NEG_SLOPE_A : <<Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x945C,0x20,0x01},    // AP_L_GC_NEG_SLOPE_B :
 {0x945D,0x04,0x01},    // AP_L_GC_NEG_SLOPE_C1 :
 {0x945E,0x04,0x01},    // AP_L_GC_NEG_SLOPE_C2 :
-{0x945F,0x0A,0x01},    // AP_L_GAIN_POS_A : <<L´ë¿ª POST Gain ¾ç¼öÃø A¼³Á¤°ª
+{0x945F,0x0A,0x01},    // AP_L_GAIN_POS_A : <<Lï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9460,0x11,0x01},    // AP_L_GAIN_POS_B :
 {0x9461,0x1C,0x01},    // AP_L_GAIN_POS_C1 :
 {0x9462,0x60,0x01},    // AP_L_GAIN_POS_C2 :
-{0x9463,0x08,0x01},    // AP_L_GAIN_NEG_A : <<L´ë¿ª POST Gain À½¼öÃø A¼³Á¤°ª
+{0x9463,0x08,0x01},    // AP_L_GAIN_NEG_A : <<Lï¿½ë¿ª POST Gain ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9464,0x0B,0x01},    // AP_L_GAIN_NEG_B :
 {0x9465,0x0A,0x01},    // AP_L_GAIN_NEG_C1 :
 {0x9466,0x20,0x01},    // AP_L_GAIN_NEG_C2 :
 ////////////////////////////////////////////////////////////////
-{0x9468,0x0200,0x02},    // AP_N_GC_POS_TH_A : <<N´ë¿ª Coring ¾ç¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x9468,0x0200,0x02},    // AP_N_GC_POS_TH_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x946A,0x00C0,0x02},    // AP_N_GC_POS_TH_B :
 {0x946C,0x0168,0x02},    // AP_N_GC_POS_TH_C1 :
 {0x946E,0x0168,0x02},    // AP_N_GC_POS_TH_C2 :
-{0x9470,0x0200,0x02},    // AP_N_GC_NEG_TH_A : <<N´ë¿ª Coring À½¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x9470,0x0200,0x02},    // AP_N_GC_NEG_TH_A : <<Nï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9472,0x00C0,0x02},    // AP_N_GC_NEG_TH_B :
 {0x9474,0x00B4,0x02},    // AP_N_GC_NEG_TH_C1 :
 {0x9476,0x00B4,0x02},    // AP_N_GC_NEG_TH_C2 :
-{0x9478,0x0000,0x02},    // AP_N_LD_DARK_TH_A : <<£Î´ë¿ª LevelDepend ÀúÈÖµµ ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x9478,0x0000,0x02},    // AP_N_LD_DARK_TH_A : <<ï¿½Î´ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x947A,0x0000,0x02},    // AP_N_LD_DARK_TH_B :
 {0x947C,0x0000,0x02},    // AP_N_LD_DARK_TH_C1 :
 {0x947E,0x0000,0x02},    // AP_N_LD_DARK_TH_C2 :
-{0x9480,0x0096,0x02},    // AP_N_LD_HIGH_TH0_X_A: <<£Î´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0 A¼³Á¤°ª
+{0x9480,0x0096,0x02},    // AP_N_LD_HIGH_TH0_X_A: <<ï¿½Î´ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9482,0x0050,0x02},    // AP_N_LD_HIGH_TH0_X_B :
 {0x9484,0x0050,0x02},    // AP_N_LD_HIGH_TH0_X_C1 :
 {0x9486,0x0050,0x02},    // AP_N_LD_HIGH_TH0_X_C2 :
-{0x9488,0x0080,0x02},    // AP_N_LD_HIGH_TH0_Y_A : <<£Î´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0¿¡¼­ÀÇ Ãâ·Â Gain A¼³Á¤°ª
+{0x9488,0x0080,0x02},    // AP_N_LD_HIGH_TH0_Y_A : <<ï¿½Î´ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Gain Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x948A,0x0080,0x02},    // AP_N_LD_HIGH_TH0_Y_B :
 {0x948C,0x0080,0x02},    // AP_N_LD_HIGH_TH0_Y_C1 :
 {0x948E,0x0080,0x02},    // AP_N_LD_HIGH_TH0_Y_C2 :
-{0x9490,0x00C8,0x02},    // AP_N_LD_HIGH_TH1_X_A : <<N´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡1 A¼³Á¤°ª
+{0x9490,0x00C8,0x02},    // AP_N_LD_HIGH_TH1_X_A : <<Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡1 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9492,0x012C,0x02},    // AP_N_LD_HIGH_TH1_X_B :
 {0x9494,0x00C8,0x02},    // AP_N_LD_HIGH_TH1_X_C1 :
 {0x9496,0x00C8,0x02},    // AP_N_LD_HIGH_TH1_X_C2
-{0x9498,0x01F4,0x02},    // AP_N_LD_HIGH_TH2_X_A : <<N´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡2 A¼³Á¤°ª
+{0x9498,0x01F4,0x02},    // AP_N_LD_HIGH_TH2_X_A : <<Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡2 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x949A,0x0200,0x02},    // AP_N_LD_HIGH_TH2_X_B :
 {0x949C,0x0200,0x02},    // AP_N_LD_HIGH_TH2_X_C1 :
 {0x949E,0x0200,0x02},    // AP_N_LD_HIGH_TH2_X_C2 :
 ////////////////////////////////////////////////////////////////
 
-{0x94A0,0x0050,0x02},    // AP_H_GC_POS_TH_A : <<H´ë¿ª Coring ¾ç¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94A0,0x0050,0x02},    // AP_H_GC_POS_TH_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94A2,0x00A0,0x02},    // AP_H_GC_POS_TH_B :
 {0x94A4,0x0033,0x02},    // AP_H_GC_POS_TH_C1 :
 {0x94A6,0x0033,0x02},    // AP_H_GC_POS_TH_C2 :
-{0x94A8,0x0050,0x02},    // AP_H_GC_NEG_TH_A : <<H´ë¿ª Coring À½¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94A8,0x0050,0x02},    // AP_H_GC_NEG_TH_A : <<Hï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94AA,0x00A0,0x02},    // AP_H_GC_NEG_TH_B :
 {0x94AC,0x0033,0x02},    // AP_H_GC_NEG_TH_C1 :
 {0x94AE,0x0033,0x02},    // AP_H_GC_NEG_TH_C2 :
-{0x94B0,0x0021,0x02},    // AP_H_LD_DARK_TH_A : <<H´ë¿ª LevelDepend ÀúÈÖµµ ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94B0,0x0021,0x02},    // AP_H_LD_DARK_TH_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94B2,0x0000,0x02},    // AP_H_LD_DARK_TH_B :
 {0x94B4,0x0000,0x02},    // AP_H_LD_DARK_TH_C1 :
 {0x94B6,0x0000,0x02},    // AP_H_LD_DARK_TH_C2
-{0x94B8,0x01F4,0x02},    // AP_H_LD_HIGH_TH0_X_A : <<H´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0 A¼³Á¤°ª
+{0x94B8,0x01F4,0x02},    // AP_H_LD_HIGH_TH0_X_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94BA,0x0083,0x02},    // AP_H_LD_HIGH_TH0_X_B :
 {0x94BC,0x0064,0x02},    // AP_H_LD_HIGH_TH0_X_C1 :
 {0x94BE,0x0064,0x02},    // AP_H_LD_HIGH_TH0_X_C2 :
-{0x94C0,0x0080,0x02},    // AP_H_LD_HIGH_TH0_Y_A : <<H´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0¿¡¼­ÀÇ Ãâ·Â Gain A¼³Á¤°ª
+{0x94C0,0x0080,0x02},    // AP_H_LD_HIGH_TH0_Y_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Gain Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94C2,0x0080,0x02},    // AP_H_LD_HIGH_TH0_Y_B :
 {0x94C4,0x0080,0x02},    // AP_H_LD_HIGH_TH0_Y_C1 :
 {0x94C6,0x0080,0x02},    // AP_H_LD_HIGH_TH0_Y_C2 :
-{0x94C8,0x0244,0x02},    // AP_H_LD_HIGH_TH1_X_A : <<H´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡1 A¼³Á¤
+{0x94C8,0x0244,0x02},    // AP_H_LD_HIGH_TH1_X_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡1 Aï¿½ï¿½ï¿½
 {0x94CA,0x01AA,0x02},    // AP_H_LD_HIGH_TH1_X_B :
 {0x94CC,0x00C8,0x02},    // AP_H_LD_HIGH_TH1_X_C1 :
 {0x94CE,0x00C8,0x02},    // AP_H_LD_HIGH_TH1_X_C2 :
-{0x94D0,0x02EC,0x02},    // AP_H_LD_HIGH_TH2_X_A : <<H´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡2 A¼³Á¤°ª
+{0x94D0,0x02EC,0x02},    // AP_H_LD_HIGH_TH2_X_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡2 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94D2,0x01EF,0x02},    // AP_H_LD_HIGH_TH2_X_B :
 {0x94D4,0x01E0,0x02},    // AP_H_LD_HIGH_TH2_X_C1 :
 {0x94D6,0x01E0,0x02},    // AP_H_LD_HIGH_TH2_X_C2 :
-{0x94D8,0x0001,0x02},    // AP_L_GC_POS_TH_A : <<L´ë¿ª Coring ¾ç¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94D8,0x0001,0x02},    // AP_L_GC_POS_TH_A : <<Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94DA,0x0040,0x02},    // AP_L_GC_POS_TH_B :
 {0x94DC,0x0010,0x02},    // AP_L_GC_POS_TH_C1 :
 {0x94DE,0x0010,0x02},    // AP_L_GC_POS_TH_C2 :
-{0x94E0,0x0001,0x02},    // AP_L_GC_NEG_TH_A : <<L´ë¿ª Coring À½¼öÃø °íÁøÆø ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94E0,0x0001,0x02},    // AP_L_GC_NEG_TH_A : <<Lï¿½ë¿ª Coring ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94E2,0x0030,0x02},    // AP_L_GC_NEG_TH_B :
 {0x94E4,0x0020,0x02},    // AP_L_GC_NEG_TH_C1 :
 {0x94E6,0x0020,0x02},    // AP_L_GC_NEG_TH_C2 :
-{0x94E8,0x0000,0x02},    // AP_L_LD_DARK_TH_A : <<L´ë¿ª LevelDepend ÀúÈÖµµ ÀÓ°èÄ¡ A¼³Á¤°ª
+{0x94E8,0x0000,0x02},    // AP_L_LD_DARK_TH_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94EA,0x0000,0x02},    // AP_L_LD_DARK_TH_B :
 {0x94EC,0x0000,0x02},    // AP_L_LD_DARK_TH_C1 :
 {0x94EE,0x0000,0x02},    // AP_L_LD_DARK_TH_C2 :
-{0x94F0,0x015E,0x02},    // AP_L_LD_HIGH_TH0_X_A : <<L´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0 A¼³Á¤°ª
+{0x94F0,0x015E,0x02},    // AP_L_LD_HIGH_TH0_X_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94F2,0x015E,0x02},    // AP_L_LD_HIGH_TH0_X_B :
 {0x94F4,0x0010,0x02},    // AP_L_LD_HIGH_TH0_X_C1 :
 {0x94F6,0x0010,0x02},    // AP_L_LD_HIGH_TH0_X_C2 :
-{0x94F8,0x0080,0x02},    // AP_L_LD_HIGH_TH0_Y_A : <<L´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡0¿¡¼­ÀÇ Ãâ·Â Gain A¼³Á¤°ª
+{0x94F8,0x0080,0x02},    // AP_L_LD_HIGH_TH0_Y_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Gain Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x94FA,0x0080,0x02},    // AP_L_LD_HIGH_TH0_Y_B :
 {0x94FC,0x0080,0x02},    // AP_L_LD_HIGH_TH0_Y_C1 :
 {0x94FE,0x0080,0x02},    // AP_L_LD_HIGH_TH0_Y_C2 :
-{0x9500,0x0226,0x02},    // AP_L_LD_HIGH_TH1_X_A : <<L´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡1 A¼³Á¤°ª
+{0x9500,0x0226,0x02},    // AP_L_LD_HIGH_TH1_X_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡1 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9502,0x0226,0x02},    // AP_L_LD_HIGH_TH1_X_B :
 {0x9504,0x0020,0x02},    // AP_L_LD_HIGH_TH1_X_C1 :
 {0x9506,0x0020,0x02},    // AP_L_LD_HIGH_TH1_X_C2 :
-{0x9508,0x02A2,0x02},    // AP_L_LD_HIGH_TH2_X_A : <<L´ë¿ª LevelDepend °íÈÖµµ ÀÓ°èÄ¡2 A¼³Á¤°ª
+{0x9508,0x02A2,0x02},    // AP_L_LD_HIGH_TH2_X_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ ï¿½Ó°ï¿½Ä¡2 Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x950A,0x028A,0x02},    // AP_L_LD_HIGH_TH2_X_B :
 {0x950C,0x0050,0x02},    // AP_L_LD_HIGH_TH2_X_C1 :
 {0x950E,0x0050,0x02},    // AP_L_LD_HIGH_TH2_X_C2 :
 
-//blendÈÄ ¸®¹ÌÆ® ¼³Á¤
+//blendï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® ï¿½ï¿½ï¿½
 
 {0x9510,0x0020,0x02},    // AP_POST_LIM_POS_A : <<
 {0x9512,0x0060,0x02},    // AP_POST_LIM_POS_B :
@@ -1445,9 +1445,9 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x952C,0x0000,0x02},    // AP_POST_CORE_NEG_C1 :
 {0x952E,0x0000,0x02},    // AP_POST_CORE_NEG_C2 :
 
-//level defender ¼³Á¤
+//level defender ï¿½ï¿½ï¿½
 
-{0x9530,0x0000,0x02},    // AP_N_LD_DARK_SLOPE_A : << N´ë¿ª LevelDepend ÀúÈÖµµÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x9530,0x0000,0x02},    // AP_N_LD_DARK_SLOPE_A : << Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9532,0x0000,0x02},
 {0x9534,0x0000,0x02},    // AP_N_LD_DARK_SLOPE_B :
 {0x9536,0x0000,0x02},
@@ -1455,7 +1455,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x953A,0x0000,0x02},
 {0x953C,0x0000,0x02},    // AP_N_LD_DARK_SLOPE_C2 :
 {0x953E,0x0000,0x02},
-{0x9540,0x0061,0x02},    // AP_N_LD_HIGH_SLOPE0_A : << N´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡0¢¦ÀÓ°èÄ¡1¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x9540,0x0061,0x02},    // AP_N_LD_HIGH_SLOPE0_A : << Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9542,0x0000,0x02},
 {0x9544,0x0031,0x02},    // AP_N_LD_HIGH_SLOPE0_B :
 {0x9546,0x0000,0x02},
@@ -1463,7 +1463,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x954A,0x0000,0x02},
 {0x954C,0x0000,0x02},    // AP_N_LD_HIGH_SLOPE0_C2 :
 {0x954E,0x0000,0x02},
-{0x9550,0x001C,0x02},    // AP_N_LD_HIGH_SLOPE1_A : <<N´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡1¢¦ÀÓ°èÄ¡2¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x9550,0x001C,0x02},    // AP_N_LD_HIGH_SLOPE1_A : <<Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9552,0x0000,0x02},
 {0x9554,0x000C,0x02},    // AP_N_LD_HIGH_SLOPE1_B :
 {0x9556,0x0000,0x02},
@@ -1471,7 +1471,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x955A,0x0000,0x02},
 {0x955C,0x001A,0x02},    // AP_N_LD_HIGH_SLOPE1_C2 :
 {0x955E,0x0000,0x02},
-{0x9560,0x0000,0x02},    // AP_N_LD_HIGH_SLOPE2_A : <<N´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡2ì¤Ë½ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x9560,0x0000,0x02},    // AP_N_LD_HIGH_SLOPE2_A : <<Nï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½Ë½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9562,0x0000,0x02},
 {0x9564,0x0005,0x02},    // AP_N_LD_HIGH_SLOPE2_B :
 {0x9566,0x0000,0x02},
@@ -1479,7 +1479,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x956A,0x0000,0x02},
 {0x956C,0x0014,0x02},    // AP_N_LD_HIGH_SLOPE2_C2 :
 {0x956E,0x0000,0x02},
-{0x9570,0x0000,0x02},    // AP_H_LD_DARK_SLOPE_A : <<H´ë¿ª LevelDepend ÀúÈÖµµÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x9570,0x0000,0x02},    // AP_H_LD_DARK_SLOPE_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9572,0x0000,0x02},
 {0x9574,0x0000,0x02},    // AP_H_LD_DARK_SLOPE_B :
 {0x9576,0x0000,0x02},
@@ -1487,7 +1487,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x957A,0x0000,0x02},
 {0x957C,0x0000,0x02},    // AP_H_LD_DARK_SLOPE_C2 :
 {0x957E,0x0000,0x02},
-{0x9580,0x0025,0x02},    // AP_H_LD_HIGH_SLOPE0_A : <<H´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡0¢¦ÀÓ°èÄ¡1¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x9580,0x0025,0x02},    // AP_H_LD_HIGH_SLOPE0_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9582,0x0000,0x02},
 {0x9584,0x0025,0x02},    // AP_H_LD_HIGH_SLOPE0_B :
 {0x9586,0x0000,0x02},
@@ -1495,7 +1495,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x958A,0x0000,0x02},
 {0x958C,0x004D,0x02},    // AP_H_LD_HIGH_SLOPE0_C2 :
 {0x958E,0x0000,0x02},
-{0x9590,0x0050,0x02},    // AP_H_LD_HIGH_SLOPE1_A : <<H´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡1¢¦ÀÓ°èÄ¡2¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x9590,0x0050,0x02},    // AP_H_LD_HIGH_SLOPE1_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x9592,0x0000,0x02},
 {0x9594,0x0050,0x02},    // AP_H_LD_HIGH_SLOPE1_B :
 {0x9596,0x0000,0x02},
@@ -1503,7 +1503,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x959A,0x0000,0x02},
 {0x959C,0x000C,0x02},    // AP_H_LD_HIGH_SLOPE1_C2 :
 {0x959E,0x0000,0x02},
-{0x95A0,0x0000,0x02},    // AP_H_LD_HIGH_SLOPE2_A : <<H´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡2ì¤Ë½ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x95A0,0x0000,0x02},    // AP_H_LD_HIGH_SLOPE2_A : <<Hï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½Ë½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x95A2,0x0000,0x02},
 {0x95A4,0x0000,0x02},    // AP_H_LD_HIGH_SLOPE2_B :
 {0x95A6,0x0000,0x02},
@@ -1511,7 +1511,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x95AA,0x0000,0x02},
 {0x95AC,0x000D,0x02},    // AP_H_LD_HIGH_SLOPE2_C2 :
 {0x95AE,0x0000,0x02},
-{0x95B0,0x0000,0x02},    // AP_L_LD_DARK_SLOPE_A : <<L´ë¿ª LevelDepend ÀúÈÖµµÂÊ ±â¿ï±â A¼³Á¤°ª
+{0x95B0,0x0000,0x02},    // AP_L_LD_DARK_SLOPE_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x95B2,0x0000,0x02},
 {0x95B4,0x0000,0x02},    // AP_L_LD_DARK_SLOPE_B :
 {0x95B6,0x0000,0x02},
@@ -1519,7 +1519,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x95BA,0x0000,0x02},
 {0x95BC,0x0000,0x02},    // AP_L_LD_DARK_SLOPE_C2 :
 {0x95BE,0x0000,0x02},
-{0x95C0,0x0020,0x02},    // AP_L_LD_HIGH_SLOPE0_A : <<L´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡0¢¦ÀÓ°èÄ¡1¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤
+{0x95C0,0x0020,0x02},    // AP_L_LD_HIGH_SLOPE0_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡0ï¿½ï¿½ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½
 {0x95C2,0x0000,0x02},
 {0x95C4,0x0023,0x02},    // AP_L_LD_HIGH_SLOPE0_B :
 {0x95C6,0x0000,0x02},
@@ -1527,7 +1527,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x95CA,0x0000,0x02},
 {0x95CC,0x012C,0x02},    // AP_L_LD_HIGH_SLOPE0_C2 :
 {0x95CE,0x0000,0x02},
-{0x95D0,0x0051,0x02},    // AP_L_LD_HIGH_SLOPE1_A : <<L´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡1¢¦ÀÓ°èÄ¡2¿¡¼­ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x95D0,0x0051,0x02},    // AP_L_LD_HIGH_SLOPE1_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡1ï¿½ï¿½ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x95D2,0x0000,0x02},
 {0x95D4,0x0050,0x02},    // AP_L_LD_HIGH_SLOPE1_B :
 {0x95D6,0x0000,0x02},
@@ -1535,7 +1535,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x95DA,0x0000,0x02},
 {0x95DC,0x0058,0x02},    // AP_L_LD_HIGH_SLOPE1_C2 :
 {0x95DE,0x0000,0x02},
-{0x95E0,0x0000,0x02},    // AP_L_LD_HIGH_SLOPE2_A : <<L´ë¿ª LevelDepend °íÈÖµµÂÊ ÀÓ°èÄ¡2ì¤Ë½ÀÇ ±â¿ï±â A¼³Á¤°ª
+{0x95E0,0x0000,0x02},    // AP_L_LD_HIGH_SLOPE2_A : <<Lï¿½ë¿ª LevelDepend ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ ï¿½Ó°ï¿½Ä¡2ï¿½ï¿½Ë½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aï¿½ï¿½ï¿½ï¿½ï¿½
 {0x95E2,0x0000,0x02},
 {0x95E4,0x0050,0x02},    // AP_L_LD_HIGH_SLOPE2_B :
 {0x95E6,0x0000,0x02},
@@ -1617,7 +1617,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x984A,0xFFCE,0x02},    // CS_CRLLEV_Y_L_B :
 {0x984C,0xFFCE,0x02},    // CS_CRLLEV_Y_L_C :
 
-//CNR°ü·Ã
+//CNRï¿½ï¿½ï¿½ï¿½
 {0x6C4A,0x07,0x01},    // MAIN_CONFIG5 :
 {0x6C4C,0x190A,0x02},    // CNR_CTRL_TH_H :
 {0x6C4E,0x1000,0x02},    // CNR_CTRL_TH_L :
@@ -1769,7 +1769,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x9926,0x0000,0x02},    // CNR_EDGE_TH_CB_M_L_B :
 {0x9928,0x0000,0x02},    // CNR_EDGE_TH_CB_M_L_C :
 
-//ITP NR°ü·Ã
+//ITP NRï¿½ï¿½ï¿½ï¿½
 {0x5005,0xBB,0x01},    // DM_SW1 :
 {0x5006,0x03,0x01},    // DM_SW2 :
 {0x9608,0x0000,0x02},    // DS_GRADCORE_A :
@@ -1865,16 +1865,16 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x96B0,0x0018,0x02},    // CS_SPOT_CSUP_LIM_C1 :
 {0x96B2,0x0018,0x02},    // CS_SPOT_CSUP_LIM_C2 :
 
-//LMT Á¶µµ¿¬µ¿ Blend °ü·Ã
+//LMT ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Blend ï¿½ï¿½ï¿½ï¿½
 {0x9800,0x40,0x01},    // 
 {0x9801,0x80,0x01},    // 
 
-//°ÔÀÎ¿¬µ¿ Type ¼³Á¤ °ü·Ã
+//ï¿½ï¿½ï¿½Î¿ï¿½ï¿½ï¿½ Type ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 {0x9217,0x3C,0x01},    // GAIN_TH_A_TYPE5 :
 {0x9218,0x28,0x01},    // GAIN_TH_B_TYPE5 :
 {0x9219,0x1E,0x01},    // GAIN_TH_C_TYPE5 :
 
-//CNR Á¶µµ¿¬µ¿ °ü·Ã
+//CNR ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 {0x928F,0x05,0x01},    // CNR_PREHNR_GAIN_SEL :
 {0x9290,0x05,0x01},    // CNR_NLM_TH_CR_H_SEL :
 {0x9291,0x05,0x01},    // CNR_NLM_TH_CR_L_SEL :
@@ -1917,7 +1917,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x92B6,0x05,0x01},    // CNR_EDGE_TH_CB_M_H_SEL :
 {0x92B7,0x05,0x01},    // CNR_EDGE_TH_CB_M_L_SEL :
 
-////////////////MWB & AWB Æ©´×////////////
+////////////////MWB & AWB Æ©ï¿½ï¿½////////////
 {0x6244,0x0B81,0x02},    // USER0R :
 {0x6246,0x1832,0x02},    // USER0B :
 {0x6248,0x09C8,0x02},    // USER1R : Daylight
@@ -2350,7 +2350,7 @@ isx012_short_t ISX012_Init_Reg[] =
 {0x038D,0x80,0x01},    // MC3_MODE_SN_11 : 
 {0x038E,0x80,0x01},    // MC3_MODE_SN_12 : 
 
-///AWBÃÊ±âÁÂÇ¥
+///AWBï¿½Ê±ï¿½ï¿½ï¿½Ç¥
 {0x6238,0x0BE3,0x02},    // INIT_CONT_INR : 
 {0x623A,0x1718,0x02},    // INIT_CONT_INB : 
 {0x623C,0x0BBB,0x02},    // INIT_CONT_OUTR : 
@@ -3530,6 +3530,7 @@ isx012_short_t ISX012_AF_Macro_OFF[] =
 {0x0081,0x00,0x01},    //MODESEL : Monitoring mode
 {0x6648,0x00C8,0x02},    //AF_MANUAL_POS : MANUA AF search start position
 {0x66DC,0x02A8,0x02},    //AF_JUDGE_MONO_POS_S
+{0x665A,0x00C8,0x02},    // AF_LENSPOS_ON_AFNG
 {0x028E,0x00,0x01},    //AF_SEARCH_DIR : NEAR->FAR
 {0x00B3,0x00,0x01},    //AFMODE_HREL : Manual AF mode
 {0x00B2,0x02,0x01},
@@ -3541,6 +3542,7 @@ isx012_short_t ISX012_AF_Macro_ON[] =
 {0x0081,0x00,0x01},    //MODESEL : Monitoring mode
 {0x6648,0x02A8,0x02},    //AF_MANUAL_POS : MANUA AF search start position
 {0x66DC,0x00C8,0x02},    //AF_JUDGE_MONO_POS_S
+{0x665A,0x02A8,0x02},    // AF_LENSPOS_ON_AFNG
 {0x028E,0x01,0x01},    //AF_SEARCH_DIR : NEAR->FAR
 {0x00B3,0x00,0x01},    //AFMODE_HREL : Manual AF mode
 {0x00B2,0x02,0x01},
@@ -5837,7 +5839,7 @@ isx012_short_t ISX012_Shading_Nocal[] =
 {0x6828,0x0017,0x02},    // SHD_PRER_OFFSET_R2 : 
 
 //PreWB offset SHD3(A)
-{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 º¯°æ
+{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 ï¿½ï¿½ï¿½ï¿½
 {0x6830,0x000A,0x02},    // SHD_PREB_OFFSET_RB : 
 
 // CXC/SHD EN
@@ -7328,7 +7330,7 @@ isx012_short_t ISX012_Shading_0[] =
 {0x6828,0x0017,0x02},    // SHD_PRER_OFFSET_R2 : 
 
 //PreWB offset SHD3(A)
-{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 º¯°æ
+{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 ï¿½ï¿½ï¿½ï¿½
 {0x6830,0x000A,0x02},    // SHD_PREB_OFFSET_RB : 
 
 // CXC/SHD EN
@@ -8811,7 +8813,7 @@ isx012_short_t ISX012_Shading_1[] =
 {0x6828,0x0016,0x02},    // SHD_PRER_OFFSET_R2 : 
 
 //PreWB offset SHD3(A)
-{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 º¯°æ
+{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 ï¿½ï¿½ï¿½ï¿½
 {0x6830,0x000A,0x02},    // SHD_PREB_OFFSET_RB : 
 
 // CXC/SHD EN
@@ -10292,7 +10294,7 @@ isx012_short_t ISX012_Shading_2[] =
 {0x6828,0x0014,0x02},    // SHD_PRER_OFFSET_R2 : 
 
 //PreWB offset SHD3(A)
-{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 º¯°æ
+{0x682C,0x0015,0x02},    // SHD_PRER_OFFSET_RB : 111121 ï¿½ï¿½ï¿½ï¿½
 {0x6830,0x000A,0x02},    // SHD_PREB_OFFSET_RB : 
 
 // CXC/SHD EN

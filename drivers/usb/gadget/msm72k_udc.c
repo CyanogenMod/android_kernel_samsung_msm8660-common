@@ -294,6 +294,13 @@ static ssize_t print_switch_state(struct switch_dev *sdev, char *buf)
 
 static inline enum chg_type usb_get_chg_type(struct usb_info *ui)
 {
+#if defined(CONFIG_BATTERY_P5LTE) || defined(CONFIG_BATTERY_P8LTE)
+	extern atomic_t charger_checking;
+	
+	if (atomic_read(&charger_checking) == 1)
+		return USB_CHG_TYPE__INVALID;
+#endif
+
 	if ((readl(USB_PORTSC) & PORTSC_LS) == PORTSC_LS)
 		return USB_CHG_TYPE__WALLCHARGER;
 	else
@@ -431,6 +438,14 @@ static void usb_chg_detect(struct work_struct *w)
 
 	temp = usb_get_chg_type(ui);
 	spin_unlock_irqrestore(&ui->lock, flags);
+
+#if defined(CONFIG_BATTERY_P5LTE) || defined(CONFIG_BATTERY_P8LTE)
+	if (temp == USB_CHG_TYPE__INVALID) {
+		pr_info("%s: checking charger type will be delayed.\n", __func__);
+		schedule_delayed_work(&ui->chg_det, USB_CHG_DET_DELAY);
+		return;
+	}
+#endif	
 
 	atomic_set(&otg->chg_type, temp);
 	maxpower = usb_get_max_power(ui);

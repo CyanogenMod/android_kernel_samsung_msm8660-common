@@ -81,7 +81,7 @@
 #define FG_VFOCV 13
 #define FG_FILTERCFG 14
 #endif
-#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && (defined (CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT))
 #define FG_AVSOC 15
 #endif
 
@@ -371,7 +371,21 @@ extern int get_fuelgauge_value(int data);
 #if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)  || defined(CONFIG_JPN_OPERATOR_NTT)
 extern int set_fuelgauge_value(int data, u16 value);
 #endif
-#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && (defined (CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT))
 extern void fg_recovery_adjust_repsoc(u32 level);
 #endif
+#endif
+
+#ifdef CONFIG_JPN_OPERATOR_NTT
+#define ENABLE_SYSFS_FG_CAPACITY
+#endif
+
+#ifdef ENABLE_SYSFS_FG_CAPACITY
+enum capacity_type {
+	CAPACITY_TYPE_FULL,
+	CAPACITY_TYPE_MIX,
+	CAPACITY_TYPE_AV,
+	CAPACITY_TYPE_REP,
+};
+extern int get_fuelgauge_capacity(enum capacity_type type);
 #endif

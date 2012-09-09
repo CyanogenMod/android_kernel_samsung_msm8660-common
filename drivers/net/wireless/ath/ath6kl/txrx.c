@@ -476,7 +476,7 @@ int ath6kl_data_tx(struct sk_buff *skb, struct net_device *dev)
 
 	spin_unlock_bh(&ar->lock);
 
-#ifndef CONFIG_KOR_MODEL_SHV_E150S   // #ifdef CONFIG_MACH_PX
+#if !defined(CONFIG_KOR_MODEL_SHV_E150S) && !defined(CONFIG_JPN_MODEL_SC_01E)    // #ifdef CONFIG_MACH_PX
 	if (false && !IS_ALIGNED((unsigned long) skb->data - HTC_HDR_LENGTH, 4) &&
 	    skb_cloned(skb)) {
 #else 

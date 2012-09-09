@@ -242,18 +242,23 @@ static void lpm_mode_check(struct battery_data *battery)
 	if (!charging_mode_from_boot)
 		return;
 
+#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU)
 	if (check_ta_conn(battery)) {
 		battery->charging_mode_booting = 1;
 		lpm_mode_flag = 1;
 		pr_info("%s: charging_mode_booting(%d)\n", __func__,
 			battery->charging_mode_booting);
 	} else {
-#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU)
 		pr_info("%s: ta no longer connected, powering off\n", __func__);
 		if (pm_power_off)
 			pm_power_off();
-#endif
 	}
+#else
+	battery->charging_mode_booting = 1;
+	lpm_mode_flag = 1;
+	pr_info("%s: charging_mode_booting(%d)\n", __func__,
+		battery->charging_mode_booting);
+#endif
 }
 #endif
 
@@ -331,7 +336,15 @@ static void p5_get_cable_status(struct battery_data *battery)
 			//IRQ_TYPE_LEVEL_LOW);
 		if (battery->pdata->inform_charger_connection)
 			battery->pdata->inform_charger_connection(false);
-		
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+		/* keep 100% level incase of cable out and full charged. */
+		if (battery->info.batt_is_full &&
+			battery->info.batt_soc == 99) {
+			pr_info("%s: forcely, adjust full_cap!\n",
+				__func__);
+			fg_set_full_charged();
+		}
+#endif
 		battery->info.batt_improper_ta = 0;  // clear flag
 	}
 
@@ -1032,6 +1045,9 @@ static struct device_attribute p5_battery_attrs[] = {
 	SEC_BATTERY_ATTR(charging_mode_booting),
 	SEC_BATTERY_ATTR(batt_lp_charging),
 #endif	
+#ifdef ENABLE_SYSFS_FG_CAPACITY
+	SEC_BATTERY_ATTR(fg_capacity),
+#endif
 };
 
 enum {
@@ -1061,6 +1077,9 @@ enum {
 	CHARGING_MODE_BOOTING,
 	BATT_LP_CHARGING,
 #endif	
+#ifdef ENABLE_SYSFS_FG_CAPACITY
+	FG_CAPACITY,
+#endif
 };
 
 static int p5_bat_create_attrs(struct device *dev)
@@ -1186,6 +1205,16 @@ static ssize_t p5_bat_show_property(struct device *dev,
 			test_batterydata->charging_mode_booting);
 		break;
 #endif		
+#ifdef ENABLE_SYSFS_FG_CAPACITY
+	case FG_CAPACITY:
+		i += scnprintf(buf + i, PAGE_SIZE - i,
+				"0x%04x 0x%04x 0x%04x 0x%04x\n",
+				get_fuelgauge_capacity(CAPACITY_TYPE_FULL),
+				get_fuelgauge_capacity(CAPACITY_TYPE_MIX),
+				get_fuelgauge_capacity(CAPACITY_TYPE_AV),
+				get_fuelgauge_capacity(CAPACITY_TYPE_REP));
+		break;
+#endif
 	default:
 		i = -EINVAL;
 	}

@@ -512,9 +512,12 @@ static int msm_rotator_ycxcx_h2v2(struct msm_rotator_img_info *info,
 		return -EINVAL;
 
 	/* rotator expects YCbCr for planar input format */
-	 /*if ((info->src.format == MDP_Y_CR_CB_H2V2 ||
-	    info->src.format == MDP_Y_CR_CB_GH2V2))
-		swap(in_chroma_paddr, in_chroma2_paddr);*/
+#ifndef CONFIG_USA_MODEL_SGH_T989
+	if ((info->src.format == MDP_Y_CR_CB_H2V2 ||
+	    info->src.format == MDP_Y_CR_CB_GH2V2) &&
+	    rotator_hw_revision < ROTATOR_REVISION_V2)
+		swap(in_chroma_paddr, in_chroma2_paddr);
+#endif
 
 	iowrite32(in_paddr, MSM_ROTATOR_SRCP0_ADDR);
 	iowrite32(in_chroma_paddr, MSM_ROTATOR_SRCP1_ADDR);

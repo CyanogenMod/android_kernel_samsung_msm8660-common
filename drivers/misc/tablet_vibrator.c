@@ -467,7 +467,7 @@ static int __devinit isa1200_vibrator_i2c_probe(struct i2c_client *client,	const
 
 	ddata->client = client;
 	ddata->gpio_en = pdata->gpio_en;
-#if defined(CONFIG_TARGET_SERIES_P8LTE)	  
+#if defined(CONFIG_TARGET_SERIES_P8LTE) || defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P4LTE)	
 	android_vib_clk = clk_get_sys("vibrator","core_clk");
 	if(IS_ERR(android_vib_clk)) {
 		printk("android vib clk failed!!!\n");

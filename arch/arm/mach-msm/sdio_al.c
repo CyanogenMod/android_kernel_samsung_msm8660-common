@@ -494,7 +494,8 @@ module_param(debug_data_on, int, 0);
 static int debug_close_on = 1;
 module_param(debug_close_on, int, 0);
 
-#if defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))
+#if (defined(CONFIG_USA_OPERATOR_ATT) && (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE))) || \
+	(defined(CONFIG_JPN_OPERATOR_NTT) && defined (CONFIG_TARGET_SERIES_P4LTE))
 int mdm_bootloader_done = 0;
 EXPORT_SYMBOL(mdm_bootloader_done);
 #endif

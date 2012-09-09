@@ -29,7 +29,7 @@ struct p5_battery_platform_data {
 	void	(*init_charger_gpio) (void);
 	void 	(*inform_charger_connection) (int);
 	void 	(*get_batt_level)(unsigned int *);
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	int		(*check_stmpe811)(void);
 	int64_t *cable_adc_check;
 #endif

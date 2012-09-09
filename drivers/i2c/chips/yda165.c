@@ -42,6 +42,19 @@ static ssize_t mode_store(struct device *dev,struct device_attribute *attr,
 		temp.hp_gainup = g_ampgain[set_mode].hp_gainup;
 		temp.sp_att = g_ampgain[set_mode].sp_att;
 		temp.sp_gainup = g_ampgain[set_mode].sp_gainup;
+#elif defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+		temp.in1_gain = g_ampgain[set_mode].in1_gain;
+		temp.in2_gain = g_ampgain[set_mode].in2_gain;
+		temp.hp_att = g_ampgain[set_mode].hp_att;
+		temp.hp_gainup = g_ampgain[set_mode].hp_gainup;
+		temp.sp_att = g_ampgain[set_mode].sp_att;
+		temp.sp_gainup = g_ampgain[set_mode].sp_gainup;
+		temp.bSpNg_DetectionLv = g_ampgain[set_mode].bSpNg_DetectionLv;
+		temp.bSpNg_AttackTime = g_ampgain[set_mode].bSpNg_AttackTime;
+		temp.bSpNcpl_NonClipRatio = g_ampgain[set_mode].bSpNcpl_NonClipRatio;
+		temp.bSpNcpl_PowerLimit = g_ampgain[set_mode].bSpNcpl_PowerLimit;
+		temp.bSpNcpl_AttackTime = g_ampgain[set_mode].bSpNcpl_AttackTime;
+		temp.bSpNcpl_ReleaseTime = g_ampgain[set_mode].bSpNcpl_ReleaseTime;
 #endif
 
 	}
@@ -1246,7 +1259,7 @@ void D4Hp3_PowerOn(D4HP3_SETTING_INFO *pstSettingInfo)
 					| (pstSettingInfo->bLine1Balance << (D4HP3_DIFA & 0xFF))
 					| (pstSettingInfo->bLine2Balance << (D4HP3_DIFB & 0xFF))
 
-#if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_KOR_MODEL_SHV_E120S) || defined (CONFIG_KOR_MODEL_SHV_E120K) || defined (CONFIG_JPN_MODEL_SC_03D)
+#if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_KOR_MODEL_SHV_E120S) || defined (CONFIG_KOR_MODEL_SHV_E120K) || defined (CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_I757)
 					| (0x00 << (D4HP3_HIZ_HP & 0xFF))
 #elif defined (HP_HIZ_ON)
 					| (0x01 << (D4HP3_HIZ_HP & 0xFF))

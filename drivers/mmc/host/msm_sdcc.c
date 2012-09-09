@@ -4902,7 +4902,9 @@ msmsdcc_runtime_suspend(struct device *dev)
 
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
 	if (mmc) {
+#ifndef CONFIG_ATHEROS_WIFI     /*   atheros wifi   ATHENV +++ avoid this otherwise wakelock will prevent system suspend*/
 		host->sdcc_suspending = 1;
+#endif /* ATHENV --- */
 		mmc->suspend_task = current;
 
 		/*

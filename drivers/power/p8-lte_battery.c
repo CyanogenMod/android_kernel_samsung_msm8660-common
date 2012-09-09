@@ -35,11 +35,11 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/rtc.h>
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 #include <linux/proc_fs.h>
 #endif
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 enum {
 	NO_EVENT_TEST_VALUE			=	0,
 	LOW_TEMP_BLOCK_TEST_VALUE,
@@ -74,7 +74,7 @@ enum charger_type {
 	CHARGER_USB,
 	CHARGER_AC,
 	CHARGER_DISCHARGE,
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	CHARGER_UNKNOWN,
 #endif
 };
@@ -84,7 +84,7 @@ struct battery_info {
 	s32 batt_vol;			/* Battery voltage from ADC */
 	s32 batt_temp;			/* Battery Temperature (C) from ADC */
 	s32 batt_current;		/* Battery current from ADC */
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	s32 batt_current_avg;	/* Battery current average */
 	s32 batt_soc;			/* Battery SOC */
 	s32 fg_vfsoc;			/* Fuel Gauge - VF SOC */
@@ -142,14 +142,16 @@ struct battery_data {
 #ifdef __TEST_DEVICE_DRIVER__ 
 	struct wake_lock	wake_lock_for_dev;
 #endif /* __TEST_DEVICE_DRIVER__ */
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	struct workqueue_struct *monitor_workqueue;	/* Current Average Work Queue */
 	struct delayed_work	cur_avg_work;	/* Current Average Work */
 	struct delayed_work	monitor_work;   /* multi-purpose monitor work */
 	struct wake_lock	monitor_wake_lock;
+	int 				monitor_work_count;
+#endif /* P5LTE_MONITOR_WORK */
+#ifdef P5LTE_CUR_AVG_WORK
 	struct wake_lock	curavg_wake_lock;
 	int 				cur_avg_flag;
-	int					monitor_work_count;
 #endif
 	enum charger_type	current_cable_status;
 	enum charger_type	previous_cable_status;
@@ -174,7 +176,7 @@ struct battery_data {
 	bool battery_percent_maintain;
 
 	bool is_low_batt_alarm;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	struct proc_dir_entry *entry;
 #endif
 
@@ -218,13 +220,13 @@ extern int p5_low_batt_compensation(int fg_soc, int fg_vcell, int fg_current);
 extern void reset_low_batt_comp_cnt(void);
 extern int check_jig_on(void);
 extern struct max17042_chip *max17042_chip_data;
-#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && (defined (CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT))
 extern void tsp_set_charging_cable(bool set);
 #endif
 
 static int check_ta_conn(struct battery_data *battery)
 {
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	battery->info.chg_connect_line = gpio_get_value_cansleep(battery->pdata->charger.connect_line);
 	pr_debug("BAT %s, return=%d\r\n", battery->info.chg_connect_line ? "TA NOT connected" : "TA connected", !battery->info.chg_connect_line);
 	return !battery->info.chg_connect_line;
@@ -253,7 +255,7 @@ static void lpm_mode_check(struct battery_data *battery)
 		pr_info("%s: charging_mode_booting(%d)\n", __func__,
 			battery->charging_mode_booting);
 	} else {
-#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU)
+#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU) && !defined(CONFIG_JPN_OPERATOR_NTT)
 		pr_info("%s: ta no longer connected, powering off\n", __func__);
 		if (pm_power_off)
 			pm_power_off();
@@ -364,7 +366,7 @@ static irqreturn_t p5_TA_interrupt_handler(int irq, void *arg)
 {
 	struct battery_data *battery = (struct battery_data *)arg;
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	pr_info("p5_TA_interrupt_handler");
 #else
 	pr_debug("p5_TA_interrupt_handler");
@@ -372,7 +374,7 @@ static irqreturn_t p5_TA_interrupt_handler(int irq, void *arg)
 	disable_irq_nosync(irq);
 	cancel_delayed_work(&battery->TA_work);
 	queue_delayed_work(battery->p5_TA_workqueue, &battery->TA_work, 30);
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	cancel_delayed_work(&battery->monitor_work);
 	wake_lock(&battery->monitor_wake_lock);
 	battery->monitor_work_count = 5;
@@ -513,7 +515,7 @@ static int p5_get_bat_level(struct power_supply *bat_ps)
 	fg_current = get_fuelgauge_value(FG_CURRENT);
 	avg_current = get_fuelgauge_value(FG_CURRENT_AVG);
 	fg_vfsoc = get_fuelgauge_value(FG_VF_SOC);
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	battery->info.batt_current = fg_current;
 	battery->info.batt_current_avg = avg_current;
 	battery->info.fg_vfsoc = fg_vfsoc;
@@ -521,7 +523,7 @@ static int p5_get_bat_level(struct power_supply *bat_ps)
 
 	/* Full Charged Check Routine */
 	// Algorithm for reducing time to fully charged (from MAXIM)
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	if(battery->info.test_value == FULL_CHARGING_TEST_VALUE ||
 		(battery->info.charging_enabled &&  // Charging is enabled
 		!(battery->info.batt_is_full && battery->info.batt_is_recharging) &&  // Not (Full & Recharging)
@@ -613,7 +615,7 @@ static int p5_get_bat_level(struct power_supply *bat_ps)
 	} else
 		battery->recharging_cnt = 0;
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	if (fg_vcell > battery->pdata->recharge_voltage) {
 		if (battery->info.batt_is_full &&
 			!battery->info.charging_enabled &&
@@ -716,7 +718,7 @@ static void p5_set_chg_en(struct battery_data *battery, int enable)
 {
 	int chg_en_val = get_charger_status(battery);
 	int charger_enable_line = battery->pdata->charger.enable_line;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#ifdef P5LTE_CUR_AVG_WORK
 	int temp_filtercfg;
 #endif
 	pr_info("%s: ++++++++++++\n",__func__);
@@ -724,7 +726,7 @@ static void p5_set_chg_en(struct battery_data *battery, int enable)
 	if (enable) {
 		if (chg_en_val) {
 			if (battery->current_cable_status == CHARGER_AC) {
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 				pr_info("%s: samsung charger!!\n", __func__);
 				p5_set_charging(battery, 1);
 #else
@@ -763,7 +765,7 @@ static void p5_set_chg_en(struct battery_data *battery, int enable)
 		battery->info.batt_is_recharging = 0;
 	}
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#ifdef P5LTE_CUR_AVG_WORK
 	if (!battery->cur_avg_flag) {
 		/* Sets the time constant of the AverageCurrent register(0x29h) */
 		temp_filtercfg = get_fuelgauge_value(FG_FILTERCFG);
@@ -830,7 +832,7 @@ static int p5_get_bat_temp(struct power_supply *bat_ps)
 	temp_low_threshold = battery->pdata->temp_low_threshold;
 	temp_low_recovery = battery->pdata->temp_low_recovery;
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	switch (battery->info.test_value) {
 	case LOW_TEMP_BLOCK_TEST_VALUE:
 		battery_temp = temp_low_threshold - 1;
@@ -902,7 +904,7 @@ static int p5_bat_get_charging_status(struct battery_data *battery)
 		case CHARGER_USB:
 			return POWER_SUPPLY_STATUS_DISCHARGING;
 		case CHARGER_AC:
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 			if (battery->info.batt_is_full)
 				return POWER_SUPPLY_STATUS_FULL;
 			else
@@ -911,7 +913,7 @@ static int p5_bat_get_charging_status(struct battery_data *battery)
 			if (battery->info.batt_is_full ||
 				battery->info.level == 100)
 				return POWER_SUPPLY_STATUS_FULL;
-#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU)
+#if !defined(CONFIG_KOR_OPERATOR_SKT) && !defined(CONFIG_KOR_OPERATOR_KT) && !defined(CONFIG_KOR_OPERATOR_LGU) && !defined(CONFIG_JPN_OPERATOR_NTT)
 			else if(battery->info.batt_improper_ta)
 				return POWER_SUPPLY_STATUS_DISCHARGING;
 #endif
@@ -920,7 +922,7 @@ static int p5_bat_get_charging_status(struct battery_data *battery)
 #endif
 		case CHARGER_DISCHARGE:
 			return POWER_SUPPLY_STATUS_NOT_CHARGING;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 		case CHARGER_UNKNOWN:
 #endif
 		default:
@@ -1022,7 +1024,7 @@ static struct device_attribute p5_battery_attrs[] = {
 	SEC_BATTERY_ATTR(batt_type),
 	SEC_BATTERY_ATTR(batt_temp_check),
 	SEC_BATTERY_ATTR(batt_full_check),
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	SEC_BATTERY_ATTR(batt_chg_state),
 	SEC_BATTERY_ATTR(batt_check_ta_conn),
 	SEC_BATTERY_ATTR(batt_current_adc),
@@ -1052,7 +1054,7 @@ enum {
 	BATT_BATT_TYPE,
 	BATT_TEMP_CHECK,
 	BATT_FULL_CHECK,
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	BATT_CHG_STATE,
 	BATT_CHECK_TA_CONN,
 	BATT_CURRENT_ADC,
@@ -1095,7 +1097,7 @@ static ssize_t p5_bat_show_property(struct device *dev,
 	s32 temp = 0;
 	u8 batt_str[5];
 	const ptrdiff_t off = attr - p5_battery_attrs;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	int temp_soc = 0;
 #endif
 
@@ -1118,7 +1120,7 @@ static ssize_t p5_bat_show_property(struct device *dev,
 			test_batterydata->info.charging_source);
 		break;
 	case BATT_FG_RAW_SOC:
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 		temp_soc = get_fuelgauge_value(FG_LEVEL);
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			temp_soc);
@@ -1143,7 +1145,7 @@ static ssize_t p5_bat_show_property(struct device *dev,
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			test_batterydata->info.batt_is_full);
 		break;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	case BATT_CHG_STATE:
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			test_batterydata->info.chg_fullstate);
@@ -1193,7 +1195,7 @@ static ssize_t p5_bat_show_property(struct device *dev,
 			test_batterydata->charging_mode_booting);
 		break;
 	case VOLTAGE_NOW:
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 		i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n",
 			get_fuelgauge_value(FG_VOLTAGE) * 1000);
 #else
@@ -1245,7 +1247,7 @@ static ssize_t p5_bat_store(struct device *dev,
 		}
 		pr_debug("%s: FG Register:%d\n", __func__, x);
 		break;
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	case BATT_TEST_VALUE:
 		if (sscanf(buf, "%d\n", &x) == 1) {
 			if (x != test_batterydata->info.test_value) {
@@ -1381,7 +1383,7 @@ static ssize_t sec_batt_test_store(struct device *dev,
 }
 #endif /* __TEST_DEVICE_DRIVER__ */
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 static int p5_bat_read_proc(char *buf, char **start, off_t offset, int count, int *eof, void *data)
 {
 	struct battery_info *info = data;
@@ -1480,14 +1482,14 @@ static int p5_cable_status_update(struct battery_data *battery, int status)
 	return ret;
 }
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 static void p5_bat_update_info(struct battery_info *info)
 {
 	/* Get Fuel Gauge Data */
-	info->batt_current_avg = get_fuelgauge_value(FG_CURRENT_AVG);
+	//info->batt_current_avg = get_fuelgauge_value(FG_CURRENT_AVG);
 	info->batt_soc = get_fuelgauge_value(FG_LEVEL);
-	info->fg_vfsoc = get_fuelgauge_value(FG_VF_SOC);
-	info->batt_current = get_fuelgauge_value(FG_CURRENT);
+	//info->fg_vfsoc = get_fuelgauge_value(FG_VF_SOC);
+	//info->batt_current = get_fuelgauge_value(FG_CURRENT);
 	info->fg_fullcap = get_fuelgauge_value(FG_FULLCAP);
 	info->fg_fullcap_nom = get_fuelgauge_value(FG_FULLCAP_NOM);
 	info->fg_remcap_rep = get_fuelgauge_value(FG_REMCAP_REP);
@@ -1520,7 +1522,7 @@ static void p5_bat_status_update(struct power_supply *bat_ps)
 		else
 			battery->info.level = p5_get_bat_level(bat_ps);
 		}
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	p5_bat_update_info(&battery->info);
 #endif
 	
@@ -1533,7 +1535,7 @@ static void p5_bat_status_update(struct power_supply *bat_ps)
 	}
 	battery->info.batt_vol = p5_get_bat_vol(bat_ps);
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	battery->info.chg_fullstate = gpio_get_value_cansleep(battery->pdata->charger.fullcharge_line);
 	current_charging_status = (battery->full_check_flag > 2 || battery->info.chg_fullstate) ? 1: 0;
 #else
@@ -1565,7 +1567,7 @@ static void p5_cable_check_status(struct battery_data *battery)
 	mutex_lock(&battery->work_lock);
 
 	if (get_charger_status(battery)) {
-#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && (defined (CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT))
         tsp_set_charging_cable(true);
 #endif        
 		if (battery->info.batt_health != POWER_SUPPLY_HEALTH_GOOD) {
@@ -1580,7 +1582,7 @@ static void p5_cable_check_status(struct battery_data *battery)
 		max17042_chip_data->info.low_batt_comp_flag = 0;
 		reset_low_batt_comp_cnt();
 	} else {
-#if defined (CONFIG_TARGET_SERIES_P8LTE) && defined (CONFIG_KOR_OPERATOR_SKT)
+#if defined (CONFIG_TARGET_SERIES_P8LTE) && (defined (CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_JPN_OPERATOR_NTT))
         tsp_set_charging_cable(false);
 #endif	
 		if(battery->full_charge_flag){
@@ -1620,7 +1622,7 @@ static void p5_cable_work(struct work_struct *work)
 	p5_cable_check_status(battery);
 }
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 static void p5_monitor_work(struct work_struct *work)
 {
 	struct battery_data *battery =
@@ -1683,7 +1685,9 @@ static void p5_monitor_work(struct work_struct *work)
 	
 	wake_unlock(&battery->monitor_wake_lock);
 }
+#endif /* P5LTE_MONITOR_WORK */
 
+#ifdef P5LTE_CUR_AVG_WORK
 static void p5_cur_avg_work(struct work_struct *work)
 {
 	struct battery_data *battery =
@@ -1959,7 +1963,7 @@ static void fullcharging_work_handler(struct work_struct *work)
 	pr_debug("%s : nCHG rising intr!!", __func__);
 	pr_info("%s : nCHG rising intr!!", __func__);
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	battery->info.chg_fullstate = gpio_get_value_cansleep(battery->pdata->charger.fullcharge_line);
 	if (battery->info.test_value == FULL_CHARGING_TEST_VALUE
 		|| ((battery->full_check_flag > 2 || battery->info.chg_fullstate)
@@ -2083,9 +2087,11 @@ static int __devinit p5_bat_probe(struct platform_device *pdev)
 		"temp wake lock");
 	wake_lock_init(&battery->fullcharge_wake_lock, WAKE_LOCK_SUSPEND,
 		"fullcharge wake lock");
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	wake_lock_init(&battery->monitor_wake_lock, WAKE_LOCK_SUSPEND,
 		"battmon wake lock");
+#endif /* P5LTE_MONITOR_WORK */
+#ifdef P5LTE_CUR_AVG_WORK
 	wake_lock_init(&battery->curavg_wake_lock, WAKE_LOCK_SUSPEND,
 		"curavg wake lock");
 #endif
@@ -2120,8 +2126,10 @@ static int __devinit p5_bat_probe(struct platform_device *pdev)
 		goto err_workqueue_init;
 	}
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#ifdef P5LTE_CUR_AVG_WORK
 	INIT_DELAYED_WORK(&battery->cur_avg_work, p5_cur_avg_work);
+#endif /* P5LTE_CUR_AVG_WORK */
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	INIT_DELAYED_WORK(&battery->monitor_work, p5_monitor_work);
 	battery->monitor_workqueue = create_singlethread_workqueue(
 		"batt_monitor_workqueue");
@@ -2196,7 +2204,7 @@ static int __devinit p5_bat_probe(struct platform_device *pdev)
 	}
 	disable_irq(battery->connect_irq);
 	
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	battery->entry = create_proc_entry("batt_info_proc", S_IRUGO, NULL);
 	if (!battery->entry) {
 		pr_err("failed to create proc_entry\n");
@@ -2204,7 +2212,8 @@ static int __devinit p5_bat_probe(struct platform_device *pdev)
 		battery->entry->read_proc = p5_bat_read_proc;
 		battery->entry->data = (struct battery_info*)&battery->info;
 	}
-
+#endif
+#ifdef P5LTE_CUR_AVG_WORK
 	battery->info.fg_filtercfg = get_fuelgauge_value(FG_FILTERCFG);
 	if (battery->info.fg_filtercfg < 0) {
 		pr_err("%s: failed to read filter configure\n", __func__);
@@ -2267,7 +2276,7 @@ err_battery_psy_register:
 #ifdef INTENSIVE_LOW_COMPENSATION
 	destroy_workqueue(battery->low_bat_comp_workqueue);
 #endif
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	destroy_workqueue(battery->monitor_workqueue);
 #endif
 err_workqueue_init:
@@ -2275,8 +2284,10 @@ err_workqueue_init:
 	wake_lock_destroy(&battery->work_wake_lock);
 	wake_lock_destroy(&battery->cable_wake_lock);
 	wake_lock_destroy(&battery->fullcharge_wake_lock);
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	wake_lock_destroy(&battery->monitor_wake_lock);
+#endif /* P5LTE_MONITOR_WORK */
+#ifdef P5LTE_CUR_AVG_WORK
 	wake_lock_destroy(&battery->curavg_wake_lock);
 #endif
 	mutex_destroy(&battery->work_lock);
@@ -2289,7 +2300,7 @@ static int __devexit p5_bat_remove(struct platform_device *pdev)
 {
 	struct battery_data *battery = platform_get_drvdata(pdev);
 
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	remove_proc_entry("batt_info_proc", NULL);
 #endif
 
@@ -2306,7 +2317,7 @@ static int __devexit p5_bat_remove(struct platform_device *pdev)
 #ifdef INTENSIVE_LOW_COMPENSATION
 	destroy_workqueue(battery->low_bat_comp_workqueue);
 #endif
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	destroy_workqueue(battery->monitor_workqueue);
 #endif
 	cancel_delayed_work(&battery->fuelgauge_work);
@@ -2318,8 +2329,10 @@ static int __devexit p5_bat_remove(struct platform_device *pdev)
 	wake_lock_destroy(&battery->work_wake_lock);
 	wake_lock_destroy(&battery->cable_wake_lock);
 	wake_lock_destroy(&battery->fullcharge_wake_lock);
-#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU)
+#if defined(CONFIG_KOR_OPERATOR_SKT) || defined(CONFIG_KOR_OPERATOR_KT) || defined(CONFIG_KOR_OPERATOR_LGU) || defined(CONFIG_JPN_OPERATOR_NTT)
 	wake_lock_destroy(&battery->monitor_wake_lock);
+#endif /* P5LTE_MONITOR_WORK */
+#ifdef P5LTE_CUR_AVG_WORK
 	wake_lock_destroy(&battery->curavg_wake_lock);
 #endif	
 #ifdef INTENSIVE_LOW_COMPENSATION

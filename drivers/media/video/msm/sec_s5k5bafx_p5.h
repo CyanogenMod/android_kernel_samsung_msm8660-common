@@ -30,19 +30,18 @@
 #if S5K5BAFX_DEBUG
 #define CAM_DEBUG(fmt, arg...)	\
 		do {\
-			printk("\033[[s5k5bafx] %s:%d: " fmt "\033[0m\n", __FUNCTION__, __LINE__, ##arg);}\
+			printk(KERN_DEBUG "[5BAFX] %s : " fmt "\n", __FUNCTION__, ##arg);}\
 		while(0)
 			
 #define cam_info(fmt, arg...)	\
 		do {\
-		printk(KERN_INFO "[s5k5bafx]" fmt "\n",##arg);}\
+		printk(KERN_INFO "[5BAFX]" fmt "\n",##arg);}\
 		while(0)
 			
 #define cam_err(fmt, arg...)	\
 		do {\
-		printk(KERN_ERR "[s5k5bafx] %s:%d:" fmt "\n",__FUNCTION__, __LINE__, ##arg);}\
+		printk(KERN_ERR "[5BAFX] %s:%d:" fmt "\n",__FUNCTION__, __LINE__, ##arg);}\
 		while(0)
-			
 #else
 #define CAM_DEBUG(fmt, arg...)	
 #define cam_info(fmt, arg...)

@@ -86,6 +86,13 @@ config SENSOR_SR200PC20M
 	---help---
 	Siliconfile 2 MP YUV Sensor
 
+config CAMERA_VE
+	bool "Front camera VE"
+	depends on SENSOR_S5K5BAFX && SENSOR_SR200PC20M
+	default n
+	---help---
+	  Enable support for Front Camera VE for E160S/K/L
+
 config WEBCAM_OV7692_QRD
 	bool "Sensor OV7692 QRD(VGA YUV)"
 	depends on MSM_CAMERA && ARCH_MSM7X27A && !MSM_CAMERA_V4L2

@@ -45,6 +45,9 @@ struct sec_jack_platform_data {
 #ifdef CONFIG_MACH_OLIVER
 	int (*rpc_init)(void);
 #endif
+#ifdef CONFIG_TARGET_SERIES_P4LTE
+	void (*init)(void);
+#endif
 	struct sec_jack_zone	*zones;
 	int	num_zones;
 	int	det_int;

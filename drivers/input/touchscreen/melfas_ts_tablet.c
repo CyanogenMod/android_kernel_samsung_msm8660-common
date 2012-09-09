@@ -45,19 +45,18 @@
 //#define RELEASE_KEY	0
 //#define DEBUG_PRINT 	0
 
+#define SHOW_COORD	0
 #define DEBUG_MODE		1
 #define SET_DOWNLOAD_BY_GPIO	1
 #define COOD_ROTATE_270
 #define TSP_FACTORY_TEST	1
 #define ENABLE_NOISE_TEST_MODE
 
-#define REPORT_MT(touch_number, x, y, amplitude) \
-do {     \
-	input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);             \
-	input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);             \
-	input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, amplitude);         \
-	input_report_abs(ts->input_dev, ABS_MT_PRESSURE, amplitude); \
-} while (0)
+enum {
+	TSP_STATE_RELEASE = 0,
+	TSP_STATE_PRESS,
+	TSP_STATE_MOVE,
+};
 
 #if SET_DOWNLOAD_BY_GPIO
 #include "mcs8000_download_tablet.h"
@@ -77,6 +76,7 @@ struct melfas_ts_data {
 	uint32_t flags;
 	bool charging_status;
 	bool tsp_status;
+	unsigned char	finger_state[P5_MAX_TOUCH];
 	int (*power)(int on);
 	void (*power_enable)(int en);
 };
@@ -88,7 +88,6 @@ static void melfas_ts_early_suspend(struct early_suspend *h);
 static void melfas_ts_late_resume(struct early_suspend *h);
 #endif
 
-static struct muti_touch_info g_Mtouch_info[P5_MAX_TOUCH];
 static bool debug_print = false;
 
 #if DEBUG_MODE
@@ -627,22 +626,10 @@ static void release_all_fingers(struct melfas_ts_data *ts)
 {
 	int i;
 	for(i=0; i<P5_MAX_TOUCH; i++){
-		if(-1 == g_Mtouch_info[i].strength){
-			g_Mtouch_info[i].posX = 0;
-			g_Mtouch_info[i].posY = 0;
-			continue;
-		}
-
 		input_mt_slot(ts->input_dev, i);
-		input_mt_report_slot_state(ts->input_dev,
-			MT_TOOL_FINGER, 0);
-		
-		g_Mtouch_info[i].strength = 0;
-		g_Mtouch_info[i].posX = 0;
-		g_Mtouch_info[i].posY = 0;
-
-		if(0 == g_Mtouch_info[i].strength)
-			g_Mtouch_info[i].strength = -1;
+		input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER,
+									false);
+		ts->finger_state[i] = TSP_STATE_RELEASE;
 	}
 	input_sync(ts->input_dev);
 }
@@ -712,7 +699,7 @@ static int firmware_update(struct melfas_ts_data *ts)
 	INT8 dl_enable_bit = 0x00;
 	u8 version_info = 0;
 	
-#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && defined(CONFIG_TARGET_LOCALE_KOR)
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN))
 	if(system_rev < 0x07){
 		pr_err("[TSP] P5LTE_KOR : This revision cannot TSP firmware update");
 		return 0;
@@ -854,7 +841,7 @@ static void melfas_ts_work_func(struct melfas_ts_data *ts)
 //	struct melfas_ts_data *ts = container_of(work, struct melfas_ts_data, work);
 	int ret = 0, i;
 	u8 buf[TS_READ_REGS_LEN];
-	int touchType=0, touchState =0, touchID=0, posX=0, posY=0, strength=0, keyID = 0, reportID = 0;
+	int touchState, touchID, posX, posY, strength, reportID;
 
 #if DEBUG_MODE
 	if (debug_on) {
@@ -865,7 +852,7 @@ static void melfas_ts_work_func(struct melfas_ts_data *ts)
 
 	ret = read_input_info(ts, buf);
 	if (ret < 0) {
-		pr_err("[TSP] Failed to read the touch info\n");
+		pr_err("[TSP] Failed to read the touch info[%d]", ret);
 
 		for(i=0; i<P5_MAX_I2C_FAIL; i++ )
 			read_input_info(ts, buf);
@@ -883,7 +870,6 @@ static void melfas_ts_work_func(struct melfas_ts_data *ts)
 		return ;
 	}
 	else{
-		touchType  = (buf[0]>>6)&0x03;
 		touchState = (buf[0]>>4)&0x01;
 		reportID = (buf[0]&0x0f);
 #if defined(COOD_ROTATE_90)
@@ -898,7 +884,7 @@ static void melfas_ts_work_func(struct melfas_ts_data *ts)
 		posX = ((buf[1]& 0x0F) << 8) | buf[2];
 		posY = ((buf[1]& 0xF0) << 4) | buf[3];
 #endif
-		keyID = strength = buf[4]; 	
+		strength = buf[4];
 
 		if(reportID == 0x0F) { // ESD Detection
 			pr_info("[TSP] MELFAS_ESD Detection");
@@ -933,63 +919,44 @@ static void melfas_ts_work_func(struct melfas_ts_data *ts)
 			return ;
 		}
 
-		if(touchType == TOUCH_SCREEN) {
-			g_Mtouch_info[touchID].posX= posX;
-			g_Mtouch_info[touchID].posY= posY;
-
 			if(touchState) {
-#if 0//def CONFIG_KERNEL_DEBUG_SEC
-				if (0 >= g_Mtouch_info[touchID].strength)
-					pr_info("[TSP] Press    - ID : %d  [%d,%d] WIDTH : %d",
-						touchID,
-						g_Mtouch_info[touchID].posX,
-						g_Mtouch_info[touchID].posY,
-						strength);
+			input_mt_slot(ts->input_dev, touchID);
+			input_mt_report_slot_state(ts->input_dev,
+							MT_TOOL_FINGER, true);
+			input_report_abs(ts->input_dev,
+					ABS_MT_POSITION_X, posX);
+			input_report_abs(ts->input_dev,
+					ABS_MT_POSITION_Y, posY);
+			input_report_abs(ts->input_dev,
+					ABS_MT_TOUCH_MAJOR, strength);
+			input_report_abs(ts->input_dev,
+					ABS_MT_PRESSURE, strength);
+
+			if (ts->finger_state[touchID] == TSP_STATE_RELEASE) {
+#if SHOW_COORD
+				pr_info("[TSP] P [%2d] [%d,%d] [%d]",
+					touchID, posX, posY, strength);
 #else
-				if (0 >= g_Mtouch_info[touchID].strength)
-					pr_info("[TSP] P : %d\n", touchID);
+				pr_info("[TSP] P [%2d]", touchID);
 #endif
-				g_Mtouch_info[touchID].strength= (strength+1)/2;
+				ts->finger_state[touchID] = TSP_STATE_PRESS;
+			} else
+				ts->finger_state[touchID] = TSP_STATE_MOVE;
 			} else {
-#if 0//def CONFIG_KERNEL_DEBUG_SEC
-				if (g_Mtouch_info[touchID].strength)
-					pr_info("[TSP] Release - ID : %d [%d,%d]",
-						touchID,
-						g_Mtouch_info[touchID].posX,
-						g_Mtouch_info[touchID].posY);
+			input_mt_slot(ts->input_dev, touchID);
+			input_mt_report_slot_state(ts->input_dev,
+							MT_TOOL_FINGER, false);
+#if SHOW_COORD
+			pr_info("[TSP] R [%2d] [%d,%d] (%d)",
+						touchID, posX, posY,
+						ts->finger_state[touchID]);
 #else
-				if (g_Mtouch_info[touchID].strength)
-					pr_info("[TSP] R : %d\n", touchID);
-
+			pr_info("[TSP] R [%2d]", touchID);
 #endif
-				g_Mtouch_info[touchID].strength = 0;
-			}
-
-			for(i=0; i<P5_MAX_TOUCH; i++) {
-				if(g_Mtouch_info[i].strength== -1)
-					continue;
-
-				input_mt_slot(ts->input_dev, i);
-				input_mt_report_slot_state(ts->input_dev,
-					MT_TOOL_FINGER,
-					!!g_Mtouch_info[i].strength);
-
-				if(g_Mtouch_info[i].strength == 0)
-					g_Mtouch_info[i].strength = -1;
-				else
-				REPORT_MT(i, g_Mtouch_info[i].posX,
-						g_Mtouch_info[i].posY, g_Mtouch_info[i].strength);
-
-			if (debug_print){
-					pr_info("[TSP] Touch ID: %d, State : %d, x: %d, y: %d, z: %d\n",
-						i, touchState, g_Mtouch_info[i].posX,
-						g_Mtouch_info[i].posY, g_Mtouch_info[i].strength);
-			}
-
-			}
+			ts->finger_state[touchID] = TSP_STATE_RELEASE;
 		}
-		input_sync(ts->input_dev);
 	}
+	input_sync(ts->input_dev);
 }
 
 
@@ -1806,9 +1773,12 @@ static int melfas_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	__set_bit(EV_ABS,  ts->input_dev->evbit);
 #endif
   
- 	input_mt_init_slots(ts->input_dev, P5_MAX_TOUCH-1); 
 	__set_bit(EV_ABS,  ts->input_dev->evbit);
+	__set_bit(EV_KEY, ts->input_dev->evbit);
+	__set_bit(MT_TOOL_FINGER, ts->input_dev->keybit);
 	__set_bit(INPUT_PROP_DIRECT, ts->input_dev->propbit);
+
+	input_mt_init_slots(ts->input_dev, P5_MAX_TOUCH);
 #if defined(COOD_ROTATE_90) || defined(COOD_ROTATE_270)
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, TS_MAX_Y_COORD, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, TS_MAX_X_COORD, 0, 0);
@@ -1817,7 +1787,6 @@ static int melfas_ts_probe(struct i2c_client *client, const struct i2c_device_id
 	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, TS_MAX_Y_COORD, 0, 0);
 #endif
 	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
-//	input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, P5_MAX_TOUCH-1, 0, 0);
 	input_set_abs_params(ts->input_dev, ABS_MT_PRESSURE, 0, 255, 0, 0);
 	
 	ret = input_register_device(ts->input_dev);	
@@ -1846,9 +1815,8 @@ static int melfas_ts_probe(struct i2c_client *client, const struct i2c_device_id
 		}
 	}
 
-//	schedule_work(&ts->work);
-	for (i = 0; i < P5_MAX_TOUCH ; i++)  /* _SUPPORT_MULTITOUCH_ */
-		g_Mtouch_info[i].strength = -1;	
+	for (i = 0 ; i < P5_MAX_TOUCH; i++)
+		ts->finger_state[i] = TSP_STATE_RELEASE;
 
 	tsp_dev  = device_create(sec_class, NULL, 0, ts, "sec_touch");
 	if (IS_ERR(tsp_dev)) 
@@ -2004,7 +1972,7 @@ static struct i2c_driver melfas_ts_driver = {
 static int __devinit melfas_ts_init(void)
 {
 #ifdef CONFIG_SAMSUNG_LPM_MODE
-#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_KT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU)
+#if defined(CONFIG_TARGET_LOCALE_KOR_SKT) || defined(CONFIG_TARGET_LOCALE_KOR_KT) || defined(CONFIG_TARGET_LOCALE_KOR_LGU) || defined(CONFIG_TARGET_LOCALE_JPN_NTT)
 	extern int charging_mode_from_boot;
 	if (charging_mode_from_boot == 1) {
 		pr_info("%s : LPM Charging Mode! returen ENODEV!\n", __func__);

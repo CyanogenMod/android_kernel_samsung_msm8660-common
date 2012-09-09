@@ -408,7 +408,7 @@ static void mdp4_scale_setup(struct mdp4_overlay_pipe *pipe)
 	pipe->phasey_step = MDP4_VG_PHASE_STEP_DEFAULT;
 
 	if (pipe->dst_h && pipe->src_h != pipe->dst_h) {
-		if (pipe->dst_h > pipe->src_h * 8)	/* too much */
+		if (pipe->dst_h > pipe->src_h * 20)	/* too much */
 			return;
 		pipe->op_mode |= MDP4_OP_SCALEY_EN;
 
@@ -431,7 +431,7 @@ static void mdp4_scale_setup(struct mdp4_overlay_pipe *pipe)
 	}
 
 	if (pipe->dst_w && pipe->src_w != pipe->dst_w) {
-		if (pipe->dst_w > pipe->src_w * 8)	/* too much */
+		if (pipe->dst_w > pipe->src_w * 20)	/* too much */
 			return;
 		pipe->op_mode |= MDP4_OP_SCALEX_EN;
 
@@ -1804,7 +1804,7 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 	}
 
 
-	if (req->dst_rect.h > (req->src_rect.h * 8)) {	/* too much */
+	if (req->dst_rect.h > (req->src_rect.h * 20)) {	/* too much */
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (h)!\n", __func__);
 		return -ERANGE;
@@ -1816,7 +1816,7 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 		return -ERANGE;
 	}
 
-	if (req->dst_rect.w > (req->src_rect.w * 8)) {	/* too much */
+	if (req->dst_rect.w > (req->src_rect.w * 20)) {	/* too much */
 		mdp4_stat.err_scale++;
 		pr_err("%s: scale up, too much (w)!\n", __func__);
 		return -ERANGE;
@@ -2294,8 +2294,8 @@ static u32 mdp4_overlay_blt_enable(struct mdp_overlay *req,
 #endif
 #endif
 
-#ifdef CONFIG_CMC623_P5LTE
-	use_blt = 0;
+#if defined(CONFIG_CMC623_P5LTE) || defined(CONFIG_CMC624_P8LTE)
+	if(mfd->panel_info.type == DTV_PANEL) use_blt = 0;
 #endif
 
 	return use_blt;
@@ -2339,6 +2339,13 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 
 	if (mixer == MDP4_MIXER0) {
 		u32 use_blt = mdp4_overlay_blt_enable(req, mfd,	perf_level);
+#if defined(CONFIG_CMC623_P5LTE) || defined(CONFIG_CMC624_P8LTE)
+		if(use_blt == 1) {
+			mdp4_overlay_pipe_free(pipe);
+			mutex_unlock(&mfd->dma->ov_mutex);
+			return -ERANGE;
+		}
+#endif
 		mfd->use_ov0_blt &= ~(1 << (pipe->pipe_ndx-1));
 		mfd->use_ov0_blt |= (use_blt << (pipe->pipe_ndx-1));
 	}
@@ -2767,8 +2774,10 @@ int mdp4_overlay_play(struct fb_info *info, struct msmfb_overlay_data *req)
 		ctrl->mixer0_played++;
 		if (ctrl->panel_mode & MDP4_PANEL_LCDC) {
 			mdp4_overlay_reg_flush(pipe, 0);
+#if !defined(CONFIG_USA_MODEL_SGH_T769)  && !defined(CONFIG_USA_MODEL_SGH_I577)
 			if (!mfd->use_ov0_blt)
-				mdp4_overlay_update_blt_mode(mfd);
+				mdp4_overlay_update_blt_mode(mfd); 
+#endif
 			mdp4_overlay_lcdc_vsync_push(mfd, pipe);
 		}
 #ifdef CONFIG_FB_MSM_MIPI_DSI

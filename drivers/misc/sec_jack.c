@@ -83,16 +83,14 @@
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 178
+#elif defined (CONFIG_JPN_MODEL_SC_01D)
+#define KEY_MEDIA_ADC_MIN 0
+#define KEY_MEDIA_ADC_MAX 178
 #elif defined (CONFIG_EUR_MODEL_GT_P7320)
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 178
-#elif defined (CONFIG_KOR_MODEL_SHV_E140S)
-#define KEY_MEDIA_ADC_MIN 0
-#define KEY_MEDIA_ADC_MAX 178
-#elif defined (CONFIG_KOR_MODEL_SHV_E140K)
-#define KEY_MEDIA_ADC_MIN 0
-#define KEY_MEDIA_ADC_MAX 178
-#elif defined (CONFIG_KOR_MODEL_SHV_E140L)
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) && defined (CONFIG_TARGET_LOCALE_KOR)
+/* P5LTE_KOR_SKT/KT/LGU E140S/K/L */
 #define KEY_MEDIA_ADC_MIN 0
 #define KEY_MEDIA_ADC_MAX 178
 #else	// etc
@@ -117,6 +115,9 @@
 #elif defined (CONFIG_Q1_KOR_AUDIO)
 #define KEY_VOLUMEUP_ADC_MIN 150
 #define KEY_VOLUMEUP_ADC_MAX 330
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) /* P5LTE_KOR_SKT/KT/LGU E140S/K/L */
+#define KEY_VOLUMEUP_ADC_MIN 179
+#define KEY_VOLUMEUP_ADC_MAX 415
 #else
 #define KEY_VOLUMEUP_ADC_MIN 120
 #define KEY_VOLUMEUP_ADC_MAX 291
@@ -145,16 +146,10 @@
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
 #define KEY_VOLUMEUP_ADC_MIN 189
 #define KEY_VOLUMEUP_ADC_MAX 391
+#elif defined (CONFIG_JPN_MODEL_SC_01D)
+#define KEY_VOLUMEUP_ADC_MIN 189
+#define KEY_VOLUMEUP_ADC_MAX 391
 #elif defined (CONFIG_EUR_MODEL_GT_P7320)
-#define KEY_VOLUMEUP_ADC_MIN 189
-#define KEY_VOLUMEUP_ADC_MAX 391
-#elif defined (CONFIG_KOR_MODEL_SHV_E140S)
-#define KEY_VOLUMEUP_ADC_MIN 189
-#define KEY_VOLUMEUP_ADC_MAX 391
-#elif defined (CONFIG_KOR_MODEL_SHV_E140K)
-#define KEY_VOLUMEUP_ADC_MIN 189
-#define KEY_VOLUMEUP_ADC_MAX 391
-#elif defined (CONFIG_KOR_MODEL_SHV_E140L)
 #define KEY_VOLUMEUP_ADC_MIN 189
 #define KEY_VOLUMEUP_ADC_MAX 391
 #else
@@ -179,6 +174,9 @@
 #elif defined (CONFIG_Q1_KOR_AUDIO)
 #define KEY_VOLUMEDOWN_ADC_MIN 350
 #define KEY_VOLUMEDOWN_ADC_MAX 750
+#elif defined(CONFIG_TARGET_SERIES_P5LTE) /* P5LTE_KOR_SKT/KT/LGU E140S/K/L */
+#define KEY_VOLUMEDOWN_ADC_MIN 416
+#define KEY_VOLUMEDOWN_ADC_MAX 1000
 #else
 #define KEY_VOLUMEDOWN_ADC_MIN 320
 #define KEY_VOLUMEDOWN_ADC_MAX 758
@@ -201,13 +199,7 @@
 #elif defined (CONFIG_USA_MODEL_SGH_I957)
 #define KEY_VOLUMEDOWN_ADC_MIN 438
 #define KEY_VOLUMEDOWN_ADC_MAX 832
-#elif defined (CONFIG_USA_MODEL_SHV_E140S)
-#define KEY_VOLUMEDOWN_ADC_MIN 438
-#define KEY_VOLUMEDOWN_ADC_MAX 832
-#elif defined (CONFIG_USA_MODEL_SHV_E140K)
-#define KEY_VOLUMEDOWN_ADC_MIN 438
-#define KEY_VOLUMEDOWN_ADC_MAX 832
-#elif defined (CONFIG_USA_MODEL_SHV_E140L)
+#elif defined (CONFIG_JPN_MODEL_SC_01D)
 #define KEY_VOLUMEDOWN_ADC_MIN 438
 #define KEY_VOLUMEDOWN_ADC_MAX 832
 #else
@@ -215,7 +207,7 @@
 #define KEY_VOLUMEDOWN_ADC_MAX 660
 #endif
 
-#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_JPN_MODEL_SC_05D)
 #define JACK_WATERPROOF
 #endif
 
@@ -797,11 +789,22 @@ static int sec_jack_probe(struct platform_device *pdev)
 	disable_irq(pdata->send_int);
 	dev_set_drvdata(&pdev->dev, hi);
 
+#ifdef CONFIG_TARGET_SERIES_P4LTE
+	pdata->init();
+#endif
+
 	/* call irq_thread forcely because of missing interrupt when booting. 
 	 * 2000ms delay is enough to waiting for adc driver registration.
 	 */
 	INIT_DELAYED_WORK(&hi->powerup_work, sec_jack_powerup_work_func);
 	schedule_delayed_work(&hi->powerup_work, msecs_to_jiffies(2000));
+
+#ifdef CONFIG_TARGET_SERIES_P4LTE
+	if(pdata->get_det_jack_state())
+	{
+		sec_jack_det_irq_handler(pdata->det_int, hi);
+	}
+#endif
 
 	return 0;
 

@@ -49,7 +49,7 @@
 #endif
 
 #ifdef CONFIG_SENSORS_YDA165
-#ifdef CONFIG_USA_MODEL_SGH_I577
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_T769)
 #include <linux/i2c/yda165_integ.h>
 #else
 #include <linux/i2c/yda165.h>
@@ -5853,14 +5853,15 @@ static struct i2c_board_info cy8ctma340_dragon_board_info[] = {
 };
 #endif
 
-#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I577)
 #define JACK_WATERPROOF
 #endif
+ 
 
 #if defined(CONFIG_SAMSUNG_JACK) || defined (CONFIG_SAMSUNG_EARJACK)
 static struct sec_jack_zone jack_zones[] = {
         [0] = {
-#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I577)
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I577)  || defined (CONFIG_USA_MODEL_SGH_T769)
                 .adc_high       = 0,
 #else
                 .adc_high       = 3,
@@ -5870,7 +5871,7 @@ static struct sec_jack_zone jack_zones[] = {
                 .jack_type      = SEC_HEADSET_3POLE,
         },
         [1] = {
-#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I577)
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I577)  || defined (CONFIG_USA_MODEL_SGH_T769)
                 .adc_high       = 988,
 #else
                 .adc_high       = 980,
@@ -5881,19 +5882,17 @@ static struct sec_jack_zone jack_zones[] = {
         },
         [2] = {
 #if defined(JACK_WATERPROOF)
-                .adc_high       = 2700,
+#if defined(CONFIG_USA_MODEL_SGH_I577)
+                .adc_high       = 1900,
+#else
+		.adc_high	= 2700,
+#endif
                 .delay_ms       = 10,
                 .check_count    = 10,
                 .jack_type      = SEC_HEADSET_4POLE,
         },
         [3] = {
 #endif
-                .adc_high       = 2700,
-                .delay_ms       = 10,
-                .check_count    = 10,
-                .jack_type      = SEC_HEADSET_4POLE,
-        },
-        [3] = {
                 .adc_high       = 9999,
                 .delay_ms       = 10,
                 .check_count    = 10,
@@ -6633,7 +6632,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 26,
 		.sp_gainup = 1,
 	},
-#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
+#elif defined (CONFIG_USA_MODEL_SGH_T989)
     // SPK
 	[0] = {
 		.in1_gain = 2,
@@ -6679,6 +6678,82 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 0,
 		.sp_gainup = 0,
 	},
+#elif defined (CONFIG_USA_MODEL_SGH_T769)
+// SPK
+	[0] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 0,
+		.hp_gainup = 0,
+		.sp_att = 23,
+		.sp_gainup = 1,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+    // HEADSET
+	[1] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 29,
+		.hp_gainup = 0,
+		.sp_att = 0,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+    // SPK + HEADSET
+	[2] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 1,
+		.hp_gainup = 2,
+		.sp_att = 24,
+		.sp_gainup = 1,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 0,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+	// SPK_CALL
+	[3] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 0,
+		.hp_gainup = 0,
+		.sp_att = 27,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 1,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},
+	// HEADSET_CALL
+	[4] = {
+		.in1_gain = 2,
+		.in2_gain = 2,
+		.hp_att = 25,
+		.hp_gainup = 2,
+		.sp_att = 0,
+		.sp_gainup = 0,
+		.bSpNg_DetectionLv = 0,
+		.bSpNg_AttackTime = 1,
+		.bSpNcpl_NonClipRatio = 1,
+		.bSpNcpl_PowerLimit = 0,
+		.bSpNcpl_AttackTime = 1,
+		.bSpNcpl_ReleaseTime = 1,
+	},	
 #elif defined (CONFIG_EUR_MODEL_GT_I9210)
 	// SPK_MULTIMEDIA
 	[0] = {
@@ -8439,15 +8514,25 @@ unsigned int msm_adc_gpio_expander_disable(int cs_disable)
 #endif
 
 static struct msm_adc_channels msm_adc_channels_data[] = {
-
-		{"head_set", CHANNEL_ADC_HDSET, 0, &xoadc_fn, CHAN_PATH_TYPE9,
+#if defined(CONFIG_USA_MODEL_SGH_I577)
+	{"head_set", CHANNEL_ADC_HDSET, 0, &xoadc_fn, CHAN_PATH_TYPE6,
 		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
+#else
+	{"head_set", CHANNEL_ADC_HDSET, 0, &xoadc_fn, CHAN_PATH_TYPE9,
+		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
+#endif
 	{"light_lux", CHANNEL_ADC_LIGHT_LUX, 0, &xoadc_fn, CHAN_PATH_TYPE7,
 		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
 	{"vichg", CHANNEL_ADC_CHG_MONITOR, 0, &xoadc_fn, CHAN_PATH_TYPE10,
 		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_xtern_chgr_cur},
-	{"batt_id", CHANNEL_ADC_BATT_ID, 0, &xoadc_fn, CHAN_PATH_TYPE6,
+#if defined(CONFIG_USA_MODEL_SGH_I577)
+	{"batt_id", CHANNEL_ADC_BATT_ID, 0, &xoadc_fn, CHAN_PATH_TYPE9,
 		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
+#else
+	{"batt_id", CHANNEL_ADC_BATT_ID, 0, &xoadc_fn, CHAN_PATH_TYPE6,
+                ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
+#endif
+
 #if defined (CONFIG_TARGET_LOCALE_USA)
 	{"batt_therm", CHANNEL_ADC_BATT_THERM, 0, &xoadc_fn, CHAN_PATH_TYPE8,
 		ADC_CONFIG_TYPE2, ADC_CALIB_CONFIG_TYPE2, scale_default},
@@ -8492,14 +8577,24 @@ static void pmic8058_xoadc_mpp_config(void)
 {
 	int rc, i;
 	struct pm8xxx_mpp_init_info xoadc_mpps[] = {
+	#if defined(CONFIG_USA_MODEL_SGH_I577)
+		PM8058_MPP_INIT(XOADC_MPP_3, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH5,
+							AOUT_CTRL_DISABLE),
+	#else
 		PM8058_MPP_INIT(XOADC_MPP_3, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH8,
 							AOUT_CTRL_DISABLE),
+	#endif
 		PM8058_MPP_INIT(XOADC_MPP_5, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH9,
 							AOUT_CTRL_DISABLE),
 		PM8058_MPP_INIT(XOADC_MPP_4, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH6,
 							AOUT_CTRL_DISABLE),
+	#if defined(CONFIG_USA_MODEL_SGH_I577)
+		PM8058_MPP_INIT(XOADC_MPP_8, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH8,
+							AOUT_CTRL_DISABLE),
+	#else
 		PM8058_MPP_INIT(XOADC_MPP_8, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH5,
 							AOUT_CTRL_DISABLE),
+	#endif
 		PM8058_MPP_INIT(XOADC_MPP_10, A_INPUT, PM8XXX_MPP_AIN_AMUX_CH7,
 							AOUT_CTRL_DISABLE),
 	};
@@ -8798,12 +8893,22 @@ static struct i2c_board_info taos_i2c_board_info[] = {
 
 #ifdef CONFIG_TOUCHSCREEN_MELFAS
 static uint32_t melfas_gpio_config_data[] = {
+#if defined(CONFIG_USA_MODEL_SGH_I757)
+	GPIO_CFG(TSP_SDA, 1,
+			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+	GPIO_CFG(TSP_SCL, 1,
+			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+	GPIO_CFG(TOUCHSCREEN_IRQ, 0,
+			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+#else
 	GPIO_CFG(TSP_SDA, 1,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 	GPIO_CFG(TSP_SCL, 1,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 	GPIO_CFG(TOUCHSCREEN_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+#endif
+
 };
 
 static void melfas_gpios(void)
@@ -9294,7 +9399,7 @@ static const u8 *mxt224e_config[] = {
 	end_config_e,
 };
 #else
-#if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+#if defined (CONFIG_USA_MODEL_SGH_I727) 
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
 				48,		/* IDLEACQINT */
 				255,	/* ACTVACQINT */
@@ -9308,7 +9413,6 @@ static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
 				10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
 				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
 				18, 15, 50, 50, 0};
-
 
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
@@ -9326,7 +9430,7 @@ static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
    				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
 				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
 				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
-				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,
+				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
 				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
 				80, 18, 15, 0};
 
@@ -9334,6 +9438,73 @@ static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
     				3, 132, 0x72, 20, 0, 0, 0, 0, 1, 2,
    				0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
 				10, 0, 9, 5, 0, 15, 0, 1, 0, 0,
+				0, 0, 0, 0, 0, 30, 2, 15,	1, 81,
+				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+				80, 18, 15, 0};
+
+static u8 end_config_e[] = {RESERVED_T255};
+
+
+static const u8 *mxt224e_config[] = {
+	t7_config_e,
+	t8_config_e,
+	t9_config_e,
+	t15_config_e,
+	t18_config_e,
+	t23_config_e,
+	t25_config_e,
+	t40_config_e,
+	t42_config_e,
+	t46_config_e,
+	t47_config_e,
+	t48_config_e,
+	t38_config_e,//110927 gumi noise
+	end_config_e,
+};
+#elif defined(CONFIG_USA_MODEL_SGH_T989) //20120531
+static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
+				48,		/* IDLEACQINT */
+				255,	/* ACTVACQINT */
+				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
+				27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+
+/* NEXTTCHDI added */
+static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
+				139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
+				10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+				18, 15, 50, 50, 0};
+	
+
+static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
+static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
+static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
+static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
+/*static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 26, 0, 0, 1, 0, 0};*/
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 24, 0, 0, 1, 0, 0};//20120530
+
+static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
+
+
+static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
+   				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
+				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+				80, 18, 15, 0};
+
+static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
+    			3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2, //20120530
+   				0, 0, 0, 6, 6, 0, 0, 48, 4, 48, 
+/*				10, 0, 9, 5, 0, 15, 0, 1, 0, 0,*/
+				10, 0, 100, 5, 0, 100, 0, 5, 0, 0, //20120530
+
 				0, 0, 0, 0, 0, 30, 2, 15,	1, 81,
 				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
 				80, 18, 15, 0};
@@ -9356,6 +9527,7 @@ static const u8 *mxt224e_config[] = {
 	t38_config_e,//110927 gumi noise
 	end_config_e,
 };
+
 #else
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
 				48,		/* IDLEACQINT */
@@ -16396,11 +16568,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #ifdef CONFIG_FB_MSM_MIPI_DSI
 int mdp_core_clk_rate_table[] = {
 	85330000,
-#if defined(CONFIG_USA_MODEL_SGH_T769)  || defined(CONFIG_USA_MODEL_SGH_I577)
-	160000000,
-#else
 	128000000,
-#endif
 	160000000,
 	200000000,
 };

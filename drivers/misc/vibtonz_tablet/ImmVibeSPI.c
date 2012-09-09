@@ -127,7 +127,7 @@ extern VibeStatus ImmVibeGetDeviceKernelParameter(VibeInt32 nDeviceIndex, VibeIn
 #define PWM_PERIOD_DEFAULT				0x80	//0x80	,0x74
 #define PWM_DUTY_DEFAULT				0x40	//0x40	,0x3a
 /* modify for P5/P7 */
-#elif defined(CONFIG_TARGET_SERIES_P8LTE) && defined(CONFIG_TARGET_LOCALE_KOR)
+#elif defined(CONFIG_TARGET_SERIES_P8LTE) && (defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN))
 #define PWM_PLLDIV_DEFAULT              0x02
 #define PWM_FREQ_DEFAULT               	0xa0	// 0x01	,0x00, (0x34)
 #define PWM_PERIOD_DEFAULT				0xae	// 0x80	,0x74, (0x36)

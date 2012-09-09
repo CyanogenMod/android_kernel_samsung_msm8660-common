@@ -192,8 +192,10 @@ int dhd_check_rdwr_macaddr(struct dhd_info *dhd, dhd_pub_t *dhdp,
 	char buf[18]      = {0};
 	char *filepath_old      = "/data/.mac.info";
 	char *filepath      = "/efs/wifi/.mac.info";
-#ifdef CONFIG_TARGET_LOCALE_NA
+#if defined(CONFIG_TARGET_LOCALE_NA)
 	char *nvfilepath       = "/data/misc/wifi/.nvmac.info";
+#elif defined(CONFIG_TARGET_LOCALE_KOR) || defined(CONFIG_TARGET_LOCALE_JPN)
+	char *nvfilepath       = "/efs/wifi/.nvmac.info";
 #else
 	char *nvfilepath = "/data/.nvmac.info";
 #endif

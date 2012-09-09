@@ -809,8 +809,18 @@ static bool state_work_completed = true;
 void mhl_hpd_handler(bool state)
 {
 	DEV_INFO("mhl_hpd_handler with state as %d\n", state);
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+	if(mhl_hpd_state == false && state == false) {
+		printk("mhl hpd_handler - already off, do nothing..\n");
+		return;
+	}
+	if (state == false) {
+		hdmi_msm_dump_regs("MHL_OFF: ");
+	}
+#else
 	if(mhl_hpd_state == state)
 		return;
+#endif
 	wait_event_interruptible_timeout(hdmi_msm_state_work_completedEvent, state_work_completed, msecs_to_jiffies(4000));
 	state_work_completed = false;
 	hdmi_msm_state->hpd_cable_chg_detected = TRUE;
@@ -957,6 +967,10 @@ static void hdmi_msm_hpd_state_work(struct work_struct *work)
 				external_common_state->sdev.state, __func__);
 #else
 			switch_set_state(&hdmi_msm_state->hdmi_audio_switch, 1);
+#endif
+#ifdef CONFIG_VIDEO_MHL_TABLET_V1
+			if (!wake_lock_active(&hdmi_msm_state->wake_lock))
+				wake_lock(&hdmi_msm_state->wake_lock);
 #endif
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2) || defined(CONFIG_VIDEO_MHL_TABLET_V1)
 			/*sending hdmi_audio_ch*/
@@ -1215,8 +1229,15 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 		/* Clear and Disable */
 		HDMI_OUTP(0x0118, (hdcp_int_val | (1 << 5))
 			& ~((1 << 6) | (1 << 4)));
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+		int link0_status_val = 0;
+		link0_status_val = HDMI_INP_ND(0x011C);
+		DEV_INFO("HDCP: AUTH_FAIL_INT received, LINK0_STATUS=0x%08x\n",
+			link0_status_val);
+#else
 		DEV_INFO("HDCP: AUTH_FAIL_INT received, LINK0_STATUS=0x%08x\n",
 			HDMI_INP_ND(0x011C));
+#endif
 #if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2)
 		if (hdmi_msm_state->full_auth_done) {
 #else
@@ -1240,6 +1261,13 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			mutex_lock(&hdcp_auth_state_mutex);
 			hdmi_msm_state->full_auth_done = FALSE;
 			mutex_unlock(&hdcp_auth_state_mutex);
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+			if ((link0_status_val & (1<<4)) && (link0_status_val & (1<<5)) &&
+					(link0_status_val) & (1<<6)) {
+				DEV_INFO("HDCP : mhl connected.. do full hpd state by mhl_hpd_handler and not here!!\n");
+			} else {
+				hdmi_msm_dump_regs("HDCP_AUTH_FAILD: ");
+#endif
 			/* Calling reauth only when authentication
 			 * is sucessful or else we always go into
 			 * the reauth loop
@@ -1247,6 +1275,9 @@ static irqreturn_t hdmi_msm_isr(int irq, void *dev_id)
 			queue_work(hdmi_work_queue,
 			    &hdmi_msm_state->hdcp_reauth_work);
 		}
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
+		}
+#endif
 		mutex_lock(&hdcp_auth_state_mutex);
 		/* This flag prevents other threads from re-authenticating
 		 * after we've just authenticated (i.e., finished part3)
@@ -1488,12 +1519,9 @@ static void msm_hdmi_init_ddc(void)
 	 * 0x0224 HDMI_DDC_SETUP
 	 * Setting 31:24 bits : Time units to wait before timeout
 	 * when clock is being stalled by external sink device
+	 * MHL CTS 6.3.18.2 6.3.18.4 2nd entry
 	 */
-#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-	HDMI_OUTP_ND(0x0224, 0);				// from Celox GB, jgk.20111215
-#elif defined(CONFIG_VIDEO_MHL_TABLET_V1)
-	HDMI_OUTP_ND(0x0224, 0xff000000);		// QC org
-#endif
+	HDMI_OUTP_ND(0x0224, 0xff000000);
 
 	/* 0x027C HDMI_DDC_REF
 	   [6] REFTIMER_ENABLE	Enable the timer
