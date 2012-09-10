@@ -3673,9 +3673,6 @@ static void ambient_light_sensor_reset(void)
 {
 	printk("[ALC] %s, %d - start\n", __func__,__LINE__);
 
-	gpio_free(PM8058_GPIO_PM_TO_SYS(ALC_RST));
-	msleep(20);
-
 	gpio_request(PM8058_GPIO_PM_TO_SYS(ALC_RST), "alc_rst");
 	gpio_direction_output(PM8058_GPIO_PM_TO_SYS(ALC_RST), 0);
 
@@ -3694,9 +3691,15 @@ static void ambient_light_sensor_resetpin_down(void)
 	gpio_direction_output(PM8058_GPIO_PM_TO_SYS(ALC_RST), 0);
 }
 
+static void ambient_light_sensor_free(void)
+{
+	gpio_free(PM8058_GPIO_PM_TO_SYS(ALC_RST));
+}
+
 static struct bh1721_platform_data bh1721_opt_data = {
 	.reset = ambient_light_sensor_reset,
 	.resetpin_down = ambient_light_sensor_resetpin_down,
+	.free = ambient_light_sensor_free,
 };
 
 static struct i2c_board_info opt_i2c_borad_info[] = {

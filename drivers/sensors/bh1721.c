@@ -76,6 +76,7 @@ struct bh1721_data {
 	struct bh1721_platform_data *pdata;
 	void (*reset) (void);
 	void (*resetpin_down) (void);	
+	void (*free) (void);
 	struct i2c_client *i2c_client;
 	struct work_struct work_light;
 	struct hrtimer timer;
@@ -445,6 +446,7 @@ static int bh1721_i2c_probe(struct i2c_client *client,
 	bh1721->pdata = pdata;
 	bh1721->reset = pdata->reset;
 	bh1721->resetpin_down = pdata->resetpin_down;	
+	bh1721->free = pdata->free;
 	bh1721->i2c_client = client;
 	i2c_set_clientdata(client, bh1721);
 	
@@ -532,6 +534,8 @@ static int bh1721_suspend(struct device *dev)
 	if (bh1721->resetpin_down)
 		bh1721->resetpin_down();
 #endif	
+	if (bh1721->free)
+		bh1721->free();
 	return 0;
 }
 
@@ -561,6 +565,8 @@ static int bh1721_i2c_remove(struct i2c_client *client)
 		if (bh1721->power_state & LIGHT_ENABLED)
 			bh1721_light_disable(bh1721);
 	}
+	if (bh1721->free)
+		bh1721->free();
 	destroy_workqueue(bh1721->wq);
 	mutex_destroy(&bh1721->power_lock);
 	kfree(bh1721);

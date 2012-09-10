@@ -23,6 +23,7 @@ struct bh1721_platform_data
 {
 	void (*reset)(void);
 	void (*resetpin_down)(void);
+	void (*free)(void);
 };
 #endif /* __KERNEL__ */
 
