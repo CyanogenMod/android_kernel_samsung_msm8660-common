@@ -575,6 +575,7 @@ static int vid_enc_open_client(struct video_client_ctx **vid_clnt_ctx,
 	rc = vcd_open(vid_enc_device_p->device_handle, false,
 		vid_enc_vcd_cb, client_ctx, flags);
 	client_ctx->stop_msg = 0;
+	client_ctx->stop_called = 1;
 
 	if (!rc) {
 		wait_for_completion(&client_ctx->event);
@@ -660,7 +661,6 @@ static int vid_enc_open_secure(struct inode *inode, struct file *file)
 	return rc;
 
 close_client:
-	client_ctx->stop_called = 1;
 	vid_enc_close_client(client_ctx);
 	ERR("Secure session operation failure\n");
 error:
@@ -1028,7 +1028,8 @@ static long vid_enc_ioctl(struct file *file,
 		if (!result) {
 			ERR("setting VEN_IOCTL_CMD_START failed\n");
 			return -EIO;
-		}
+		} else
+			client_ctx->stop_called = 0;
 		break;
 	}
 	case VEN_IOCTL_CMD_STOP:
