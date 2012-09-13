@@ -424,6 +424,27 @@ void audio_aio_async_in_flush(struct q6audio_aio *audio)
 	}
 }
 
+static void audio_aio_unmap_pmem_region(struct q6audio_aio *audio)
+{
+	struct audio_aio_pmem_region *region;
+	struct list_head *ptr, *next;
+	int rc = -EINVAL;
+
+	pr_debug("%s[%p]:\n", __func__, audio);
+	list_for_each_safe(ptr, next, &audio->pmem_region_queue) {
+		region = list_entry(ptr, struct audio_aio_pmem_region, list);
+		pr_debug("%s[%p]: phy_address = 0x%lx\n",
+				__func__, audio, region->paddr);
+		if (region != NULL) {
+			rc = q6asm_memory_unmap(audio->ac,
+						(uint32_t)region->paddr, IN);
+			if (rc < 0)
+				pr_err("%s[%p]: memory unmap failed\n",
+					__func__, audio);
+		}
+	}
+}
+
 void audio_aio_cb(uint32_t opcode, uint32_t token,
 		uint32_t *payload,  struct q6audio_aio *audio)
 {
@@ -484,6 +505,15 @@ void audio_aio_cb(uint32_t opcode, uint32_t token,
 		e_payload.stream_info.chan_info = audio->pcm_cfg.channel_count;
 		e_payload.stream_info.sample_rate = audio->pcm_cfg.sample_rate;
 		audio_aio_post_event(audio, AUDIO_EVENT_STREAM_INFO, e_payload);
+		break;
+	case APR_BASIC_RSP_RESULT:
+		switch (payload[0]) {
+		case ASM_STREAM_CMD_CLOSE:
+			audio_aio_unmap_pmem_region(audio);
+			break;
+		default:
+			break;
+		}
 		break;
 	default:
 		break;
@@ -558,27 +588,6 @@ void audio_aio_reset_event_queue(struct q6audio_aio *audio)
 	return;
 }
 
-static void audio_aio_unmap_pmem_region(struct q6audio_aio *audio)
-{
-	struct audio_aio_pmem_region *region;
-	struct list_head *ptr, *next;
-	int rc = -EINVAL;
-
-	pr_debug("%s[%p]:\n", __func__, audio);
-	list_for_each_safe(ptr, next, &audio->pmem_region_queue) {
-		region = list_entry(ptr, struct audio_aio_pmem_region, list);
-		pr_debug("%s[%p]: phy_address = 0x%lx\n",
-				__func__, audio, region->paddr);
-		if (region != NULL) {
-			rc = q6asm_memory_unmap(audio->ac,
-						(uint32_t)region->paddr, IN);
-			if (rc < 0)
-				pr_err("%s[%p]: memory unmap failed\n",
-					__func__, audio);
-		}
-	}
-}
-
 int audio_aio_release(struct inode *inode, struct file *file)
 {
 	struct q6audio_aio *audio = file->private_data;
@@ -590,7 +599,6 @@ int audio_aio_release(struct inode *inode, struct file *file)
 	audio->wflush = 0;
 	audio->drv_ops.out_flush(audio);
 	audio->drv_ops.in_flush(audio);
-	audio_aio_unmap_pmem_region(audio);
 	audio_aio_disable(audio);
 	audio_aio_reset_pmem_region(audio);
 	audio->event_abort = 1;
