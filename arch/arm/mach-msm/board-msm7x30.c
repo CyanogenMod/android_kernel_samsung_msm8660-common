@@ -4160,7 +4160,7 @@ static int display_common_power(int on)
 	}
 
 	if (quickvx_mddi_client)
-		rc = regulator_set_voltage(mddi_ldo20, 1500000, 1800000);
+		rc = regulator_set_voltage(mddi_ldo20, 1800000, 1800000);
 	else
 		rc = regulator_set_voltage(mddi_ldo20, 1500000, 1500000);
 
@@ -4515,6 +4515,7 @@ static int lcdc_panel_power(int on)
 
 	if (unlikely(!lcdc_power_initialized)) {
 		quickvx_mddi_client = 0;
+		regulator_put(mddi_ldo20);
 		display_common_init();
 		lcdc_power_initialized = 1;
 	}
