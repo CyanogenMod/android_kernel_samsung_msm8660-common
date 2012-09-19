@@ -270,9 +270,7 @@ static void touchkey_on(void) {
 		my_tkey_led_vdd_enable(1);
 	}
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
-	if (false){
-		my_tkey_led_vdd_enable(1);
-	}
+	my_tkey_led_vdd_enable(1);
 #elif defined (CONFIG_USA_MODEL_SGH_T989)
 	if (get_hw_rev() >=0x0d){
 		my_tkey_led_vdd_enable(1);
