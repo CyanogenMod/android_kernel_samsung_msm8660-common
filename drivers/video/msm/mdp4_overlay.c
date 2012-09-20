@@ -2267,6 +2267,8 @@ void mdp4_overlay_pipe_free(struct mdp4_overlay_pipe *pipe)
 
 }
 
+static int mdp4_calc_pipe_mdp_clk(struct msm_fb_data_type *mfd, struct mdp4_overlay_pipe *pipe);
+
 static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 			struct mdp4_overlay_pipe **ppipe,
 			struct msm_fb_data_type *mfd)
@@ -2526,6 +2528,22 @@ static int mdp4_overlay_req2pipe(struct mdp_overlay *req, int mixer,
 	pipe->transp = req->transp_mask;
 
 	pipe->flags = req->flags;
+
+#ifdef CONFIG_ARCH_MSM8X60
+	/* If we're composing with MDP and we suddenly need a really outrageous clockrate,
+	 * just fail so that userspace switches to the GPU. If we don't do this, MDP will
+	 * switch to BLT mode, but it locks up and we never get any interrupts. Only seems to
+	 * happen on 8660 devices, so ifdeffed this appropriately. */
+	if (pipe->flags & MDP_BACKEND_COMPOSITION && req->id == MSMFB_NEW_REQUEST) {
+		mdp4_calc_pipe_mdp_clk(mfd, pipe);
+		if (pipe->req_clk > mdp_max_clk) {
+			pr_err("%s: high clock rate requested while composing, switch to GPU! req=%d max=%d",
+							__func__, pipe->req_clk, mdp_max_clk);
+			mdp4_overlay_pipe_free(pipe);
+			return -EINVAL;
+		}
+	}
+#endif
 
 	*ppipe = pipe;
 
