@@ -217,7 +217,7 @@ void adreno_drawctxt_destroy(struct kgsl_device *device,
 	}
 
 	if (device->state != KGSL_STATE_HUNG)
-		adreno_idle(device);
+		adreno_idle(device, KGSL_TIMEOUT_DEFAULT);
 
 	kgsl_sharedmem_free(&drawctxt->gpustate);
 	kgsl_sharedmem_free(&drawctxt->context_gmem_shadow.gmemshadow);
