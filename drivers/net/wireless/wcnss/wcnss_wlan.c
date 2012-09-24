@@ -15,6 +15,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
+#include <linux/io.h>
 #include <linux/fs.h>
 #include <linux/wcnss_wlan.h>
 #include <linux/platform_data/qcom_wcnss_device.h>
@@ -22,6 +23,7 @@
 #include <linux/jiffies.h>
 #include <linux/gpio.h>
 #include <mach/peripheral-loader.h>
+#include <mach/msm_iomap.h>
 #ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
 #include "wcnss_prealloc.h"
 #endif
@@ -77,6 +79,13 @@ static ssize_t wcnss_serial_number_store(struct device *dev,
 
 static DEVICE_ATTR(serial_number, S_IRUSR | S_IWUSR,
 	wcnss_serial_number_show, wcnss_serial_number_store);
+
+void wcnss_reset_intr(void)
+{
+	wmb();
+	__raw_writel(1 << 24, MSM_APCS_GCC_BASE + 0x8);
+}
+EXPORT_SYMBOL(wcnss_reset_intr);
 
 static int wcnss_create_sysfs(struct device *dev)
 {
