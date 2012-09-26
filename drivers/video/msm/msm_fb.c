@@ -252,6 +252,28 @@ int msm_fb_detect_client(const char *name)
 	return ret;
 }
 
+#ifdef CONFIG_FB_MSM_VSYNC_SYSFS
+int msm_fb_notify_vsync(struct msm_fb_data_type *mfd, ktime_t vsync_time)
+{
+	if (mfd) {
+		mfd->vsync_time = vsync_time;
+		sysfs_notify(&mfd->fbi->dev->kobj, NULL, "vsync_time");
+		return 0;
+	}
+	return -1;
+}
+
+static ssize_t msm_fb_vsync_time(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	return snprintf(buf, PAGE_SIZE, "%llu", ktime_to_ns(mfd->vsync_time));
+}
+
+static DEVICE_ATTR(vsync_time, S_IRUGO, msm_fb_vsync_time, NULL);
+#endif
+
 static ssize_t msm_fb_msm_fb_type(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
@@ -306,6 +328,9 @@ static ssize_t msm_fb_msm_fb_type(struct device *dev,
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, msm_fb_msm_fb_type, NULL);
 static struct attribute *msm_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
+#ifdef CONFIG_FB_MSM_VSYNC_SYSFS
+	&dev_attr_vsync_time.attr,
+#endif
 	NULL,
 };
 static struct attribute_group msm_fb_attr_group = {
@@ -321,7 +346,7 @@ static int msm_fb_create_sysfs(struct platform_device *pdev)
 	if (rc)
 		MSM_FB_ERR("%s: sysfs group creation failed, rc=%d\n", __func__,
 			rc);
-	return rc;
+    return rc;
 }
 static void msm_fb_remove_sysfs(struct platform_device *pdev)
 {

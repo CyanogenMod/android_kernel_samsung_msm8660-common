@@ -422,6 +422,14 @@ config FB_MSM_NO_MDP_PIPE_CTRL
 	  screen updates will use a different clock control mechanism if
 	  this is selected.
 
+config FB_MSM_VSYNC_SYSFS
+	depends on FB_MSM_OVERLAY
+	bool "Use sysfs_notify for vsync notification"
+	default y
+	---help---
+	  Saying 'Y' here will use sysfs_notify instead of the default uevent for
+	  notification of vsync events to userspace.
+
 config FB_MSM_OVERLAY0_WRITEBACK
 	depends on FB_MSM_OVERLAY
         bool "MDP overlay0 write back mode enable"
