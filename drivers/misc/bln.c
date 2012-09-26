@@ -10,7 +10,7 @@
  */
 
 // Enable the pr_debug() prints
-//#define DEBUG 1
+#define DEBUG 1
 
 #include <linux/platform_device.h>
 #include <linux/init.h>

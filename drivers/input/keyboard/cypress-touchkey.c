@@ -14,7 +14,7 @@
  */
 
 // Enable the pr_debug() prints
-//#define DEBUG 1
+#define DEBUG 1
 
 #include <linux/module.h>
 #include <linux/init.h>
