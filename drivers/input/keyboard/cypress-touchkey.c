@@ -240,9 +240,7 @@ static void touchkey_on(void) {
 
 	if(touchled_cmd_reversed) {
 		touchled_cmd_reversed = 0;
-#if defined (CONFIG_USA_MODEL_SGH_I717)	|| defined (CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
 		msleep(100);
-#endif
 		i2c_touchkey_write((u8*)&touchkey_led_status, 1);
 		pr_debug("[TKEY] LED RESERVED !! LED returned on touchkey_led_status = %d\n", touchkey_led_status);
 	}
@@ -553,16 +551,25 @@ static void melfas_touchkey_early_resume(struct early_suspend *h)
 {
 	pr_debug("[TKEY] melfas_touchkey_early_resume\n");
 
+	mutex_lock(&touchkey_driver->mutex);
+
+	pr_debug("[TKEY] %s is_delay_led_on=%d is_backlight_on=%d is_bln_active=%d\n", __func__,
+		touchkey_driver->is_delay_led_on, touchkey_driver->is_backlight_on,
+		touchkey_driver->is_bln_active);
+
 #if defined(CONFIG_GENERIC_BLN)
 	if (touchkey_driver->is_bln_active) {
 		pr_debug("[TKEY] %s canceling BLN activity\n", __func__);
+
+		// Must unlock mutex to avoid a deadlock since the cancel function might
+		// call one of our functions that tries to lock the same mutex
+		mutex_unlock(&touchkey_driver->mutex);
 		cancel_bln_activity();
+		mutex_lock(&touchkey_driver->mutex);
+		touchkey_driver->is_delay_led_on = true;
 		touchkey_driver->is_bln_active = false;
 	}
 #endif
-
-	mutex_lock(&touchkey_driver->mutex);
-
 	touchkey_on();
 
 	touchkey_driver->is_dead = false;
@@ -799,7 +806,7 @@ static void init_hw(void)
 
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
 
-#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
+#elif defined (CONFIG_USA_MODEL_SGH_T989)
 	if (get_hw_rev() >= 0x0d){
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_RISING);	
 	} else { 
@@ -955,7 +962,7 @@ static ssize_t touch_led_control(struct device *dev, struct device_attribute *at
 			goto unlock;
 
 		touchkey_driver->is_backlight_on = true;
-		if (touchkey_driver->is_powering_on || touchkey_driver->is_key_pressed) {
+		if (touchkey_driver->is_powering_on || touchkey_driver->is_key_pressed || touchkey_driver->is_bln_active) {
 			dev_info(dev, "[TKEY] %s: delay led on (is_powering_on=%d, is_key_pressed=%d)\n", __func__, touchkey_driver->is_powering_on, touchkey_driver->is_key_pressed);
 			touchkey_driver->is_delay_led_on = true;
 			goto unlock;
@@ -966,7 +973,7 @@ static ssize_t touch_led_control(struct device *dev, struct device_attribute *at
 	else
 	{
 		touchkey_driver->is_backlight_on = false;
-		if (touchkey_driver->is_powering_on || touchkey_driver->is_key_pressed) {
+		if (touchkey_driver->is_powering_on || touchkey_driver->is_key_pressed || touchkey_driver->is_bln_active) {
 			dev_info(dev, "[TKEY] %s: delay led off (is_powering_on=%d, is_key_pressed=%d)\n", __func__, touchkey_driver->is_powering_on, touchkey_driver->is_key_pressed);
 			touchkey_driver->is_delay_led_on = true;
 			goto unlock;

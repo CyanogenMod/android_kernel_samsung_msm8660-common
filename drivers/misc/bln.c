@@ -9,6 +9,9 @@
  * published by the Free Software Foundation.
  */
 
+// Enable the pr_debug() prints
+//#define DEBUG 1
+
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/earlysuspend.h>
@@ -327,7 +330,21 @@ EXPORT_SYMBOL(register_bln_implementation);
 void cancel_bln_activity(void)
 {
 	mutex_lock(&bln_mutex);
-	disable_led_notification();
+
+	if (bln_ongoing) {
+		bln_blink_stop();
+		bln_ongoing = false;
+
+		// Since this is only called on early_resume and therefore lights
+		// are about to be turned on, don't bother disabling the regulators.
+		// Also, cypress will need to know that it needs to write the desired
+                // lights state.
+
+		pr_debug("%s: success\n", __FUNCTION__);
+	} else {
+		pr_notice("%s: fail (ongoing=%d)\n", __FUNCTION__, bln_ongoing);
+	}
+
 	mutex_unlock(&bln_mutex);
 }
 EXPORT_SYMBOL(cancel_bln_activity);
@@ -339,12 +356,14 @@ static void blink_callback(struct work_struct *blink_work)
 		if (--blink_count == 0) {
 			pr_notice("%s: notification led time out\n", __FUNCTION__);
 			disable_led_notification();
-			return;
+			goto unlock;
 		}
 		bln_led_off();
 	} else {
 		bln_led_on();
 	}
+
+unlock:
 	mutex_unlock(&bln_mutex);
 }
 
