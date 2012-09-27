@@ -144,8 +144,6 @@ int mipi_dsi_off(struct platform_device *pdev)
 	else
 		up(&mfd->dma->mutex);
 
-	pr_debug("%s-:\n", __func__);
-
 	return ret;
 }
 struct platform_device *pdev_temp = NULL;
@@ -164,6 +162,8 @@ int mipi_dsi_on(struct platform_device *pdev)
 	int target_type = 0;
 
 	pdev_temp = pdev;
+
+
 	mfd = platform_get_drvdata(pdev);
 	fbi = mfd->fbi;
 	var = &fbi->var;
@@ -335,8 +335,6 @@ int mipi_dsi_on(struct platform_device *pdev)
 		mutex_unlock(&mfd->dma->ov_mutex);
 	else
 		up(&mfd->dma->mutex);
-
-	pr_debug("%s-:\n", __func__);
 
 	return ret;
 }
