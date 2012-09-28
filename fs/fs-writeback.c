@@ -216,7 +216,11 @@ static void redirty_tail(struct inode *inode)
  */
 static void requeue_io(struct inode *inode)
 {
-	struct bdi_writeback *wb = &inode_to_bdi(inode)->wb;
+	struct backing_dev_info *bdi = inode_to_bdi(inode);
+	if (bdi == NULL)
+		return;
+
+	struct bdi_writeback *wb = &bdi->wb;
 
 	assert_spin_locked(&inode_wb_list_lock);
 	list_move(&inode->i_wb_list, &wb->b_more_io);
@@ -1082,6 +1086,9 @@ void __mark_inode_dirty(struct inode *inode, int flags)
 		if (!was_dirty) {
 			bool wakeup_bdi = false;
 			bdi = inode_to_bdi(inode);
+
+			if (bdi == NULL)
+				return;
 
 			if (bdi_cap_writeback_dirty(bdi)) {
 				WARN(!test_bit(BDI_registered, &bdi->state),

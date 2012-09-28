@@ -1970,7 +1970,7 @@ pki_encrypt_session_key(struct key *auth_tok_key,
 {
 	struct ecryptfs_msg_ctx *msg_ctx = NULL;
 	char *payload = NULL;
-	size_t payload_len = 0;
+	size_t payload_len;
 	struct ecryptfs_message *msg;
 	int rc;
 
@@ -2183,7 +2183,7 @@ write_tag_3_packet(char *dest, size_t *remaining_bytes,
 {
 	size_t i;
 	size_t encrypted_session_key_valid = 0;
-	char session_key_encryption_key[ECRYPTFS_MAX_KEY_BYTES] = {0, };
+	char session_key_encryption_key[ECRYPTFS_MAX_KEY_BYTES];
 	struct scatterlist dst_sg[2];
 	struct scatterlist src_sg[2];
 	struct mutex *tfm_mutex = NULL;
