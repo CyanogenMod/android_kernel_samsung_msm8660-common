@@ -107,7 +107,7 @@
 #define DIM_BACKLIGHT_VALUE 0
 #define DFT_BACKLIGHT_VALUE 10
 #define BRIGHTNESS_LEVEL_DIVIDER 9
-// static DEFINE_SPINLOCK(bl_ctrl_lock);
+static DEFINE_SPINLOCK(bl_ctrl_lock);
 
 
 #define POWER_IS_ON(pwr)	((pwr) <= FB_BLANK_NORMAL)
@@ -1435,7 +1435,7 @@ static void ld9040_gamma_ctl(struct ld9040 *lcd)
 
 static void lcdc_ld9040_set_brightness(int level)
 {
-// unsigned long irqflags;
+	unsigned long irqflags;
 	int tune_level = level;
 // int i;
  	// LCD should be turned on prior to backlight
@@ -1449,8 +1449,7 @@ static void lcdc_ld9040_set_brightness(int level)
 	}
 */
 
-	//TODO: lock
-       //spin_lock_irqsave(&bl_ctrl_lock, irqflags);
+       spin_lock_irqsave(&bl_ctrl_lock, irqflags);
 
    lcd.bl = tune_level;
 
@@ -1460,8 +1459,7 @@ static void lcdc_ld9040_set_brightness(int level)
 	
 	ld9040_gamma_ctl(&lcd);	
 
-	//TODO: unlock
-	//spin_unlock_irqrestore(&bl_ctrl_lock, irqflags);
+	spin_unlock_irqrestore(&bl_ctrl_lock, irqflags);
 
 }
 
