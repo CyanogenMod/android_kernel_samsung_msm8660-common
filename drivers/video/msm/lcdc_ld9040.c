@@ -624,9 +624,7 @@ static struct miscdevice lcdtest_device = {
 static void setting_table_write(struct setting_table *table)
 {
 	long i, j;
-
-mutex_lock(&lcd.lock);
-
+	
 	LCD_CSX_HIGH
 	udelay(DEFAULT_USLEEP);
 	LCD_SCL_HIGH
@@ -687,9 +685,7 @@ mutex_lock(&lcd.lock);
 			udelay(DEFAULT_USLEEP);
 		}
 	}
-
-mutex_unlock(&lcd.lock);
-
+	
 	#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 		if(get_hw_rev() == 0x05)
 			msleep(table->wait);
@@ -714,7 +710,6 @@ mutex_unlock(&lcd.lock);
 	#else
 		msleep(table->wait);
 	#endif
-
 }
 
 
@@ -795,7 +790,6 @@ static void spi_init(void)
 #endif
 
 	#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T769)
-
 		if(!jump_from_boot)
 			return;
 		else
@@ -1185,7 +1179,6 @@ void ld9040_disp_on(void)
 #endif
 // Gamma Set
 		#if defined (CONFIG_USA_MODEL_SGH_I727)
-
 		if(!jump_from_boot){
 			lcdc_ld9040_set_brightness(18);
 			jump_from_boot=1;
@@ -1271,8 +1264,9 @@ extern void key_led_control(int on);
 
 static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 {
-	DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
-
+	mutex_lock(&lcd.lock);
+	DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
+	
 	if (!ld9040_state.disp_initialized) {
 		/* Configure reset GPIO that drives DAC */
 		lcdc_ld9040_pdata->panel_config_gpio(1);
@@ -1292,7 +1286,8 @@ static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 #endif
 	}
 
-	DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
+	DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
+	mutex_unlock(&lcd.lock);
 
 	return 0;
 }
@@ -1301,7 +1296,8 @@ static int lcdc_ld9040_panel_off(struct platform_device *pdev)
 {
 	int i;
 
-	DPRINT("%s +  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
+	mutex_lock(&lcd.lock);
+	DPRINT("%s +  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
 
 #if 0
 	if ( get_hw_rev() >= 12 )	// TEMP
@@ -1319,8 +1315,10 @@ static int lcdc_ld9040_panel_off(struct platform_device *pdev)
 		ld9040_disp_powerdown();
 //		flag_gammaupdate = 0;
 	}
+	mutex_unlock(&lcd.lock);
+	
+	DPRINT("%s -\n", __func__);	
 
-	DPRINT("%s -\n", __func__);
 	return 0;
 }
 
@@ -1483,6 +1481,9 @@ static void lcdc_ld9040_set_brightness(int level)
 static int get_gamma_value_from_bl(int bl)
 {
 	int gamma_value =0;
+#ifndef MAPPING_TBL_AUTO_BRIGHTNESS
+	int gamma_val_x10 =0;
+#endif
 
 #ifdef MAPPING_TBL_AUTO_BRIGHTNESS
 	if (unlikely(!lcd.auto_brightness && bl > 250))	bl = 250;
@@ -1521,6 +1522,8 @@ static void lcdc_ld9040_set_backlight(struct msm_fb_data_type *mfd)
 {
 	int bl_level = mfd->bl_level;
 	int tune_level;
+
+	mutex_lock(&lcd.lock);
 
 	// brightness tuning
 #if 0
@@ -1601,6 +1604,7 @@ static void lcdc_ld9040_set_backlight(struct msm_fb_data_type *mfd)
 #endif
 	pre_bl_level = bl_level;
 
+	mutex_unlock(&lcd.lock);
 }
 
 /////////////////////// sysfs
@@ -1875,13 +1879,15 @@ device_attribute *attr, const char *buf, size_t size)
 DPRINT("acl_set_store : %d\n", value);
 	if (rc < 0)
 		return rc;
-	else{
+	else {
 		if (lcd.acl_enable != value) {
+			mutex_lock(&lcd.lock);
 			lcd.acl_enable = value;
 //			if (lcd->ldi_enable)
             {
 				ld9040_set_acl(&lcd);    // Arimy to make func
             }
+			mutex_unlock(&lcd.lock);
 		}
 		return size;
 	}
@@ -2050,12 +2056,14 @@ static ssize_t ld9040_sysfs_store_lcd_power(struct device *dev,
 	if (rc < 0)
 		return rc;
 
+	mutex_lock(&lcd->lock);
 	if(lcd_enable) {
 		ld9040_power(lcd, FB_BLANK_UNBLANK);
 	}
 	else {
 		ld9040_power(lcd, FB_BLANK_POWERDOWN);
 	}
+	mutex_unlock(&lcd->lock);
 
 	return len;
 }
@@ -2109,7 +2117,8 @@ static DEVICE_ATTR(auto_brightness, 0664,
 static void ld9040_early_suspend(struct early_suspend *h) {
 
 	int i;
-
+	
+	mutex_lock(&lcd.lock);
 	DPRINT("panel off at early_suspend (%d,%d,%d)\n",
 			ld9040_state.disp_initialized,
 			ld9040_state.disp_powered_up,
@@ -2124,12 +2133,14 @@ static void ld9040_early_suspend(struct early_suspend *h) {
 		ld9040_state.disp_initialized = FALSE;
 		ld9040_disp_powerdown();
 	}
-
+	mutex_unlock(&lcd.lock);
+	
 	return;
 }
 
 static void ld9040_late_resume(struct early_suspend *h) {
 
+	mutex_lock(&lcd.lock);
 	DPRINT("panel on at late_resume (%d,%d,%d)\n",
 			ld9040_state.disp_initialized,
 			ld9040_state.disp_powered_up,
@@ -2144,6 +2155,7 @@ static void ld9040_late_resume(struct early_suspend *h) {
 		ld9040_state.disp_initialized = TRUE;
 //		flag_gammaupdate = 0;
 	}
+	mutex_unlock(&lcd.lock);
 
 	return;
 }
