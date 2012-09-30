@@ -3220,6 +3220,10 @@ static int msmfb_handle_pp_ioctl(struct msm_fb_data_type *mfd,
 			break;
 		}
 		break;
+	case mdp_op_qseed_cfg:
+		ret = mdp4_qseed_cfg((struct mdp_qseed_cfg_data *)
+						&pp_ptr->data.qseed_cfg_data);
+		break;
 #endif
 	case mdp_bl_scale_cfg:
 		ret = mdp_bl_scale_config(mfd, (struct mdp_bl_scale_data *)
