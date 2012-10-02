@@ -375,9 +375,6 @@ static void send_vsync_work(struct work_struct *work)
 {
 	struct vsycn_ctrl *vctrl =
 			container_of(work, typeof(*vctrl), vsync_work);
-#ifdef CONFIG_FB_MSM_VSYNC_SYSFS
-	msm_fb_notify_vsync(vctrl->mfd, vctrl->vsync_time);
-#else
 	char buf[64];
 	char *envp[2];
 
@@ -386,7 +383,6 @@ static void send_vsync_work(struct work_struct *work)
 	envp[0] = buf;
 	envp[1] = NULL;
 	kobject_uevent_env(&vctrl->dev->kobj, KOBJ_CHANGE, envp);
-#endif
 }
 
 void mdp4_dsi_vsync_init(int cndx)
