@@ -72,7 +72,6 @@ static struct vsycn_ctrl {
 	int clk_enabled;
 	int new_update;
 	int clk_control;
-	int new_update;
 	ktime_t vsync_time;
 	struct work_struct clk_work;
 } vsync_ctrl_db[MAX_CONTROLLER];
@@ -271,6 +270,8 @@ int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 	vp = &vctrl->vlist[undx];
 	pipe = vctrl->base_pipe;
 	mixer = pipe->mixer_num;
+
+	mdp_update_pm(vctrl->mfd, vctrl->vsync_time);
 
 	if (vp->update_cnt == 0) {
 		mutex_unlock(&vctrl->update_lock);
