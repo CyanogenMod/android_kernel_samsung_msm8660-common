@@ -290,11 +290,8 @@ int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 	pipe = vctrl->base_pipe;
 	if (pipe == NULL) {
 		pr_err("%s: NO base pipe\n", __func__);
-		mutex_unlock(&vctrl->update_lock);
-		return 0;
-	}
 
-	mixer = pipe->mixer_num;
+	mdp_update_pm(vctrl->mfd, vctrl->vsync_time);
 
 	/*
 	 * allow stage_commit without pipes queued
