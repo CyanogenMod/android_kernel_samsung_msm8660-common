@@ -601,6 +601,9 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd)
 	mfd->op_enable = mfd->suspend.op_enable;
 
 	if (mfd->suspend.panel_power_on) {
+		if (mfd->panel_driver_on == FALSE)
+			msm_fb_blank_sub(FB_BLANK_POWERDOWN, mfd->fbi,
+				      mfd->op_enable);
 		ret =
 		     msm_fb_blank_sub(FB_BLANK_UNBLANK, mfd->fbi,
 				      mfd->op_enable);
@@ -872,6 +875,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	    }
 	  }
 */
+				mfd->panel_driver_on = mfd->op_enable;
 			}
 		}
 		break;
@@ -997,6 +1001,12 @@ static int msm_fb_blank(int blank_mode, struct fb_info *info)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	msm_fb_pan_idle(mfd);
+	if (mfd->op_enable == 0) {
+		if (blank_mode == FB_BLANK_UNBLANK)
+			mfd->suspend.panel_power_on = TRUE;
+		else
+			mfd->suspend.panel_power_on = FALSE;
+	}
 	return msm_fb_blank_sub(blank_mode, info, mfd->op_enable);
 }
 
