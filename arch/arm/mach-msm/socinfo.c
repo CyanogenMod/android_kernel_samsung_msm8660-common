@@ -694,6 +694,7 @@ int __init socinfo_init(void)
 			socinfo->v5.accessory_chip);
 		break;
 	case 6:
+#if !defined(CONFIG_USA_MODEL_SGH_I577)
 		pr_info("%s: v%u, id=%u, ver=%u.%u, "
 			 "raw_id=%u, raw_ver=%u, hw_plat=%u,  hw_plat_ver=%u\n"
 			" accessory_chip=%u hw_plat_subtype=%u\n", __func__,
@@ -705,6 +706,7 @@ int __init socinfo_init(void)
 			socinfo->v3.hw_platform, socinfo->v4.platform_version,
 			socinfo->v5.accessory_chip,
 			socinfo->v6.hw_platform_subtype);
+#endif
 		break;
 	default:
 		pr_err("%s: Unknown format found\n", __func__);

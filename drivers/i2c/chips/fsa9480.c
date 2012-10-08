@@ -751,7 +751,7 @@ void fsa9480_audiopath_control(int enable)
 {
 	struct i2c_client *client = local_usbsw->client;
 	dev_info(&client->dev, "%s(%d)\n", __func__, enable);
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if(enable) {
 		if(Dockconnected && !get_sec_det_jack_state())
 			fsa9480_manual_switching(SWITCH_PORT_AUDIO); /* dock audio path On */
@@ -790,7 +790,7 @@ void fsa9480_manual_switching(int path)
 	value = i2c_smbus_read_byte_data(client, FSA9480_REG_CTRL);
 	if (value < 0)
 		dev_err(&client->dev, "%s: err %d\n", __func__, value);
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (Dockconnected) {
 		if ((value & ~CON_MANUAL_SW & ~CON_RAW_DATA) !=
 				(CON_SWITCH_OPEN |  CON_WAIT)) {
