@@ -62,9 +62,9 @@
 #include <linux/fb.h>
 #include <linux/backlight.h>
 #include <linux/miscdevice.h>
-#include "lcdc_ld9040_seq.h"
-#include "lcdc_ea8868_seq.h"
-#include "mdp4_video_enhance.h"
+#include <lcdc_ld9040_seq.h>
+#include <lcdc_ea8868_seq.h>
+#include <mdp4_video_enhance.h>
 
 #define MAPPING_TBL_AUTO_BRIGHTNESS 1
 //#if defined (CONFIG_JPN_MODEL_SC_03D)
