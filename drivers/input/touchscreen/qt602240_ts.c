@@ -98,11 +98,14 @@
 
 #define MXT224_AUTOCAL_WAIT_TIME		2000
 
-
+#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
+#define T48_CALCFG_TA     0x72
+#else
 #define T48_CALCFG_TA     0x52
+#endif
 
 #if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
-#define	T48_CALCFG                0x42
+#define	T48_CALCFG                0x72
 #else
 #if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
 #define	T48_CALCFG                0x72 //20120418
@@ -592,9 +595,15 @@ static void mxt224_ta_probe(int ta_status)
 		calcfg_dis = T48_CALCFG_TA;
 		calcfg_en = T48_CALCFG_TA | 0x20;
 		
-		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
+		noise_threshold = 32;
+		active_depth = 32;	//20120713
+		#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
 		noise_threshold = 32;
 		active_depth = 35;	//20120418
+		#elif defined (CONFIG_USA_MODEL_SGH_T769)
+		noise_threshold = 40;
+		active_depth = 38;//20120704
 		#else		
 		noise_threshold = 40;
 		active_depth = 38;	//20120418	
@@ -629,11 +638,16 @@ static void mxt224_ta_probe(int ta_status)
 		noise_threshold = 30;
 		movfilter = 11;		
 		blen = 32;
-		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727)
+		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
+		active_depth = 28;//20120713
+		charge_time = 22;
+		#elif defined (CONFIG_USA_MODEL_SGH_I727)
 		active_depth = 26;//20120418
 		charge_time = 22;
 		#elif defined (CONFIG_USA_MODEL_SGH_T989)
 		active_depth = 24;
+		#elif defined (CONFIG_USA_MODEL_SGH_T769) //20120704
+		active_depth = 20; 
 		#else
 		active_depth = 56;
 		#endif
@@ -676,11 +690,7 @@ static void mxt224_ta_probe(int ta_status)
 		#endif
 		#endif
 
-		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
-		value = 26;
-		#else
 		value = active_depth;
-		#endif
 		ret = get_object_info(copy_data, SPT_CTECONFIG_T46, &size_one, &obj_address);
 		write_mem(copy_data, obj_address+3, 1, &value);
 		
@@ -690,6 +700,17 @@ static void mxt224_ta_probe(int ta_status)
 		#if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
 	        value = charge_time;
 		write_mem(copy_data, obj_address, size_one, &value);
+		#elif defined (CONFIG_USA_MODEL_SGH_T769)// 20120702
+		if (ta_status)
+		{
+			value = 22;
+			write_mem(copy_data, obj_address, size_one, &value);
+		}
+		else
+		{
+			value = 22; //20120702 27;
+			write_mem(copy_data, obj_address, size_one, &value);
+		}
 		#else
 		if (ta_status)
 		{
@@ -702,23 +723,25 @@ static void mxt224_ta_probe(int ta_status)
 			write_mem(copy_data, obj_address, size_one, &value);
 		}
 		#endif
-	
+#if !defined (CONFIG_USA_MODEL_SGH_T769) //20120702
 		value = calcfg_dis;
 		register_address=2;
 		ret = get_object_info(copy_data, PROCG_NOISESUPPRESSION_T48, &size_one, &obj_address);
 	       size = size_one;
 		size_one = 1;
 		write_mem(copy_data, obj_address+(u16)register_address, size_one, &value);
-		
+#endif		
 		if (ta_status)
 		write_config(copy_data, PROCG_NOISESUPPRESSION_T48, copy_data->noise_suppression_cfg_ta);
 		else
 		write_config(copy_data, PROCG_NOISESUPPRESSION_T48, copy_data->noise_suppression_cfg);
 
+#if !defined (CONFIG_USA_MODEL_SGH_T769) //20120702
 		value = calcfg_en;
 		write_mem(copy_data, obj_address+(u16)register_address, size_one, &value);
 		read_mem(copy_data, obj_address+(u16)register_address, (u8)size_one, &val);
 		printk(KERN_ERR"[TSP]TA_probe MXT224E T%d Byte%d is %d\n",48,register_address,val);
+#endif		
 
 		if(is_inputmethod == 1)   /* T48 Config change for TA connection */
 		{

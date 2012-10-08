@@ -1813,7 +1813,7 @@ ADIE_SPEAKER_HEADSET_RX_48000_256;
 static struct adie_codec_action_unit speaker_lineout_rx_48KHz_osr256_actions[] =
 ADIE_SPEAKER_HEADSET_RX_48000_256; //ADIE_SPEAKER_RX_48000_256;
 
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 static struct adie_codec_action_unit hac_handset_call_rx_48KHz_osr256_actions[] =
 ADIE_HANDSET_CALL_RX_48000_256;
 #endif
@@ -2265,7 +2265,7 @@ static struct adie_codec_hwsetting_entry speaker_lineout_rx_settings[] = {
 	}
 };
 
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 static struct adie_codec_hwsetting_entry hac_handset_call_rx_settings[] = {
 	{
 		.freq_plan = AUDIO_FREQUENCY,
@@ -2560,7 +2560,7 @@ static struct adie_codec_dev_profile speaker_lineout_rx_profile = {
 	.setting_sz = ARRAY_SIZE(speaker_lineout_rx_settings),
 };
 
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 static struct adie_codec_dev_profile hac_handset_call_rx_profile = {
 	.path_type = ADIE_CODEC_RX,
 	.settings = hac_handset_call_rx_settings,
@@ -3492,7 +3492,7 @@ static struct snddev_hdmi_data speaker_hdmi_rx_data = {
 	.default_sample_rate = 48000,
 };
 
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 static struct snddev_icodec_data hac_handset_call_rx_data = {
 	.capability = (SNDDEV_CAP_RX | SNDDEV_CAP_VOICE),
 	.name = "hac_handset_call_rx",
@@ -4503,7 +4503,7 @@ static struct platform_device device_speaker_hdmi_rx = {
 	.dev = { .platform_data = &speaker_hdmi_rx_data },
 };
 
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 static struct platform_device device_hac_handset_call_rx = {
 	.name = "snddev_icodec",
 	.dev = { .platform_data = &hac_handset_call_rx_data },
@@ -4844,7 +4844,7 @@ static struct platform_device *snd_devices_celox[] __initdata = {
 	&device_speaker_headset_rx,
 	&device_speaker_lineout_rx,
 	&device_speaker_hdmi_rx,
-#if defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	&device_hac_handset_call_rx,
 #endif 	
 	&device_camcoder_tx,

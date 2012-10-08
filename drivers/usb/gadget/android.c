@@ -946,10 +946,12 @@ static ssize_t rndis_ethaddr_store(struct device *dev,
 		/* XOR the USB serial across the remaining bytes */
 		rndis->ethaddr[i % (ETH_ALEN - 1) + 1] ^= *src++;
 	}
+#if !defined(CONFIG_USA_MODEL_SGH_I577)
 	printk(KERN_DEBUG "usb: %s MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
 			__func__, rndis->ethaddr[0], rndis->ethaddr[1],
 			rndis->ethaddr[2], rndis->ethaddr[3], rndis->ethaddr[4],
 			rndis->ethaddr[5]);
+#endif
 	return size;
 #else
 	if (sscanf(buf, "%02x:%02x:%02x:%02x:%02x:%02x\n",
