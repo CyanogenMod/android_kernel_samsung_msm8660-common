@@ -166,6 +166,7 @@ struct taos_data {
 	int light_buffer;
 	int delay;
 	int avg[3];
+	u8 calibrated_pulse_count;
 //	struct timer_list light_init_timer;
 //	struct timer_list prox_init_timer;  
 };

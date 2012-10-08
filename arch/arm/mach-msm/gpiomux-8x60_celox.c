@@ -573,7 +573,7 @@ static struct gpiomux_setting gyro_fifo_int_suspend_cfg = {
 #endif
 #endif //CONFIG_TARGET_LOCALE_US_ATT_REV01
 
-#ifdef CONFIG_OPTICAL_GP2A
+#if defined(CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
 static struct gpiomux_setting opt_active_cfg = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_8MA,
@@ -717,6 +717,32 @@ static struct gpiomux_setting boot_config_cfg = {
 };
 
 static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
+#if defined(CONFIG_USA_MODEL_SGH_T769)
+	{
+		.gpio      = 33,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio      = 34,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio      = 35,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+	{
+		.gpio      = 36,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+#else
 	{
 		.gpio      = 33,
 		.settings = {
@@ -741,6 +767,7 @@ static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi1,
 		},
 	},	
+#endif
 	{
 		.gpio      = 43,
 		.settings = {
@@ -789,12 +816,21 @@ static struct msm_gpiomux_config msm8x60_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi8,
 		},
 	},
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+	{
+		.gpio      = 65,
+		.settings = {
+			[GPIOMUX_SUSPENDED] = &nc_cfg,
+		},
+	},
+#else
 	{
 		.gpio      = 65,
 		.settings = {
 			[GPIOMUX_SUSPENDED] = &gsbi8,
 		},
 	},
+#endif
 #if defined(CONFIG_PN544_NFC)
 	{
 		.gpio      = 72,
@@ -1079,7 +1115,7 @@ static struct msm_gpiomux_config msm8x60_gyro_configs[] __initdata = {
 #endif
 #endif //CONFIG_TARGET_LOCALE_US_ATT_REV01
 
-#ifdef CONFIG_OPTICAL_GP2A
+#if defined(CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
 static struct msm_gpiomux_config msm8x60_opt_configs[] __initdata = {
 	{
 		.gpio      = 138,

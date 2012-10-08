@@ -104,6 +104,18 @@
 #define RCOMP0_TEMP			20	/* 'C */
 #endif /* CONFIG_PMIC8058_XOADC_CAL */
 
+#elif defined(CONFIG_USA_MODEL_SGH_T769)
+
+#if defined(CONFIG_PMIC8058_XOADC_CAL)
+#define CURRENT_OF_FULL_CHG_UI          2400    /* 240mA */
+#define CURRENT_OF_FULL_CHG             2000    /* 200mA */
+#define RCOMP0_TEMP                     20      /* 'C */
+#else
+#define CURRENT_OF_FULL_CHG_UI          2000    /* 200mA */
+#define CURRENT_OF_FULL_CHG             1700    /* 170mA */
+#define RCOMP0_TEMP                     20      /* 'C */
+#endif /* CONFIG_PMIC8058_XOADC_CAL */
+
 #else
 
 #if defined(CONFIG_PMIC8058_XOADC_CAL)
@@ -141,7 +153,7 @@
 #endif
 
 #if defined(CONFIG_USA_MODEL_SGH_I577) || \
-	defined(CONFIG_CAN_MODEL_SGH_I577R)
+	defined(CONFIG_CAN_MODEL_SGH_I577R) || defined(CONFIG_USA_MODEL_SGH_T769)
 #define RECHARGING_VOLTAGE	(4140 * 1000)		/* 4.14 V */
 #else
 #define RECHARGING_VOLTAGE	(4130 * 1000)		/* 4.13 V */
@@ -258,12 +270,12 @@
 #define NB_LOW_RECOVER_TEMP_ADC			1600
 
 #elif defined(CONFIG_USA_MODEL_SGH_T769)
-#define HIGH_BLOCK_TEMP_ADC			626
-#define HIGH_RECOVER_TEMP_ADC			614
+#define HIGH_BLOCK_TEMP_ADC			706
+#define HIGH_RECOVER_TEMP_ADC			700
 #define EVT_HIGH_BLOCK_TEMP_ADC			707
 #define EVT_HIGH_RECOVER_TEMP_ADC		701
-#define LOW_BLOCK_TEMP_ADC			513
-#define LOW_RECOVER_TEMP_ADC			522
+#define LOW_BLOCK_TEMP_ADC			514
+#define LOW_RECOVER_TEMP_ADC			524
 
 #define NB_HIGH_BLOCK_TEMP_ADC			510
 #define NB_HIGH_RECOVER_TEMP_ADC		637
