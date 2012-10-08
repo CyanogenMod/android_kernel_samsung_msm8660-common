@@ -63,8 +63,8 @@
 #include <linux/backlight.h>
 #include <linux/miscdevice.h>
 
-#include <lcdc_S6E63M0_seq.h>
-#include <mdp4_video_enhance.h>
+#include "lcdc_S6E63M0_seq.h"
+#include "mdp4_video_enhance.h"
 
 #define LCDC_DEBUG
 
