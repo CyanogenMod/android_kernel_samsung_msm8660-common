@@ -195,7 +195,7 @@ static int s5k6aafx_i2c_write_burst_list(const u32 *list, int size, char *name)
 	int len = 0;
 	u8 buf[BURST_MODE_BUFFER_MAX_SIZE] = {0,};
 
-	CAM_DEBUG("%s, size=%d",name, size);
+	cam_info("%s, size=%d",name, size);
 
 
 	struct i2c_msg msg = {
@@ -1136,7 +1136,6 @@ int s5k6aafx_sensor_ext_config(void __user *argp)
 {
 	sensor_ext_cfg_data cfg_data;
 	int rc = 0;
-    printk("s5k6aafx_sensor_ext_config");
 
 	if (!s5k6aafx_ctrl)
 		return -ENOSYS;
@@ -1147,7 +1146,7 @@ int s5k6aafx_sensor_ext_config(void __user *argp)
 		return -EFAULT;
 	}
 
-	CAM_DEBUG("cmd = %d , param1 = %d",cfg_data.cmd,cfg_data.value_1);
+	cam_info("cmd = %d , param1 = %d",cfg_data.cmd,cfg_data.value_1);
 	if( (cfg_data.cmd != EXT_CFG_SET_DTP)
 		&& (cfg_data.cmd != EXT_CFG_SET_VT_MODE)
 		&& (cfg_data.cmd != EXT_CFG_SET_MOVIE_MODE)
