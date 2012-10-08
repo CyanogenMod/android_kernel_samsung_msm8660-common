@@ -2767,8 +2767,10 @@ int mdp4_overlay_play(struct fb_info *info, struct msmfb_overlay_data *req)
 		ctrl->mixer0_played++;
 		if (ctrl->panel_mode & MDP4_PANEL_LCDC) {
 			mdp4_overlay_reg_flush(pipe, 0);
+#if !defined(CONFIG_USA_MODEL_SGH_T769) && !defined(CONFIG_USA_MODEL_SGH_I577)
 			if (!mfd->use_ov0_blt)
 				mdp4_overlay_update_blt_mode(mfd);
+#endif
 			mdp4_overlay_lcdc_vsync_push(mfd, pipe);
 		}
 #ifdef CONFIG_FB_MSM_MIPI_DSI

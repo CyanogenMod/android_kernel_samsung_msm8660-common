@@ -42,6 +42,19 @@ static ssize_t mode_store(struct device *dev,struct device_attribute *attr,
 		temp.hp_gainup = g_ampgain[set_mode].hp_gainup;
 		temp.sp_att = g_ampgain[set_mode].sp_att;
 		temp.sp_gainup = g_ampgain[set_mode].sp_gainup;
+#elif defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+		temp.in1_gain = g_ampgain[set_mode].in1_gain;
+		temp.in2_gain = g_ampgain[set_mode].in2_gain;
+		temp.hp_att = g_ampgain[set_mode].hp_att;
+		temp.hp_gainup = g_ampgain[set_mode].hp_gainup;
+		temp.sp_att = g_ampgain[set_mode].sp_att;
+		temp.sp_gainup = g_ampgain[set_mode].sp_gainup;
+		temp.bSpNg_DetectionLv = g_ampgain[set_mode].bSpNg_DetectionLv;
+		temp.bSpNg_AttackTime = g_ampgain[set_mode].bSpNg_AttackTime;
+		temp.bSpNcpl_NonClipRatio = g_ampgain[set_mode].bSpNcpl_NonClipRatio;
+		temp.bSpNcpl_PowerLimit = g_ampgain[set_mode].bSpNcpl_PowerLimit;
+		temp.bSpNcpl_AttackTime = g_ampgain[set_mode].bSpNcpl_AttackTime;
+		temp.bSpNcpl_ReleaseTime = g_ampgain[set_mode].bSpNcpl_ReleaseTime;
 #endif
 
 	}
