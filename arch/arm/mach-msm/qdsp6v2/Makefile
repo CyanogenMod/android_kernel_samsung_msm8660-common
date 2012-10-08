@@ -6,6 +6,8 @@ ifdef CONFIG_USA_MODEL_SGH_I717
 obj-y += board-msm8x60-audio-Q1.o
 else ifdef CONFIG_USA_MODEL_SGH_I577
 obj-y += board-msm8x60-audio_a2.o
+else ifdef CONFIG_USA_MODEL_SGH_T769
+obj-y += board-msm8x60-audio-APEX40.o
 else ifdef CONFIG_USA_MODEL_SGH_I757
 obj-y += board-msm8x60-audio-CELOXHD.o
 else ifdef CONFIG_EUR_MODEL_GT_P7320
