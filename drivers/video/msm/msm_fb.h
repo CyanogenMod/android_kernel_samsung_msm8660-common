@@ -200,6 +200,7 @@ struct msm_fb_data_type {
 	struct work_struct commit_work;
 	void *msm_fb_backup;
 	boolean panel_driver_on;
+	struct mutex entry_mutex;
 };
 struct msm_fb_backup_type {
 	struct fb_info info;
