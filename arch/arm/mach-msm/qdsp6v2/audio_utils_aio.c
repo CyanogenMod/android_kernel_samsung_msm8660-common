@@ -506,15 +506,6 @@ void audio_aio_cb(uint32_t opcode, uint32_t token,
 		e_payload.stream_info.sample_rate = audio->pcm_cfg.sample_rate;
 		audio_aio_post_event(audio, AUDIO_EVENT_STREAM_INFO, e_payload);
 		break;
-	case APR_BASIC_RSP_RESULT:
-		switch (payload[0]) {
-		case ASM_STREAM_CMD_CLOSE:
-			audio_aio_unmap_pmem_region(audio);
-			break;
-		default:
-			break;
-		}
-		break;
 	default:
 		break;
 	}
@@ -600,6 +591,7 @@ int audio_aio_release(struct inode *inode, struct file *file)
 	audio->drv_ops.out_flush(audio);
 	audio->drv_ops.in_flush(audio);
 	audio_aio_disable(audio);
+	audio_aio_unmap_pmem_region(audio);
 	audio_aio_reset_pmem_region(audio);
 	audio->event_abort = 1;
 	wake_up(&audio->event_wait);
