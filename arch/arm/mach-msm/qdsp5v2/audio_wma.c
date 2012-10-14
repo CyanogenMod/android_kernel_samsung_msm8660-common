@@ -1110,7 +1110,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 					uint8_t index;
 					uint32_t offset = 0;
 					audio->read_data =
-						audio->map_v_read->vaddr;
+						(char *)audio->map_v_read;
 					audio->buf_refresh = 0;
 					audio->pcm_buf_count =
 					    config.buffer_count;
