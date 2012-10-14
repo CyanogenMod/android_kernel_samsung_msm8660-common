@@ -186,7 +186,8 @@ void mipi_dsi_clk_cfg(int on)
 			}
 		}
 	}
-	pr_debug("%s: on=%d clk_cnt=%d\n", __func__, on, dsi_clk_cnt);
+	pr_debug("%s: on=%d clk_cnt=%d pid=%d\n", __func__,
+				on, dsi_clk_cnt, current->pid);
 	mutex_unlock(&clk_mutex);
 }
 
@@ -1042,6 +1043,7 @@ void mipi_dsi_cmd_mdp_start(void)
 	spin_lock_irqsave(&dsi_mdp_lock, flag);
 	mipi_dsi_enable_irq(DSI_MDP_TERM);
 	dsi_mdp_busy = TRUE;
+	INIT_COMPLETION(dsi_mdp_comp);
 	spin_unlock_irqrestore(&dsi_mdp_lock, flag);
 }
 
@@ -1585,10 +1587,12 @@ void mipi_dsi_cmdlist_commit(int from_mdp)
 
 	mutex_lock(&cmd_mutex);
 	req = mipi_dsi_cmdlist_get();
-	if (req == NULL) {
-		mutex_unlock(&cmd_mutex);
-		return;
-	}
+
+	/* make sure dsi_cmd_mdp is idle */
+	mipi_dsi_cmd_mdp_busy();
+
+	if (req == NULL)
+		goto need_lock;
 
 	video = MIPI_INP(MIPI_DSI_BASE + 0x0000);
 	video &= 0x02; /* VIDEO_MODE */
@@ -1601,7 +1605,7 @@ void mipi_dsi_cmdlist_commit(int from_mdp)
 	dsi_ctrl = MIPI_INP(MIPI_DSI_BASE + 0x0000);
 	if (dsi_ctrl & 0x02) {
 		/* video mode, make sure dsi_cmd_mdp is busy
-		 * sodcs command will be txed at start of BLLP
+		 * so dcs command will be txed at start of BLLP
 		 */
 		mipi_dsi_wait_for_video_eng_busy();
 	} else {
@@ -1619,6 +1623,11 @@ void mipi_dsi_cmdlist_commit(int from_mdp)
 
 	if (!video)
 		mipi_dsi_clk_cfg(0);
+
+need_lock:
+
+	if (from_mdp) /* from pipe_commit */
+		mipi_dsi_cmd_mdp_start();
 
 	mutex_unlock(&cmd_mutex);
 }
@@ -1771,6 +1780,7 @@ irqreturn_t mipi_dsi_isr(int irq, void *ptr)
 		mipi_dsi_mdp_stat_inc(STAT_DSI_MDP);
 		spin_lock(&dsi_mdp_lock);
 		dsi_ctrl_lock = FALSE;
+		dsi_mdp_busy = FALSE;
 		mipi_dsi_disable_irq_nosync(DSI_MDP_TERM);
 		complete(&dsi_mdp_comp);
 		spin_unlock(&dsi_mdp_lock);
