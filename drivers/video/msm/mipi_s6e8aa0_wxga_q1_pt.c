@@ -92,11 +92,8 @@ static int __init mipi_video_s6e8aa0_wxga_q1_pt_init(void)
 
 	pinfo.bl_max = 255; 
 	pinfo.bl_min = 1; 
-#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-	pinfo.fb_num = 3; 
-#else
 	pinfo.fb_num = 2; 
-#endif
+    pinfo.lcd.blt_ctrl = 1;
 
 //	pinfo.clk_rate = 400000000; 
 
