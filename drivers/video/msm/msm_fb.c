@@ -729,6 +729,7 @@ static int msm_fb_ext_resume(struct device *dev)
 		return 0;
 
 	mutex_lock(&mfd->entry_mutex);
+	msm_fb_pan_idle(mfd);
 	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 	if (mfd->panel_info.type == HDMI_PANEL ||
 		mfd->panel_info.type == DTV_PANEL) {
@@ -784,7 +785,9 @@ static void memset32_io(u32 __iomem *_ptr, u32 val, size_t count)
 static void msmfb_early_suspend(struct early_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-						    early_suspend);
+						early_suspend);
+
+	msm_fb_pan_idle(mfd);
 #if defined(CONFIG_FB_MSM_MDP303)
 	/*
 	* For MDP with overlay, set framebuffer with black pixels
@@ -807,7 +810,10 @@ static void msmfb_early_suspend(struct early_suspend *h)
 static void msmfb_early_resume(struct early_suspend *h)
 {
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
-						    early_suspend);
+						early_suspend);
+
+	msm_fb_pan_idle(mfd);
+
 	msm_fb_resume_sub(mfd);
 }
 #endif
@@ -892,8 +898,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 	if (!op_enable)
 		return -EPERM;
-
-	msm_fb_pan_idle(mfd);
 
 	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 	if ((!pdata) || (!pdata->on) || (!pdata->off)) {
