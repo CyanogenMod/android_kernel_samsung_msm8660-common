@@ -33,6 +33,7 @@
 #include "kgsl_sharedmem.h"
 #include "kgsl_device.h"
 #include "kgsl_trace.h"
+#include "kgsl_sync.h"
 
 #undef MODULE_PARAM_PREFIX
 #define MODULE_PARAM_PREFIX "kgsl."
@@ -59,9 +60,9 @@ static struct ion_client *kgsl_ion_client;
  * @returns - 0 on success or error code on failure
  */
 
-static int kgsl_add_event(struct kgsl_device *device, u32 ts,
+int kgsl_add_event(struct kgsl_device *device, u32 ts,
 	void (*cb)(struct kgsl_device *, void *, u32), void *priv,
-	struct kgsl_device_private *owner)
+	void *owner)
 {
 	struct kgsl_event *event;
 	struct list_head *n;
@@ -105,6 +106,7 @@ static int kgsl_add_event(struct kgsl_device *device, u32 ts,
 	queue_work(device->work_queue, &device->ts_expired_ws);
 	return 0;
 }
+EXPORT_SYMBOL(kgsl_add_event);
 
 /**
  * kgsl_cancel_events - Cancel all events for a process
@@ -112,8 +114,8 @@ static int kgsl_add_event(struct kgsl_device *device, u32 ts,
  * @owner - driver instance that owns the events to cancel
  *
  */
-static void kgsl_cancel_events(struct kgsl_device *device,
-	struct kgsl_device_private *owner)
+void kgsl_cancel_events(struct kgsl_device *device,
+	void *owner)
 {
 	struct kgsl_event *event, *event_tmp;
 	unsigned int cur = device->ftbl->readtimestamp(device,
@@ -135,6 +137,7 @@ static void kgsl_cancel_events(struct kgsl_device *device,
 		kfree(event);
 	}
 }
+EXPORT_SYMBOL(kgsl_cancel_events);
 
 static inline struct kgsl_mem_entry *
 kgsl_mem_entry_create(void)
@@ -255,6 +258,12 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 	context->id = id;
 	context->dev_priv = dev_priv;
 
+	if (kgsl_sync_timeline_create(context)) {
+		idr_remove(&dev_priv->device->context_idr, id);
+		kfree(context);
+		return NULL;
+	}
+
 	return context;
 }
 
@@ -271,6 +280,7 @@ kgsl_destroy_context(struct kgsl_device_private *dev_priv,
 	BUG_ON(context->devctxt);
 
 	id = context->id;
+	kgsl_sync_timeline_destroy(context);
 	kfree(context);
 
 	idr_remove(&dev_priv->device->context_idr, id);
@@ -1844,6 +1854,11 @@ static long kgsl_ioctl_timestamp_event(struct kgsl_device_private *dev_priv,
 			param->timestamp, param->priv, param->len,
 			dev_priv);
 		break;
+	case KGSL_TIMESTAMP_EVENT_FENCE:
+		ret = kgsl_add_fence_event(dev_priv->device,
+			param->context_id, param->timestamp, param->priv,
+			param->len, dev_priv);
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -1914,6 +1929,8 @@ static long kgsl_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 		cmd = IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP;
 	else if (cmd == IOCTL_KGSL_CMDSTREAM_READTIMESTAMP_OLD)
 		cmd = IOCTL_KGSL_CMDSTREAM_READTIMESTAMP;
+	else if (cmd == IOCTL_KGSL_TIMESTAMP_EVENT_OLD)
+		cmd = IOCTL_KGSL_TIMESTAMP_EVENT;
 
 	nr = _IOC_NR(cmd);
 
