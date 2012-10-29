@@ -114,8 +114,7 @@ static void register_page_bootmem_info_section(unsigned long start_pfn)
 {
 	unsigned long *usemap, mapsize, page_mapsize, section_nr, i, j;
 	struct mem_section *ms;
-	struct page *page, *memmap, *page_page;
-	int memmap_page_valid;
+	struct page *page, *memmap;
 
 	section_nr = pfn_to_section_nr(start_pfn);
 	ms = __nr_to_section(section_nr);
