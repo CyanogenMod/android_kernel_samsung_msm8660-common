@@ -200,11 +200,8 @@ static int k3dh_read_accel_xyz(struct k3dh_data *k3dh, struct k3dh_acc *acc)
 	}
 #elif defined (CONFIG_USA_MODEL_SGH_I577)
 	{
-                acc->x = acc->x;
-                s16 temp = acc->x;
-                acc->x = acc->y;
-                acc->y = (temp);
-	 	acc->z = -(acc->z);
+		acc->x = -(acc->x);
+		acc->y = -(acc->y);
 	}
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
 	if (get_hw_rev() >= 0x04 ) 
