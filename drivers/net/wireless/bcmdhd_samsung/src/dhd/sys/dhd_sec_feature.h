@@ -53,7 +53,7 @@
 #if defined(CONFIG_TARGET_SERIES_CELOX)\
 	&& defined(CONFIG_TARGET_LOCALE_USA)
 #if defined(CONFIG_USA_MODEL_SGH_I577)
-#define RDWR_MACADDR
+#define READ_MACADDR
 #else
 #define WRITE_MACADDR
 #endif
@@ -61,7 +61,7 @@
 
 #if defined(CONFIG_USA_OPERATOR_TMO)\
         && defined(CONFIG_USA_MODEL_SGH_T769)
-#define RDWR_MACADDR
+#define READ_MACADDR
 #endif
 
 #if defined(CONFIG_TARGET_SERIES_Q1)\
