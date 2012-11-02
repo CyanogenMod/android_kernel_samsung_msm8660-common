@@ -295,7 +295,7 @@ void FSA9480_CheckAndHookAudioDock(int value, int onoff)
 			if (pdata->deskdock_cb)
 				pdata->deskdock_cb(FSA9480_ATTACHED);
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 			if (!get_sec_det_jack_state()) {
 #endif
 				if (HWversion ==VERSION_FSA9480)
@@ -309,7 +309,7 @@ void FSA9480_CheckAndHookAudioDock(int value, int onoff)
 			
 				if (ret < 0)
 					dev_err(&client->dev,"%s: err %d\n", __func__, ret);
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 			}
 			else
 				printk("%s: Earjack exist..\n", __func__);
@@ -390,7 +390,7 @@ void FSA9480_CheckAndHookAudioDock(int value, int onoff)
 			dev_info(&client->dev, "FSA9480_CheckAndHookAudioDock On ctrl reg: 0x%x\n", ret);
 
 
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 			if (!get_sec_det_jack_state()) {
 #endif
 				if (HWversion ==VERSION_FSA9480)
@@ -404,7 +404,7 @@ void FSA9480_CheckAndHookAudioDock(int value, int onoff)
 			
 				if (ret < 0)
 					dev_err(&client->dev,"%s: err %d\n", __func__, ret);
-#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_T769)
 			}
 			else
 				printk("%s: Earjack exist..\n", __func__);
