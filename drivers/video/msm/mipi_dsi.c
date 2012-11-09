@@ -147,8 +147,9 @@ int mipi_dsi_off(struct platform_device *pdev)
 	return ret;
 }
 struct platform_device *pdev_temp = NULL;
+
 extern struct mdp4_overlay_perf perf_current;
-int mipi_dsi_on(struct platform_device *pdev)
+static int mipi_dsi_on(struct platform_device *pdev)
 {
 	int ret = 0;
 	u32 clk_rate;
