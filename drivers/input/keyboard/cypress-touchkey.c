@@ -69,7 +69,7 @@ struct device *sec_touchkey;
 
 
 static int touchkey_keycode[5] = {0,KEY_MENU , KEY_HOMEPAGE, KEY_BACK, KEY_SEARCH};
-#if defined (CONFIG_USA_MODEL_SGH_T989) //new touchkey fpcb
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769) //new touchkey fpcb
 static int touchkey_pba_revision = TOUCHKEY_PBA_REV_NA;
 #endif
 static int vol_mv_level = 33;
@@ -163,7 +163,7 @@ int my_tkey_led_vdd_enable(int onoff) {
 
 /* Mutex must be locked when calling. */
 static void set_backlight_onoff_values(void) {
-#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I727)
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >=0x05 )
 	{
 		touchkey_driver->backlight_on  = BACKLIGHT_ON;
@@ -172,7 +172,7 @@ static void set_backlight_onoff_values(void) {
 		touchkey_driver->backlight_on  = OLD_BACKLIGHT_ON;
 		touchkey_driver->backlight_off = OLD_BACKLIGHT_OFF;
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I577)|| defined(CONFIG_CAN_MODEL_SGH_I577R)
 	touchkey_driver->backlight_on  = BACKLIGHT_ON;
 	touchkey_driver->backlight_off = BACKLIGHT_OFF;
 #else
@@ -183,7 +183,7 @@ static void set_backlight_onoff_values(void) {
 
 /* Mutex must be locked when calling. */
 static void touchkey_off(void) {
-#if defined (CONFIG_USA_MODEL_SGH_T989)
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >= 0x0d){
 		my_tkey_vdd_enable(0);
 		my_tkey_led_vdd_enable(0);
@@ -201,7 +201,7 @@ static void touchkey_off(void) {
 		gpio_direction_output(GPIO_TOUCHKEY_SDA, 0);
 		gpio_free(GPIO_TOUCHKEY_SDA);
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I577)|| defined(CONFIG_CAN_MODEL_SGH_I577R)
 	my_tkey_vdd_enable(0);
 	my_tkey_led_vdd_enable(0);
 	gpio_direction_output(GPIO_TOUCHKEY_SCL, 0);
@@ -213,7 +213,7 @@ static void touchkey_off(void) {
 
 /* Mutex must be locked when calling. */
 static void touchkey_on(void) {
-#if defined (CONFIG_USA_MODEL_SGH_T989)
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >= 0x0d){
 		my_tkey_vdd_enable(1);
 		gpio_request(GPIO_TOUCHKEY_SCL, "TKEY_SCL");
@@ -229,7 +229,7 @@ static void touchkey_on(void) {
 		gpio_request(GPIO_TOUCHKEY_SDA, "TKEY_SDA");
 		gpio_direction_input(GPIO_TOUCHKEY_SDA);
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
 	my_tkey_vdd_enable(1);
 	gpio_request(GPIO_TOUCHKEY_SCL, "TKEY_SCL");
 	gpio_direction_input(GPIO_TOUCHKEY_SCL);
@@ -267,9 +267,9 @@ static void touchkey_on(void) {
 	if (get_hw_rev() >=0x0a){
 		my_tkey_led_vdd_enable(1);
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
 	my_tkey_led_vdd_enable(1);
-#elif defined (CONFIG_USA_MODEL_SGH_T989)
+#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >=0x0d){
 		my_tkey_led_vdd_enable(1);
 	}
@@ -763,7 +763,7 @@ static void init_hw(void)
 		struct pm_gpio cfg;
 	};
 
-#if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989)
+#if defined (CONFIG_USA_MODEL_SGH_I727) || defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 
 	struct pm8058_gpio_cfg touchkey_int_cfg = 
 	{
@@ -802,11 +802,11 @@ static void init_hw(void)
 	} else { 
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
 
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
 
-#elif defined (CONFIG_USA_MODEL_SGH_T989)
+#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >= 0x0d){
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_RISING);	
 	} else { 
@@ -872,13 +872,17 @@ static ssize_t touch_recommend_read(struct device *dev, struct device_attribute 
 	char data[3] = { 0, };
 	int count;
 	mutex_lock(&touchkey_driver->mutex);
-#if defined (CONFIG_USA_MODEL_SGH_I727)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
+	data[1] = 0x05;
+#elif defined (CONFIG_USA_MODEL_SGH_I727)
 	if (get_hw_rev() >=0x0a)
 		data[1] = 0x12;
 	else
 		data[1] = 0x07;
 #elif defined (CONFIG_USA_MODEL_SGH_I717)
 	data[1] = 0x04;
+#elif defined (CONFIG_USA_MODEL_SGH_T769)
+	data[1] = 0x0F;
 #elif defined (CONFIG_USA_MODEL_SGH_T989)
 	if (get_hw_rev() >= 0x0d)
 		data[1] = 0x13;
@@ -1236,9 +1240,9 @@ static int __init touchkey_init(void)
 	} else { 
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
 	}
-#elif defined (CONFIG_USA_MODEL_SGH_I717)
+#elif defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_USA_MODEL_SGH_I577) || defined (CONFIG_CAN_MODEL_SGH_I577R)
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_FALLING);
-#elif defined (CONFIG_USA_MODEL_SGH_T989)
+#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >= 0x0d){
 		irq_set_irq_type(IRQ_TOUCHKEY_INT, IRQ_TYPE_EDGE_RISING);	
 	} else { 
@@ -1261,7 +1265,18 @@ static int __init touchkey_init(void)
 	touch_version = data[1];
 	retry = 3;
 	
-#if defined (CONFIG_USA_MODEL_SGH_T989)//new touchkey fpcb
+#if defined (CONFIG_USA_MODEL_SGH_T769)
+	if(data[1] > 0x03 && data[1] < 0x0F) {
+		while (retry--) {
+			if (ISSP_main(touchkey_pba_revision) == 0) {
+				pr_info("[TKEY] touchkey_update succeeded\n");
+				break;
+			}
+			pr_err("[TKEY] touchkey_update failed... retry...\n");
+		}
+		init_hw();	//after update, re initalize.
+	}
+#elif defined (CONFIG_USA_MODEL_SGH_T989)//new touchkey fpcb
 	//update version "eclair/vendor/samsung/apps/Lcdtest/src/com/sec/android/app/lcdtest/touch_firmware.java"
 	if ((data[1] == 0x01) && (data[2] < 0x05)) {
 		while (retry--) {
@@ -1315,6 +1330,17 @@ static int __init touchkey_init(void)
 		while (retry--) {
 			if (ISSP_main(TOUCHKEY_PBA_REV_05) == 0) {
 				pr_info("[TKEY] touchkey_update succeeded_new\n");
+				break;
+			}
+			pr_err("[TKEY] touchkey_update failed... retry...\n");
+		}
+		init_hw();	//after update, re initalize.
+	}
+#elif defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
+	if (data[1] != 0x05) {
+		while (retry--) {
+			if (ISSP_main(0) == 0) {
+				pr_info("[TKEY] touchkey_update succeeded\n");
 				break;
 			}
 			pr_err("[TKEY] touchkey_update failed... retry...\n");

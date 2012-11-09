@@ -53,11 +53,7 @@ obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
 obj-$(CONFIG_KEYBOARD_QCIKBD)       += qci_kbd.o
 obj-$(CONFIG_KEYBOARD_W90P910)		+= w90p910_keypad.o
 obj-$(CONFIG_KEYBOARD_PMIC8058)		+= pmic8058-keypad.o
-ifdef CONFIG_USA_MODEL_SGH_T769
-obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)                += cypress-touchkey_t769.o
-else ifdef CONFIG_USA_MODEL_SGH_I577
-obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)                += cypress-touchkey_t769.o
-else ifdef CONFIG_TARGET_SERIES_DALI
+ifdef CONFIG_TARGET_SERIES_DALI
 obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)                += cypress-touchkey_dali.o
 else ifdef CONFIG_JPN_MODEL_SC_05D
 obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)                += cypress-touchkey.o
