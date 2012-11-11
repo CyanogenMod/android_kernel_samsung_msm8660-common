@@ -1570,6 +1570,11 @@ struct platform_device msm_multi_ch_pcm = {
 	.id	= -1,
 };
 
+struct platform_device msm_lowlatency_pcm = {
+	.name	= "msm-lowlatency-pcm-dsp",
+	.id	= -1,
+};
+
 struct platform_device msm_pcm_routing = {
 	.name	= "msm-pcm-routing",
 	.id	= -1,

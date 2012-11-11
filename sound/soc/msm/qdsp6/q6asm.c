@@ -210,6 +210,7 @@ static void q6asm_session_free(struct audio_client *ac)
 	session[ac->session] = 0;
 	mutex_unlock(&session_lock);
 	ac->session = 0;
+	ac->perf_mode = false;
 	return;
 }
 
@@ -395,6 +396,7 @@ struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv)
 	ac->cb = cb;
 	ac->priv = priv;
 	ac->io_mode = SYNC_IO_MODE;
+	ac->perf_mode = false;
 	ac->apr = apr_register("ADSP", "ASM", \
 				(apr_fn)q6asm_callback,\
 				((ac->session) << 8 | 0x0001),\
@@ -741,6 +743,7 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 
 	if (data->opcode == APR_BASIC_RSP_RESULT) {
 		token = data->token;
+		pr_debug("%s payload[0]:%x", __func__, payload[0]);
 		switch (payload[0]) {
 		case ASM_STREAM_CMD_SET_PP_PARAMS:
 			if (rtac_make_asm_callback(ac->session, payload,
@@ -760,7 +763,9 @@ static int32_t q6asm_callback(struct apr_client_data *data, void *priv)
 			return -EINVAL;
 		}
 		case ASM_STREAM_CMD_OPEN_READ:
+		case ASM_STREAM_CMD_OPEN_READ_V2_1:
 		case ASM_STREAM_CMD_OPEN_WRITE:
+		case ASM_STREAM_CMD_OPEN_WRITE_V2_1:
 		case ASM_STREAM_CMD_OPEN_READWRITE:
 		case ASM_DATA_CMD_MEDIA_FORMAT_UPDATE:
 		case ASM_STREAM_CMD_SET_ENCDEC_PARAM:
@@ -1126,6 +1131,10 @@ int q6asm_open_read(struct audio_client *ac,
 		open.uMode = STREAM_PRIORITY_HIGH;
 		open.format = LINEAR_PCM;
 		break;
+	case FORMAT_MULTI_CHANNEL_LINEAR_PCM:
+		open.uMode = STREAM_PRIORITY_HIGH;
+		open.format = MULTI_CHANNEL_PCM;
+		break;
 	case FORMAT_MPEG4_AAC:
 		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
 		open.format = MPEG4_AAC;
@@ -1168,6 +1177,81 @@ fail_cmd:
 	return -EINVAL;
 }
 
+int q6asm_open_read_v2_1(struct audio_client *ac,
+		uint32_t format)
+{
+	int rc = 0x00;
+	struct asm_stream_cmd_open_read_v2_1 open;
+#ifdef CONFIG_DEBUG_FS
+	in_cont_index = 0;
+#endif
+	if ((ac == NULL) || (ac->apr == NULL)) {
+		pr_err("%s: APR handle NULL\n", __func__);
+		return -EINVAL;
+	}
+	pr_debug("%s:session[%d]", __func__, ac->session);
+
+	q6asm_add_hdr(ac, &open.hdr, sizeof(open), TRUE);
+	open.hdr.opcode = ASM_STREAM_CMD_OPEN_READ_V2_1;
+	open.src_endpoint = ASM_END_POINT_DEVICE_MATRIX;
+	open.pre_proc_top = get_asm_topology();
+	if (open.pre_proc_top == 0)
+		open.pre_proc_top = DEFAULT_POPP_TOPOLOGY;
+
+	switch (format) {
+	case FORMAT_LINEAR_PCM:
+		open.uMode = STREAM_PRIORITY_HIGH;
+		open.format = LINEAR_PCM;
+		break;
+	case FORMAT_MULTI_CHANNEL_LINEAR_PCM:
+		open.uMode = STREAM_PRIORITY_HIGH;
+		open.format = MULTI_CHANNEL_PCM;
+		break;
+	case FORMAT_MPEG4_AAC:
+		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
+		open.format = MPEG4_AAC;
+		break;
+	case FORMAT_V13K:
+		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
+		open.format = V13K_FS;
+		break;
+	case FORMAT_EVRC:
+		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
+		open.format = EVRC_FS;
+		break;
+	case FORMAT_AMRNB:
+		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
+		open.format = AMRNB_FS;
+		break;
+	case FORMAT_AMRWB:
+		open.uMode = BUFFER_META_ENABLE | STREAM_PRIORITY_HIGH;
+		open.format = AMRWB_FS;
+		break;
+	default:
+		pr_err("Invalid format[%d]\n", format);
+		goto fail_cmd;
+	}
+	open.uMode = ASM_OPEN_READ_PERF_MODE_BIT;
+	open.bits_per_sample = PCM_BITS_PER_SAMPLE;
+	open.reserved = 0;
+	rc = apr_send_pkt(ac->apr, (uint32_t *) &open);
+	if (rc < 0) {
+		pr_err("open failed op[0x%x]rc[%d]\n", \
+						open.hdr.opcode, rc);
+		goto fail_cmd;
+	}
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_err("%s: timeout. waited for OPEN_WRITE rc[%d]\n", __func__,
+			rc);
+		goto fail_cmd;
+	}
+	return 0;
+fail_cmd:
+	return -EINVAL;
+}
+
 int q6asm_open_write(struct audio_client *ac, uint32_t format)
 {
 	int rc = 0x00;
@@ -1182,12 +1266,20 @@ int q6asm_open_write(struct audio_client *ac, uint32_t format)
 
 	q6asm_add_hdr(ac, &open.hdr, sizeof(open), TRUE);
 
-	open.hdr.opcode = ASM_STREAM_CMD_OPEN_WRITE;
-	open.uMode = STREAM_PRIORITY_HIGH;
-	/* source endpoint : matrix */
-	open.sink_endpoint = ASM_END_POINT_DEVICE_MATRIX;
-	open.stream_handle = 0x00;
-
+	if (ac->perf_mode) {
+		pr_debug("%s In Performance/lowlatency mode", __func__);
+		open.hdr.opcode = ASM_STREAM_CMD_OPEN_WRITE_V2_1;
+		open.uMode = ASM_OPEN_WRITE_PERF_MODE_BIT;
+		/* source endpoint : matrix */
+		open.sink_endpoint = ASM_END_POINT_DEVICE_MATRIX;
+		open.stream_handle = PCM_BITS_PER_SAMPLE;
+	} else {
+		open.hdr.opcode = ASM_STREAM_CMD_OPEN_WRITE;
+		open.uMode = STREAM_PRIORITY_HIGH;
+		/* source endpoint : matrix */
+		open.sink_endpoint = ASM_END_POINT_DEVICE_MATRIX;
+		open.stream_handle = 0x00;
+	}
 	open.post_proc_top = get_asm_topology();
 	if (open.post_proc_top == 0)
 		open.post_proc_top = DEFAULT_POPP_TOPOLOGY;
@@ -1496,6 +1588,135 @@ fail_cmd:
 	return -EINVAL;
 }
 
+int q6asm_enc_cfg_blk_pcm_native(struct audio_client *ac,
+			uint32_t rate, uint32_t channels)
+{
+	struct asm_stream_cmd_encdec_cfg_blk  enc_cfg;
+
+	int rc = 0;
+
+	pr_debug("%s: Session %d, rate = %d, channels = %d, setting the rate and channels to 0 for native\n",
+			 __func__, ac->session, rate, channels);
+
+	q6asm_add_hdr(ac, &enc_cfg.hdr, sizeof(enc_cfg), TRUE);
+
+	enc_cfg.hdr.opcode = ASM_STREAM_CMD_SET_ENCDEC_PARAM;
+	enc_cfg.param_id = ASM_ENCDEC_CFG_BLK_ID;
+	enc_cfg.param_size = sizeof(struct asm_encode_cfg_blk);
+	enc_cfg.enc_blk.frames_per_buf = 1;
+	enc_cfg.enc_blk.format_id = LINEAR_PCM;
+	enc_cfg.enc_blk.cfg_size = sizeof(struct asm_pcm_cfg);
+	enc_cfg.enc_blk.cfg.pcm.ch_cfg = 0;/*channels;*/
+	enc_cfg.enc_blk.cfg.pcm.bits_per_sample = 16;
+	enc_cfg.enc_blk.cfg.pcm.sample_rate = 0;/*rate;*/
+	enc_cfg.enc_blk.cfg.pcm.is_signed = 1;
+	enc_cfg.enc_blk.cfg.pcm.interleaved = 1;
+
+	rc = apr_send_pkt(ac->apr, (uint32_t *) &enc_cfg);
+	if (rc < 0) {
+		pr_err("Comamnd open failed\n");
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_err("timeout opcode[0x%x] ", enc_cfg.hdr.opcode);
+		goto fail_cmd;
+	}
+	return 0;
+fail_cmd:
+	return -EINVAL;
+}
+
+int q6asm_enc_cfg_blk_multi_ch_pcm(struct audio_client *ac,
+			uint32_t rate, uint32_t channels)
+{
+	struct asm_stream_cmd_encdec_cfg_blk  enc_cfg;
+
+	int rc = 0;
+
+	pr_debug("%s: Session %d, rate = %d, channels = %d\n", __func__,
+			 ac->session, rate, channels);
+
+	q6asm_add_hdr(ac, &enc_cfg.hdr, sizeof(enc_cfg), TRUE);
+
+	enc_cfg.hdr.opcode = ASM_STREAM_CMD_SET_ENCDEC_PARAM;
+	enc_cfg.param_id = ASM_ENCDEC_CFG_BLK_ID;
+	enc_cfg.param_size = sizeof(struct asm_encode_cfg_blk);
+	enc_cfg.enc_blk.frames_per_buf = 1;
+	enc_cfg.enc_blk.format_id = MULTI_CHANNEL_PCM;
+	enc_cfg.enc_blk.cfg_size =
+		sizeof(struct asm_multi_channel_pcm_fmt_blk);
+	enc_cfg.enc_blk.cfg.mpcm.num_channels = channels;
+	enc_cfg.enc_blk.cfg.mpcm.bits_per_sample = 16;
+	enc_cfg.enc_blk.cfg.mpcm.sample_rate = rate;
+	enc_cfg.enc_blk.cfg.mpcm.is_signed = 1;
+	enc_cfg.enc_blk.cfg.mpcm.is_interleaved = 1;
+	if (channels == 1) {
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[0] = PCM_CHANNEL_FL;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[1] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[2] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[3] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[4] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[5] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[6] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[7] = 0;
+	} else if (channels == 2) {
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[0] = PCM_CHANNEL_FL;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[1] = PCM_CHANNEL_FR;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[2] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[3] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[4] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[5] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[6] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[7] = 0;
+	} else if (channels == 4) {
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[0] = PCM_CHANNEL_FL;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[1] = PCM_CHANNEL_FR;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[2] = PCM_CHANNEL_RB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[3] = PCM_CHANNEL_LB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[4] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[5] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[6] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[7] = 0;
+	} else if (channels == 6) {
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[0] = PCM_CHANNEL_FL;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[1] = PCM_CHANNEL_FR;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[2] = PCM_CHANNEL_LFE;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[3] = PCM_CHANNEL_FC;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[4] = PCM_CHANNEL_LB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[5] = PCM_CHANNEL_RB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[6] = 0;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[7] = 0;
+	} else if (channels == 8) {
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[0] = PCM_CHANNEL_FL;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[1] = PCM_CHANNEL_FR;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[2] = PCM_CHANNEL_LFE;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[3] = PCM_CHANNEL_FC;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[4] = PCM_CHANNEL_LB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[5] = PCM_CHANNEL_RB;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[6] = PCM_CHANNEL_FLC;
+		enc_cfg.enc_blk.cfg.mpcm.channel_mapping[7] = PCM_CHANNEL_FRC;
+	}
+
+	rc = apr_send_pkt(ac->apr, (uint32_t *) &enc_cfg);
+	if (rc < 0) {
+		pr_err("Comamnd open failed\n");
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_err("timeout opcode[0x%x] ", enc_cfg.hdr.opcode);
+		goto fail_cmd;
+	}
+	return 0;
+fail_cmd:
+	return -EINVAL;
+}
+
 int q6asm_enable_sbrps(struct audio_client *ac,
 			uint32_t sbr_ps_enable)
 {
@@ -1596,6 +1817,11 @@ int q6asm_set_encdec_chan_map(struct audio_client *ac,
 	} else if (num_channels == 2) {
 		channel_mapping[0] = PCM_CHANNEL_FL;
 		channel_mapping[1] = PCM_CHANNEL_FR;
+	} else if (num_channels == 4) {
+		channel_mapping[0] = PCM_CHANNEL_FL;
+		channel_mapping[1] = PCM_CHANNEL_FR;
+		channel_mapping[1] = PCM_CHANNEL_LB;
+		channel_mapping[1] = PCM_CHANNEL_RB;
 	} else if (num_channels == 6) {
 		channel_mapping[0] = PCM_CHANNEL_FC;
 		channel_mapping[1] = PCM_CHANNEL_FL;
@@ -1603,6 +1829,15 @@ int q6asm_set_encdec_chan_map(struct audio_client *ac,
 		channel_mapping[3] = PCM_CHANNEL_LB;
 		channel_mapping[4] = PCM_CHANNEL_RB;
 		channel_mapping[5] = PCM_CHANNEL_LFE;
+	} else if (num_channels == 8) {
+		channel_mapping[0] = PCM_CHANNEL_FC;
+		channel_mapping[1] = PCM_CHANNEL_FL;
+		channel_mapping[2] = PCM_CHANNEL_FR;
+		channel_mapping[3] = PCM_CHANNEL_LB;
+		channel_mapping[4] = PCM_CHANNEL_RB;
+		channel_mapping[5] = PCM_CHANNEL_LFE;
+		channel_mapping[6] = PCM_CHANNEL_FLC;
+		channel_mapping[7] = PCM_CHANNEL_FRC;
 	} else {
 		pr_err("%s: ERROR.unsupported num_ch = %u\n", __func__,
 				num_channels);
