@@ -55,6 +55,7 @@
 #define VCD_I_VOP_TIMING_CONSTANT_DELTA (VCD_START_BASE + 0x27)
 #define VCD_I_SLICE_DELIVERY_MODE (VCD_START_BASE + 0x28)
 #define VCD_I_ENABLE_DELIMITER_FLAG (VCD_START_BASE + 0x2A)
+#define VCD_I_ENABLE_VUI_TIMING_INFO (VCD_START_BASE + 0x2B)
 #define VCD_I_ENABLE_VUI_BITSTREAM_RESTRICT_FLAG (VCD_START_BASE + 0x2F)
 
 #define VCD_I_SET_EXT_METABUFFER (VCD_START_BASE + 0x2C)
@@ -382,6 +383,10 @@ struct vcd_property_sps_pps_for_idr_enable {
 
 struct vcd_property_avc_delimiter_enable {
 	u32 avc_delimiter_enable_flag;
+};
+
+struct vcd_property_vui_timing_info_enable {
+	u32 vui_timing_info;
 };
 
 struct vcd_property_bitstream_restrict_enable {

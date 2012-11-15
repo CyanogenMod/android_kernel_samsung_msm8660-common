@@ -294,6 +294,7 @@ struct ddl_encoder_data{
 	struct vcd_property_slice_delivery_info slice_delivery_info;
 	struct ddl_batch_frame_data batch_frame;
 	u32 avc_delimiter_enable;
+	u32 vui_timinginfo_enable;
 	u32 bitstream_restrict_enable;
 };
 struct ddl_decoder_data {
