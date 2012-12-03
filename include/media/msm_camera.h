@@ -25,10 +25,7 @@
 #include <linux/time.h>
 #endif
 
-#ifdef __KERNEL__
 #include <linux/ion.h>
-#endif
-
 #define VFE_FRAME_NUM_MAX	0x00FFFFFF
 #define ZERO_OUT_FRAME		0xFF000000
 #define CLEAR_FOCUS_BIT		0x7FFFFFFF
