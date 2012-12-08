@@ -123,10 +123,6 @@ int mipi_dsi_off(struct platform_device *pdev)
 
 	ret = panel_next_off(pdev);
 
-#ifdef CONFIG_MSM_BUS_SCALING
-	mdp_bus_scale_update_request(0);
-#endif
-
 #if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) || \
 	defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
 
@@ -134,6 +130,7 @@ int mipi_dsi_off(struct platform_device *pdev)
 #endif
 
 	spin_lock_bh(&dsi_clk_lock);
+
 	mipi_dsi_clk_disable();
 
 	/* disbale dsi engine */
