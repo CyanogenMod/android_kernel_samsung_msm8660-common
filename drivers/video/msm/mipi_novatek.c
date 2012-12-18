@@ -446,6 +446,11 @@ static int mipi_novatek_lcd_off(struct platform_device *pdev)
 	return 0;
 }
 
+static int mipi_novatek_lcd_late_init(struct platform_device *pdev)
+{
+	return 0;
+}
+
 static char led_pwm1[2] = {0x51, 0x0};	/* DTYPE_DCS_WRITE1 */
 static struct dsi_cmd_desc backlight_cmd = {
 	DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_pwm1), led_pwm1};
@@ -536,6 +541,7 @@ static struct platform_driver this_driver = {
 static struct msm_fb_panel_data novatek_panel_data = {
 	.on		= mipi_novatek_lcd_on,
 	.off		= mipi_novatek_lcd_off,
+	.late_init	= mipi_novatek_lcd_late_init,
 	.set_backlight = mipi_novatek_set_backlight,
 };
 
