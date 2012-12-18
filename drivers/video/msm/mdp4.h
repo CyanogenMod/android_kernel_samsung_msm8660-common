@@ -993,9 +993,15 @@ static inline void mdp4_wfd_init(int cndx)
 {
 	/* empty */
 }
+static inline int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
+					int cndx, int wait)
+{
+	return 0;
+}
 #else
 void mdp4_wfd_pipe_queue(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_wfd_init(int cndx);
+int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd, int cndx, int wait);
 #endif
 
 #endif /* MDP_H */
