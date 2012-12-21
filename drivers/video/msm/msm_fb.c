@@ -1736,22 +1736,13 @@ int msm_fb_wait_for_fence(struct msm_fb_data_type *mfd)
 	/* buf sync */
 	for (i = 0; i < mfd->acq_fen_cnt; i++) {
 		ret = sync_fence_wait(mfd->acq_fen[i], WAIT_FENCE_TIMEOUT);
+		sync_fence_put(mfd->acq_fen[i]);
 		if (ret < 0) {
 			pr_err("%s: sync_fence_wait failed! ret = %x\n",
 				__func__, ret);
 			break;
 		}
-		sync_fence_put(mfd->acq_fen[i]);
-		put_unused_fd(mfd->acq_fen_fd[i]);
 	}
-	if (ret) {
-		while (i < mfd->acq_fen_cnt) {
-			sync_fence_put(mfd->acq_fen[i]);
-			put_unused_fd(mfd->acq_fen_fd[i]);
-			i++;
-		}
-	}
-
 	mfd->acq_fen_cnt = 0;
 	return ret;
 }
@@ -3575,7 +3566,6 @@ static int msmfb_handle_buf_sync_ioctl(struct msm_fb_data_type *mfd,
 			break;
 		}
 		mfd->acq_fen[i] = fence;
-		mfd->acq_fen_fd[i] = acq_fen_fd[i];
 	}
 	fence_cnt = i;
 	if (ret)
@@ -3618,10 +3608,8 @@ buf_sync_err_2:
 	mfd->cur_rel_fence = NULL;
 	mfd->cur_rel_fen_fd = 0;
 buf_sync_err_1:
-	for (i = 0; i < fence_cnt; i++) {
+	for (i = 0; i < fence_cnt; i++)
 		sync_fence_put(mfd->acq_fen[i]);
-		put_unused_fd(mfd->acq_fen_fd[i]);
-	}
 	mfd->acq_fen_cnt = 0;
 	mutex_unlock(&mfd->sync_mutex);
 	return ret;
@@ -3648,7 +3636,6 @@ static int buf_fence_process(struct msm_fb_data_type *mfd,
 			break;
 		}
 		mfd->acq_fen[i] = fence;
-		mfd->acq_fen_fd[i] = buf_fence->acq_fen_fd[i];
 	}
 	fence_cnt = i;
 	if (ret)
@@ -3680,10 +3667,8 @@ static int buf_fence_process(struct msm_fb_data_type *mfd,
 	mutex_unlock(&mfd->sync_mutex);
 	return ret;
 buf_fence_err_1:
-	for (i = 0; i < fence_cnt; i++) {
+	for (i = 0; i < fence_cnt; i++)
 		sync_fence_put(mfd->acq_fen[i]);
-		put_unused_fd(mfd->acq_fen_fd[i]);
-	}
 	mfd->acq_fen_cnt = 0;
 	mutex_unlock(&mfd->sync_mutex);
 	return ret;
