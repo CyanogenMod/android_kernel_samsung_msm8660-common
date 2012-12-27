@@ -241,6 +241,7 @@ enum {
 
 #define MDP4_MAX_PLANE		4
 #define VSYNC_PERIOD		16
+#define WAIT_FOR_COMPLETION_TIMEOUT	800
 
 struct mdp4_hsic_regs {
 	int32_t params[NUM_HSIC_PARAM];
