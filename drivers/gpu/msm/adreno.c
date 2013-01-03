@@ -1147,65 +1147,15 @@ void adreno_regwrite(struct kgsl_device *device, unsigned int offsetwords,
 	__raw_writel(value, reg);
 }
 
-static int adreno_next_event(struct kgsl_device *device,
-	struct kgsl_event *event)
+static unsigned int adreno_check_hw_ts(struct kgsl_device *device,
+						unsigned int timestamp)
 {
-	int status;
+	int status = 0;
 	unsigned int ref_ts, enableflag;
-
-	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
-
-	status = kgsl_check_timestamp(device, event->timestamp);
-	if (!status) {
-		kgsl_sharedmem_readl(&device->memstore, &enableflag,
-			KGSL_DEVICE_MEMSTORE_OFFSET(ts_cmp_enable));
-		mb();
-
-		if (enableflag) {
-			kgsl_sharedmem_readl(&device->memstore, &ref_ts,
-				KGSL_DEVICE_MEMSTORE_OFFSET(ref_wait_ts));
-			mb();
-			if (timestamp_cmp(ref_ts, event->timestamp) >= 0) {
-				kgsl_sharedmem_writel(&device->memstore,
-				KGSL_DEVICE_MEMSTORE_OFFSET(ref_wait_ts),
-				event->timestamp);
-				wmb();
-			}
-		} else {
-			unsigned int cmds[2];
-			kgsl_sharedmem_writel(&device->memstore,
-				KGSL_DEVICE_MEMSTORE_OFFSET(ref_wait_ts),
-				event->timestamp);
-			enableflag = 1;
-			kgsl_sharedmem_writel(&device->memstore,
-				KGSL_DEVICE_MEMSTORE_OFFSET(ts_cmp_enable),
-				enableflag);
-			wmb();
-			/* submit a dummy packet so that even if all
-			* commands upto timestamp get executed we will still
-			* get an interrupt */
-			cmds[0] = cp_type3_packet(CP_NOP, 1);
-			cmds[1] = 0;
-
-			adreno_ringbuffer_issuecmds(device,
-					adreno_dev->drawctxt_active,
-					KGSL_CMD_FLAGS_NONE, &cmds[0], 2);
-		}
-	}
-	return status;
-}
-
-static int kgsl_check_interrupt_timestamp(struct kgsl_device *device,
-					unsigned int timestamp)
-{
-	int status;
-	unsigned int ref_ts, enableflag;
-
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 
 	status = kgsl_check_timestamp(device, timestamp);
 	if (!status) {
-		mutex_lock(&device->mutex);
 		kgsl_sharedmem_readl(&device->memstore, &enableflag,
 			KGSL_DEVICE_MEMSTORE_OFFSET(ts_cmp_enable));
 		mb();
@@ -1213,6 +1163,7 @@ static int kgsl_check_interrupt_timestamp(struct kgsl_device *device,
 		if (enableflag) {
 			kgsl_sharedmem_readl(&device->memstore, &ref_ts,
 				KGSL_DEVICE_MEMSTORE_OFFSET(ref_wait_ts));
+
 			mb();
 			if (timestamp_cmp(ref_ts, timestamp) >= 0) {
 				kgsl_sharedmem_writel(&device->memstore,
@@ -1240,12 +1191,27 @@ static int kgsl_check_interrupt_timestamp(struct kgsl_device *device,
 					adreno_dev->drawctxt_active,
 					KGSL_CMD_FLAGS_NONE, &cmds[0], 2);
 		}
-		mutex_unlock(&device->mutex);
 	}
-
 	return status;
 }
 
+
+static int adreno_next_event(struct kgsl_device *device,
+	struct kgsl_event *event)
+{
+	return adreno_check_hw_ts(device, event->timestamp);
+}
+
+static int adreno_check_interrupt_timestamp(struct kgsl_device *device,
+					unsigned int timestamp)
+{
+	int status = 0;
+	mutex_lock(&device->mutex);
+	status = adreno_check_hw_ts(device, timestamp);
+	mutex_unlock(&device->mutex);
+
+	return status;
+}
 /*
  wait_event_interruptible_timeout checks for the exit condition before
  placing a process in wait q. For conditional interrupts we expect the
@@ -1316,10 +1282,11 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 		 */
 		status = kgsl_wait_event_interruptible_timeout(
 				device->wait_queue,
-				kgsl_check_interrupt_timestamp(device,
+				adreno_check_interrupt_timestamp(device,
 					timestamp),
 				msecs_to_jiffies(retries ?
 					msecs_part : msecs_first), io);
+
 		mutex_lock(&device->mutex);
 
 		if (status > 0) {
