@@ -472,12 +472,7 @@ u32 ddl_encode_frame(u32 *ddl_handle,
 	struct ddl_encoder_data *encoder =
 		&ddl->codec_data.encoder;
 	u32 vcd_status = VCD_S_SUCCESS;
-
-	struct vcd_transc *transc;
-	transc = (struct vcd_transc *)(ddl->client_data);
-	DDL_MSG_LOW("%s: transc = 0x%x, in_use = %u",
-				 __func__, (u32)ddl->client_data, transc->in_use);
-
+	DDL_MSG_LOW("%s: transc = 0x%x", __func__, (u32)ddl->client_data);
 	if (encoder->slice_delivery_info.enable) {
 		return ddl_encode_frame_batch(ddl_handle,
 					input_frame,
