@@ -2056,6 +2056,31 @@ config MSM_L1_ERR_PANIC
 
 	  For production builds, you should probably say 'N' here.
 
+config MSM_L1_RECOV_ERR_PANIC
+	bool "Panic on recoverable L1 cache errors"
+	depends on MSM_CACHE_ERP && MSM_L1_ERR_PANIC
+	help
+	  Certain CPU designs may be able to automatically recover from certain
+	  kinds of L1 cache errors, even though the L1 cache itself may not
+	  support error correction. These errors should not result in any kind
+	  of corruption, but their presence is nevertheless an indication of
+	  poor system health. To cause the kernel to panic whenever a
+	  recoverable L1 cache error is detected, say 'Y' here. This may be
+	  useful as a debugging technique if general system instability is
+	  suspected.
+
+	  For production builds, you should definitely say 'N' here.
+
+config MSM_L1_ERR_LOG
+	bool "Log CPU ERP events to system memory"
+	depends on MSM_CACHE_ERP
+	help
+	  Enable logging CPU ERP events to an area of memory that will be
+	  preserved across a system reset. This may be useful for detecting and
+	  troubleshooting ERP-related system crashes in the field.
+
+	  For production builds, you may want to say 'Y' here.
+
 config MSM_L2_ERP_PRINT_ACCESS_ERRORS
 	bool "Report L2 master port slave/decode errors in kernel log"
 	depends on MSM_CACHE_ERP
@@ -2069,15 +2094,6 @@ config MSM_L2_ERP_PRINT_ACCESS_ERRORS
 	  interrupt rather than as an exception, meaning that the backtrace may
 	  have some skid. This option may help with debugging, though production
 	  builds should probably say 'N' here.
-config MSM_L1_ERR_LOG
-	bool "Log CPU ERP events to system memory"
-	depends on MSM_CACHE_ERP
-	help
-	  Enable logging CPU ERP events to an area of memory that will be
-	  preserved across a system reset. This may be useful for detecting and
-	  troubleshooting ERP-related system crashes in the field.
-
-	  For production builds, you may want to say 'Y' here.
 
 config MSM_L2_ERP_PORT_PANIC
 	bool "Panic on L2 master port errors"
