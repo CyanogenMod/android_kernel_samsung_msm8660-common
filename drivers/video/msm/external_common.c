@@ -2015,7 +2015,7 @@ int get_best_display_Mode(void)
 
 bool hdmi_common_get_video_format_from_drv_data(struct msm_fb_data_type *mfd)
 {
-	uint32 format;
+	uint32 format =  external_common_state->video_resolution;
 	struct fb_var_screeninfo *var = &mfd->fbi->var;
 	bool changed = TRUE;
 	uint32_t userformat = 0;
