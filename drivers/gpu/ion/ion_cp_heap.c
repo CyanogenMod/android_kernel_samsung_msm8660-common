@@ -28,6 +28,8 @@
 #include <linux/seq_file.h>
 #include <linux/fmem.h>
 #include <linux/iommu.h>
+#include <trace/events/kmem.h>
+
 #include <mach/msm_memtypes.h>
 #include <mach/scm.h>
 #include <mach/iommu_domains.h>
@@ -106,7 +108,6 @@ static int ion_cp_protect_mem(unsigned int phy_base, unsigned int size,
 
 static int ion_cp_unprotect_mem(unsigned int phy_base, unsigned int size,
 				unsigned int permission_type);
-
 /**
  * Get the total number of kernel mappings.
  * Must be called with heap->lock locked.
