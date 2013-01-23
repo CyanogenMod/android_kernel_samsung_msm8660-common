@@ -3765,7 +3765,6 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct msmfb_mdp_pp mdp_pp;
 	struct msmfb_metadata mdp_metadata;
 	struct mdp_buf_sync buf_sync;
-	struct msmfb_metadata mdp_metadata;
 	int ret = 0;
 	mutex_lock(&mfd->entry_mutex);
 	msm_fb_pan_idle(mfd);
