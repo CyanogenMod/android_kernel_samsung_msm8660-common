@@ -201,7 +201,7 @@ static unsigned long audio_aio_pmem_fixup(struct q6audio_aio *audio, void *addr,
 
 static int audio_aio_pause(struct q6audio_aio  *audio)
 {
-	int rc = 0;
+	int rc = -EINVAL;
 
 	pr_debug("%s[%p], enabled = %d\n", __func__, audio,
 			audio->enabled);
@@ -424,6 +424,27 @@ void audio_aio_async_in_flush(struct q6audio_aio *audio)
 	}
 }
 
+static void audio_aio_unmap_pmem_region(struct q6audio_aio *audio)
+{
+	struct audio_aio_pmem_region *region;
+	struct list_head *ptr, *next;
+	int rc = -EINVAL;
+
+	pr_debug("%s[%p]:\n", __func__, audio);
+	list_for_each_safe(ptr, next, &audio->pmem_region_queue) {
+		region = list_entry(ptr, struct audio_aio_pmem_region, list);
+		pr_debug("%s[%p]: phy_address = 0x%lx\n",
+				__func__, audio, region->paddr);
+		if (region != NULL) {
+			rc = q6asm_memory_unmap(audio->ac,
+						(uint32_t)region->paddr, IN);
+			if (rc < 0)
+				pr_err("%s[%p]: memory unmap failed\n",
+					__func__, audio);
+		}
+	}
+}
+
 void audio_aio_cb(uint32_t opcode, uint32_t token,
 		uint32_t *payload,  struct q6audio_aio *audio)
 {
@@ -558,27 +579,6 @@ void audio_aio_reset_event_queue(struct q6audio_aio *audio)
 	return;
 }
 
-static void audio_aio_unmap_pmem_region(struct q6audio_aio *audio)
-{
-	struct audio_aio_pmem_region *region;
-	struct list_head *ptr, *next;
-	int rc = -EINVAL;
-
-	pr_debug("%s[%p]:\n", __func__, audio);
-	list_for_each_safe(ptr, next, &audio->pmem_region_queue) {
-		region = list_entry(ptr, struct audio_aio_pmem_region, list);
-		pr_debug("%s[%p]: phy_address = 0x%lx\n",
-				__func__, audio, region->paddr);
-		if (region != NULL) {
-			rc = q6asm_memory_unmap(audio->ac,
-						(uint32_t)region->paddr, IN);
-			if (rc < 0)
-				pr_err("%s[%p]: memory unmap failed\n",
-					__func__, audio);
-		}
-	}
-}
-
 int audio_aio_release(struct inode *inode, struct file *file)
 {
 	struct q6audio_aio *audio = file->private_data;
@@ -590,8 +590,8 @@ int audio_aio_release(struct inode *inode, struct file *file)
 	audio->wflush = 0;
 	audio->drv_ops.out_flush(audio);
 	audio->drv_ops.in_flush(audio);
-	audio_aio_unmap_pmem_region(audio);
 	audio_aio_disable(audio);
+	audio_aio_unmap_pmem_region(audio);
 	audio_aio_reset_pmem_region(audio);
 	audio->event_abort = 1;
 	wake_up(&audio->event_wait);
@@ -1237,9 +1237,12 @@ long audio_aio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		mutex_lock(&audio->lock);
 		if (arg == 1) {
 			rc = audio_aio_pause(audio);
-			if (rc < 0)
+			if (rc < 0) {
 				pr_err("%s[%p]: pause FAILED rc=%d\n",
 					__func__, audio, rc);
+				mutex_unlock(&audio->lock);
+				break;
+			}
 			audio->drv_status |= ADRV_STATUS_PAUSE;
 		} else if (arg == 0) {
 			if (audio->drv_status & ADRV_STATUS_PAUSE) {

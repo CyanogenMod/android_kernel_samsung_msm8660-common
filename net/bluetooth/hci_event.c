@@ -283,6 +283,8 @@ static void hci_cc_write_scan_enable(struct hci_dev *hdev, struct sk_buff *skb)
 	if (!sent)
 		return;
 
+	hci_dev_lock(hdev);
+
 	if (!status) {
 		__u8 param = *((__u8 *) sent);
 		int old_pscan, old_iscan;
@@ -304,7 +306,7 @@ static void hci_cc_write_scan_enable(struct hci_dev *hdev, struct sk_buff *skb)
 		} else if (old_pscan)
 			mgmt_connectable(hdev->id, 0);
 	}
-
+	hci_dev_unlock(hdev);
 	hci_req_complete(hdev, HCI_OP_WRITE_SCAN_ENABLE, status);
 }
 
@@ -1404,6 +1406,11 @@ static inline void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 
 		conn->type = SCO_LINK;
 	}
+	if ((!conn->ssp_mode || !conn->hdev->ssp_mode) &&
+			((conn->dev_class[1] & 0x1f) != 0x05)) {
+		__u8 auth = AUTH_DISABLED;
+		hci_send_cmd(hdev, HCI_OP_WRITE_AUTH_ENABLE, 1, &auth);
+	}
 
 	if (!ev->status) {
 		conn->handle = __le16_to_cpu(ev->handle);
@@ -1425,12 +1432,12 @@ static inline void hci_conn_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 		if (test_bit(HCI_ENCRYPT, &hdev->flags))
 			conn->link_mode |= HCI_LM_ENCRYPT;
 
-		/* Get remote features */
+		/* Get remote version */
 		if (conn->type == ACL_LINK) {
-			struct hci_cp_read_remote_features cp;
+			struct hci_cp_read_remote_version cp;
 			cp.handle = ev->handle;
-			hci_send_cmd(hdev, HCI_OP_READ_REMOTE_FEATURES,
-							sizeof(cp), &cp);
+			hci_send_cmd(hdev, HCI_OP_READ_REMOTE_VERSION,
+				sizeof(cp), &cp);
 		}
 
 		/* Set packet type for incoming connection */
@@ -1615,7 +1622,7 @@ static inline void hci_auth_complete_evt(struct hci_dev *hdev, struct sk_buff *s
 		}
 	} else {
 		mgmt_auth_failed(hdev->id, &conn->dst, ev->status);
-		conn->disc_timeout = HCI_DISCONN_TIMEOUT/200; /* 0.01 sec */
+		conn->disc_timeout = HCI_DISCONN_TIMEOUT/200; // 0.01 sec
 	}
 
 	clear_bit(HCI_CONN_AUTH_PEND, &conn->pend);
@@ -1795,7 +1802,24 @@ unlock:
 
 static inline void hci_remote_version_evt(struct hci_dev *hdev, struct sk_buff *skb)
 {
-	BT_DBG("%s", hdev->name);
+	struct hci_ev_remote_version *ev = (void *) skb->data;
+	struct hci_cp_read_remote_features cp;
+	struct hci_conn *conn;
+	BT_DBG("%s status %d", hdev->name, ev->status);
+
+	hci_dev_lock(hdev);
+	cp.handle = ev->handle;
+	hci_send_cmd(hdev, HCI_OP_READ_REMOTE_FEATURES,
+				sizeof(cp), &cp);
+
+	conn = hci_conn_hash_lookup_handle(hdev, __le16_to_cpu(ev->handle));
+	if (!conn)
+		goto unlock;
+	if (!ev->status)
+		mgmt_remote_version(hdev->id, &conn->dst, ev->lmp_ver,
+				ev->manufacturer, ev->lmp_subver);
+unlock:
+	hci_dev_unlock(hdev);
 }
 
 static inline void hci_qos_setup_complete_evt(struct hci_dev *hdev, struct sk_buff *skb)
@@ -2455,6 +2479,17 @@ static inline void hci_remote_ext_features_evt(struct hci_dev *hdev, struct sk_b
 			ie->data.ssp_mode = (ev->features[0] & 0x01);
 
 		conn->ssp_mode = (ev->features[0] & 0x01);
+		/*In case if remote device ssp supported/2.0 device
+		reduce the security level to MEDIUM if it is HIGH*/
+		if (!conn->ssp_mode && conn->auth_initiator &&
+			(conn->pending_sec_level == BT_SECURITY_HIGH))
+			conn->pending_sec_level = BT_SECURITY_MEDIUM;
+
+		if (conn->ssp_mode && conn->auth_initiator &&
+			conn->io_capability != 0x03) {
+			conn->pending_sec_level = BT_SECURITY_HIGH;
+			conn->auth_type = HCI_AT_DEDICATED_BONDING_MITM;
+		}
 	}
 
 	if (conn->state != BT_CONFIG)
@@ -2542,8 +2577,16 @@ static inline void hci_sync_conn_changed_evt(struct hci_dev *hdev, struct sk_buf
 static inline void hci_sniff_subrate_evt(struct hci_dev *hdev, struct sk_buff *skb)
 {
 	struct hci_ev_sniff_subrate *ev = (void *) skb->data;
+	struct hci_conn *conn =
+		hci_conn_hash_lookup_handle(hdev, __le16_to_cpu(ev->handle));
 
 	BT_DBG("%s status %d", hdev->name, ev->status);
+	if (conn && (ev->max_rx_latency > hdev->sniff_max_interval)) {
+		BT_ERR("value of rx_latency:%d", ev->max_rx_latency);
+		hci_dev_lock(hdev);
+		hci_conn_enter_active_mode(conn, 1);
+		hci_dev_unlock(hdev);
+	}
 }
 
 static inline void hci_extended_inquiry_result_evt(struct hci_dev *hdev, struct sk_buff *skb)
@@ -2760,7 +2803,7 @@ static inline void hci_simple_pair_complete_evt(struct hci_dev *hdev, struct sk_
 	if (!test_bit(HCI_CONN_AUTH_PEND, &conn->pend) && ev->status != 0) {
 		mgmt_auth_failed(hdev->id, &conn->dst, ev->status);
 		conn->out = 1;
-		conn->disc_timeout = HCI_DISCONN_TIMEOUT/200; /* 0.01 sec */
+		conn->disc_timeout = HCI_DISCONN_TIMEOUT/200; // 0.01 sec
 	}
 	hci_conn_put(conn);
 

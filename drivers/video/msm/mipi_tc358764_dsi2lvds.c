@@ -186,8 +186,9 @@
 #define DEBUG01		0x05A4	/* LVDS Data */
 
 /* PWM */
-#define PWM_FREQ_HZ	(66*1000)	/* 66 KHZ */
-#define PWM_LEVEL 15
+static u32 d2l_pwm_freq_hz = (3.921*1000);
+
+#define PWM_FREQ_HZ	(d2l_pwm_freq_hz)
 #define PWM_PERIOD_USEC (USEC_PER_SEC / PWM_FREQ_HZ)
 #define PWM_DUTY_LEVEL (PWM_PERIOD_USEC / PWM_LEVEL)
 
@@ -448,6 +449,8 @@ static int mipi_d2l_lcd_on(struct platform_device *pdev)
 	mipi_d2l_write_reg(mfd, GPIOC, d2l_gpio_out_mask);
 	/* Set GPIOs: gpio#4=U/D=0 , gpio#3=L/R=1 , gpio#2,1=CABC=0. */
 	mipi_d2l_write_reg(mfd, GPIOO, d2l_gpio_out_val);
+
+	d2l_pwm_freq_hz = (3.921*1000);
 
 	if (bl_level == 0)
 		bl_level = PWM_LEVEL * 2 / 3 ; /* Default ON value */

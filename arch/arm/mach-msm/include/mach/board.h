@@ -422,6 +422,8 @@ struct msm_hdmi_platform_data {
 	int (*enable_5v)(int on);
 	int (*core_power)(int on, int show);
 	int (*cec_power)(int on);
+	int (*panel_power)(int on);
+	int (*gpio_config)(int on);
 	int (*init_irq)(void);
 	bool (*check_hdcp_hw_support)(void);
 	int gpio;
@@ -459,6 +461,7 @@ struct msm_vidc_platform_data {
 	struct msm_bus_scale_pdata *vidc_bus_client_pdata;
 #endif
 	int disable_turbo;
+        int cont_mode_dpb_count;
 };
 
 #if defined(CONFIG_USB_PEHCI_HCD) || defined(CONFIG_USB_PEHCI_HCD_MODULE)

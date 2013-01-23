@@ -143,7 +143,7 @@ int32_t msm_sensor_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 		total_lines_per_frame = (uint16_t)
 			((s_ctrl->curr_frame_length_lines) *
 			s_ctrl->fps_divider/Q10);
-
+		total_lines_per_frame += (total_lines_per_frame & 0x1);
 		rc = msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 			s_ctrl->sensor_output_reg_addr->frame_length_lines,
 			total_lines_per_frame, MSM_CAMERA_I2C_WORD_DATA);

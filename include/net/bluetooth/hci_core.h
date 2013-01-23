@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2012, Code Aurora Forum. All rights reserved.
+   Copyright (c) 2000-2001, 2010, Code Aurora Forum. All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -210,12 +210,6 @@ struct hci_dev {
 
 	struct list_head	adv_entries;
 	struct timer_list	adv_timer;
-
-	struct timer_list	disco_timer;
-	struct timer_list	disco_le_timer;
-	__u8			disco_state;
-	int			disco_int_phase;
-	int			disco_int_count;
 
 	struct hci_dev_stats	stat;
 
@@ -873,9 +867,6 @@ int mgmt_auth_failed(u16 index, bdaddr_t *bdaddr, u8 status);
 int mgmt_set_local_name_complete(u16 index, u8 *name, u8 status);
 int mgmt_read_local_oob_data_reply_complete(u16 index, u8 *hash, u8 *randomizer,
 								u8 status);
-void mgmt_disco_timeout(unsigned long data);
-void mgmt_disco_le_timeout(unsigned long data);
-
 int mgmt_device_found(u16 index, bdaddr_t *bdaddr, u8 *dev_class, s8 rssi,
 								u8 *eir);
 int mgmt_remote_name(u16 index, bdaddr_t *bdaddr, u8 *name);

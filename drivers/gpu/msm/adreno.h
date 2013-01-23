@@ -27,7 +27,7 @@
 /* Flags to control command packet settings */
 #define KGSL_CMD_FLAGS_NONE             0x00000000
 #define KGSL_CMD_FLAGS_PMODE		0x00000001
-#define KGSL_CMD_FLAGS_NO_TS_CMP	0x00000002
+#define KGSL_CMD_FLAGS_DUMMY_INTR_CMD	0x00000002
 
 /* Command identifiers */
 #define KGSL_CONTEXT_TO_MEM_IDENTIFIER	0x2EADBEEF
@@ -46,6 +46,12 @@
 #define ADRENO_ISTORE_START 0x5000 /* Istore offset */
 
 #define ADRENO_NUM_CTX_SWITCH_ALLOWED_BEFORE_DRAW	50
+
+/* One cannot wait forever for the core to idle, so set an upper limit to the
+ * amount of time to wait for the core to go idle
+ */
+
+#define ADRENO_IDLE_TIMEOUT (20 * 1000)
 
 enum adreno_gpurev {
 	ADRENO_REV_UNKNOWN = 0,
@@ -152,7 +158,7 @@ extern unsigned int hang_detect_regs[];
 extern const unsigned int hang_detect_regs_count;
 
 
-int adreno_idle(struct kgsl_device *device, unsigned int timeout);
+int adreno_idle(struct kgsl_device *device);
 void adreno_regread(struct kgsl_device *device, unsigned int offsetwords,
 				unsigned int *value);
 void adreno_regwrite(struct kgsl_device *device, unsigned int offsetwords,

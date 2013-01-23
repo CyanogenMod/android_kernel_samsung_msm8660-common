@@ -15,6 +15,7 @@
 #include <linux/err.h>
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
+#include <linux/io.h>
 #include <linux/fs.h>
 #include <linux/wcnss_wlan.h>
 #include <linux/platform_data/qcom_wcnss_device.h>
@@ -22,6 +23,10 @@
 #include <linux/jiffies.h>
 #include <linux/gpio.h>
 #include <mach/peripheral-loader.h>
+#include <mach/msm_iomap.h>
+#ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
+#include "wcnss_prealloc.h"
+#endif
 
 #define DEVICE "wcnss_wlan"
 #define VERSION "1.01"
@@ -74,6 +79,13 @@ static ssize_t wcnss_serial_number_store(struct device *dev,
 
 static DEVICE_ATTR(serial_number, S_IRUSR | S_IWUSR,
 	wcnss_serial_number_show, wcnss_serial_number_store);
+
+void wcnss_reset_intr(void)
+{
+	wmb();
+	__raw_writel(1 << 24, MSM_APCS_GCC_BASE + 0x8);
+}
+EXPORT_SYMBOL(wcnss_reset_intr);
 
 static int wcnss_create_sysfs(struct device *dev)
 {
@@ -437,10 +449,18 @@ static struct platform_driver wcnss_wlan_driver = {
 
 static int __init wcnss_wlan_init(void)
 {
+	int ret = 0;
+
 	platform_driver_register(&wcnss_wlan_driver);
 	platform_driver_register(&wcnss_wlan_ctrl_driver);
 
-	return 0;
+#ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
+	ret = wcnss_prealloc_init();
+	if (ret < 0)
+		pr_err("wcnss: pre-allocation failed\n");
+#endif
+
+	return ret;
 }
 
 static void __exit wcnss_wlan_exit(void)
@@ -456,6 +476,9 @@ static void __exit wcnss_wlan_exit(void)
 
 	platform_driver_unregister(&wcnss_wlan_ctrl_driver);
 	platform_driver_unregister(&wcnss_wlan_driver);
+#ifdef CONFIG_WCNSS_MEM_PRE_ALLOC
+	wcnss_prealloc_deinit();
+#endif
 }
 
 module_init(wcnss_wlan_init);

@@ -394,35 +394,30 @@ static void l2cap_chan_del(struct l2cap_chan *chan, int err)
 	BT_DBG("chan %p, conn %p, err %d", chan, conn, err);
 
 	if (conn) {
-		/* Delete from channel list */
-		write_lock_bh(&conn->chan_lock);
-		list_del(&chan->list);
-		write_unlock_bh(&conn->chan_lock);
-		chan_put(chan);
-
-		chan->conn = NULL;
-
-	/* BEGIN SS_BLUEZ_BT +kjh 2011.06.23 : */
-	/* workaround for a2dp chopping in multi connection.*/
-		switch (chan->psm) {
-		case 0x03:
-			rfc_conn = NULL;
-			break;
-		case 0x11:
-			hid_conn = NULL;
-			break;
-		case 0x17:
-			av_conn = NULL;
-			break;
-		default:
-			break;
-		}
-	/* END SS_BLUEZ_BT */
-
-		if (conn->hcon) {
-			conn->hcon->out = 1;
+		struct l2cap_chan_list *l = &conn->chan_list;
+		/* Unlink from channel list */
+		l2cap_chan_unlink(l, sk);
+		l2cap_pi(sk)->conn = NULL;
+		if (!l2cap_pi(sk)->fixed_channel)
 			hci_conn_put(conn->hcon);
-		}
+
+		read_lock(&l->lock);
+		if (l2cap_pi(sk)->flush_to < l2cap_get_smallest_flushto(l))
+			l2cap_set_acl_flushto(conn->hcon,
+				l2cap_get_smallest_flushto(l));
+		read_unlock(&l->lock);
+	}
+
+	if (l2cap_pi(sk)->ampchan) {
+		struct hci_chan *ampchan = l2cap_pi(sk)->ampchan;
+		struct hci_conn *ampcon = l2cap_pi(sk)->ampcon;
+		l2cap_pi(sk)->ampchan = NULL;
+		l2cap_pi(sk)->ampcon = NULL;
+		l2cap_pi(sk)->amp_id = 0;
+		if (hci_chan_put(ampchan))
+			ampcon->l2cap_data = NULL;
+		else
+			l2cap_deaggregate(ampchan, l2cap_pi(sk));
 	}
 
 	l2cap_state_change(chan, BT_CLOSED);
@@ -2550,16 +2545,82 @@ static inline int l2cap_connect_rsp(struct l2cap_conn *conn, struct l2cap_cmd_hd
 		chan->dcid = dcid;
 		clear_bit(CONF_CONNECT_PEND, &chan->conf_state);
 
-		if (test_and_set_bit(CONF_REQ_SENT, &chan->conf_state))
-			break;
+		lock_sock(sk);
+		pi = l2cap_pi(sk);
+
+		l2cap_sock_clear_timer(sk);
+		if (result == L2CAP_MOVE_CHAN_PENDING)
+			l2cap_sock_set_timer(sk, L2CAP_MOVE_ERTX_TIMEOUT);
+
+		if (pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_LOGICAL_COMPLETE) {
+			/* Move confirm will be sent when logical link
+			 * is complete.
+			 */
+			pi->amp_move_state =
+				L2CAP_AMP_STATE_WAIT_LOGICAL_CONFIRM;
+		} else if (pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_MOVE_RSP_SUCCESS) {
+			if (result == L2CAP_MOVE_CHAN_PENDING) {
+				break;
+			} else if (pi->conn_state & L2CAP_CONN_LOCAL_BUSY) {
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_LOCAL_BUSY;
+			} else {
+				/* Logical link is up or moving to BR/EDR,
+				 * proceed with move */
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_MOVE_CONFIRM_RSP;
+				l2cap_send_move_chan_cfm(conn, pi, pi->scid,
+						L2CAP_MOVE_CHAN_CONFIRMED);
+				l2cap_sock_set_timer(sk, L2CAP_MOVE_TIMEOUT);
+			}
+		} else if (pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_MOVE_RSP) {
+			struct l2cap_conf_ext_fs default_fs = {1, 1, 0xFFFF,
+					0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+			struct hci_chan *chan;
+			/* Moving to AMP */
+			if (result == L2CAP_MOVE_CHAN_SUCCESS) {
+				/* Remote is ready, send confirm immediately
+				 * after logical link is ready
+				 */
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_LOGICAL_CONFIRM;
+			} else {
+				/* Both logical link and move success
+				 * are required to confirm
+				 */
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_LOGICAL_COMPLETE;
+			}
+			pi->remote_fs = default_fs;
+			pi->local_fs = default_fs;
+			chan = l2cap_chan_admit(pi->amp_move_id, pi);
+			if (!chan) {
+				/* Logical link not available */
+				l2cap_send_move_chan_cfm(conn, pi, pi->scid,
+						L2CAP_MOVE_CHAN_UNCONFIRMED);
+				break;
+			}
 
 		l2cap_send_cmd(conn, l2cap_get_ident(conn), L2CAP_CONF_REQ,
 					l2cap_build_conf_req(chan, req), req);
 		chan->num_conf_req++;
 		break;
 
-	case L2CAP_CR_PEND:
-		set_bit(CONF_CONNECT_PEND, &chan->conf_state);
+				l2cap_create_cfm(chan, 0);
+			}
+		} else {
+			/* Any other amp move state means the move failed. */
+			pi->amp_move_id = pi->amp_id;
+			pi->amp_move_state = L2CAP_AMP_STATE_STABLE;
+			l2cap_amp_move_revert(sk);
+			pi->amp_move_role = L2CAP_AMP_MOVE_NONE;
+			l2cap_send_move_chan_cfm(conn, pi, pi->scid,
+						L2CAP_MOVE_CHAN_UNCONFIRMED);
+			l2cap_sock_set_timer(sk, L2CAP_MOVE_TIMEOUT);
+		}
 		break;
 
 	default:
@@ -2590,14 +2651,34 @@ static inline void set_default_fcs(struct l2cap_chan *chan)
 		chan->fcs = L2CAP_FCS_CRC16;
 }
 
-static inline int l2cap_config_req(struct l2cap_conn *conn, struct l2cap_cmd_hdr *cmd, u16 cmd_len, u8 *data)
-{
-	struct l2cap_conf_req *req = (struct l2cap_conf_req *) data;
-	u16 dcid, flags;
-	u8 rsp[64];
-	struct l2cap_chan *chan;
-	struct sock *sk;
-	int len;
+	lock_sock(sk);
+	pi = l2cap_pi(sk);
+
+	if (pi->amp_move_state == L2CAP_AMP_STATE_WAIT_MOVE_CONFIRM) {
+		pi->amp_move_state = L2CAP_AMP_STATE_STABLE;
+		if (result == L2CAP_MOVE_CHAN_CONFIRMED) {
+			pi->amp_id = pi->amp_move_id;
+			if (!pi->amp_id && pi->ampchan) {
+				struct hci_chan *ampchan = pi->ampchan;
+				struct hci_conn *ampcon = pi->ampcon;
+				/* Have moved off of AMP, free the channel */
+				pi->ampchan = NULL;
+				pi->ampcon = NULL;
+				if (hci_chan_put(ampchan))
+					ampcon->l2cap_data = NULL;
+				else
+					l2cap_deaggregate(ampchan, pi);
+			}
+			l2cap_amp_move_success(sk);
+		} else {
+			pi->amp_move_id = pi->amp_id;
+			l2cap_amp_move_revert(sk);
+		}
+		pi->amp_move_role = L2CAP_AMP_MOVE_NONE;
+	} else if (pi->amp_move_state ==
+			L2CAP_AMP_STATE_WAIT_LOGICAL_CONFIRM) {
+		BT_DBG("Bad AMP_MOVE_STATE (%d)", pi->amp_move_state);
+	}
 
 	dcid  = __le16_to_cpu(req->dcid);
 	flags = __le16_to_cpu(req->flags);
@@ -2653,13 +2734,17 @@ static inline int l2cap_config_req(struct l2cap_conn *conn, struct l2cap_cmd_hdr
 	/* Reset config buffer. */
 	chan->conf_len = 0;
 
-	if (!test_bit(CONF_OUTPUT_DONE, &chan->conf_state))
-		goto unlock;
-
-	if (test_bit(CONF_INPUT_DONE, &chan->conf_state)) {
-		set_default_fcs(chan);
-
-		l2cap_state_change(chan, BT_CONNECTED);
+		if (!pi->amp_id && pi->ampchan) {
+			struct hci_chan *ampchan = pi->ampchan;
+			struct hci_conn *ampcon = pi->ampcon;
+			/* Have moved off of AMP, free the channel */
+			pi->ampchan = NULL;
+			pi->ampcon = NULL;
+			if (hci_chan_put(ampchan))
+				ampcon->l2cap_data = NULL;
+			else
+				l2cap_deaggregate(ampchan, pi);
+		}
 
 		chan->next_tx_seq = 0;
 		chan->expected_tx_seq = 0;
@@ -2772,6 +2857,10 @@ static inline int l2cap_disconnect_req(struct l2cap_conn *conn, struct l2cap_cmd
 	u16 dcid, scid;
 	struct l2cap_chan *chan;
 	struct sock *sk;
+	struct hci_chan *ampchan;
+	struct hci_conn *ampcon;
+
+	BT_DBG("status %d, chan %p, conn %p", (int) status, chan, chan->conn);
 
 	scid = __le16_to_cpu(req->scid);
 	dcid = __le16_to_cpu(req->dcid);
@@ -2788,7 +2877,10 @@ static inline int l2cap_disconnect_req(struct l2cap_conn *conn, struct l2cap_cmd
 	rsp.scid = cpu_to_le16(chan->dcid);
 	l2cap_send_cmd(conn, cmd->ident, L2CAP_DISCONN_RSP, sizeof(rsp), &rsp);
 
-	sk->sk_shutdown = SHUTDOWN_MASK;
+		BT_DBG("amp_move_state %d", pi->amp_move_state);
+
+		if (sk->sk_state != BT_CONNECTED) {
+			struct l2cap_conf_rsp rsp;
 
 	/* don't delete l2cap channel if sk is owned by user */
 	if (sock_owned_by_user(sk)) {
@@ -2813,24 +2905,96 @@ static inline int l2cap_disconnect_rsp(struct l2cap_conn *conn, struct l2cap_cmd
 	struct l2cap_chan *chan;
 	struct sock *sk;
 
-	scid = __le16_to_cpu(rsp->scid);
-	dcid = __le16_to_cpu(rsp->dcid);
+				l2cap_chan_ready(sk);
+			}
+			bh_unlock_sock(sk);
+		} else if (pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_LOGICAL_COMPLETE) {
+			/* Move confirm will be sent after a success
+			 * response is received
+			 */
+			pi->amp_move_state =
+				L2CAP_AMP_STATE_WAIT_MOVE_RSP_SUCCESS;
+		} else if (pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_LOGICAL_CONFIRM) {
+			if (pi->conn_state & L2CAP_CONN_LOCAL_BUSY)
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_LOCAL_BUSY;
+			else if (pi->amp_move_role ==
+					L2CAP_AMP_MOVE_INITIATOR) {
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_MOVE_CONFIRM_RSP;
+				l2cap_send_move_chan_cfm(pi->conn, pi, pi->scid,
+					L2CAP_MOVE_CHAN_SUCCESS);
+				l2cap_sock_set_timer(sk, L2CAP_MOVE_TIMEOUT);
+			} else if (pi->amp_move_role ==
+					L2CAP_AMP_MOVE_RESPONDER) {
+				pi->amp_move_state =
+					L2CAP_AMP_STATE_WAIT_MOVE_CONFIRM;
+				l2cap_send_move_chan_rsp(pi->conn,
+					pi->amp_move_cmd_ident, pi->dcid,
+					L2CAP_MOVE_CHAN_SUCCESS);
+			}
+		} else if ((pi->amp_move_state !=
+				L2CAP_AMP_STATE_WAIT_MOVE_RSP_SUCCESS) &&
+			(pi->amp_move_state !=
+				L2CAP_AMP_STATE_WAIT_MOVE_CONFIRM)) {
+			/* Move was not in expected state, free the channel */
+			ampchan = pi->ampchan;
+			ampcon = pi->ampcon;
+			pi->ampchan = NULL;
+			pi->ampcon = NULL;
+			if (ampchan) {
+				if (hci_chan_put(ampchan))
+					ampcon->l2cap_data = NULL;
+				else
+					l2cap_deaggregate(ampchan, pi);
+			}
+			pi->amp_move_state = L2CAP_AMP_STATE_STABLE;
+		}
+	} else {
+		/* Logical link setup failed. */
 
-	BT_DBG("dcid 0x%4.4x scid 0x%4.4x", dcid, scid);
+		if (sk->sk_state != BT_CONNECTED)
+			l2cap_send_disconn_req(pi->conn, sk, ECONNRESET);
+		else if (pi->amp_move_role == L2CAP_AMP_MOVE_RESPONDER) {
+			l2cap_amp_move_revert(sk);
+			l2cap_pi(sk)->amp_move_role = L2CAP_AMP_MOVE_NONE;
+			pi->amp_move_state = L2CAP_AMP_STATE_STABLE;
+			l2cap_send_move_chan_rsp(pi->conn,
+					pi->amp_move_cmd_ident, pi->dcid,
+					L2CAP_MOVE_CHAN_REFUSED_CONFIG);
+		} else if (pi->amp_move_role == L2CAP_AMP_MOVE_INITIATOR) {
+			if ((pi->amp_move_state ==
+				L2CAP_AMP_STATE_WAIT_LOGICAL_COMPLETE) ||
+				(pi->amp_move_state ==
+				    L2CAP_AMP_STATE_WAIT_LOGICAL_CONFIRM)) {
+				/* Remote has only sent pending or
+				 * success responses, clean up
+				 */
+				l2cap_amp_move_revert(sk);
+				l2cap_pi(sk)->amp_move_role =
+					L2CAP_AMP_MOVE_NONE;
+				pi->amp_move_state = L2CAP_AMP_STATE_STABLE;
+			}
 
-	chan = l2cap_get_chan_by_scid(conn, scid);
-	if (!chan)
-		return 0;
-
-	sk = chan->sk;
-
-	/* don't delete l2cap channel if sk is owned by user */
-	if (sock_owned_by_user(sk)) {
-		l2cap_state_change(chan,BT_DISCONN);
-		__clear_chan_timer(chan);
-		__set_chan_timer(chan, HZ / 5);
-		bh_unlock_sock(sk);
-		return 0;
+			/* Other amp move states imply that the move
+			 * has already aborted
+			 */
+			l2cap_send_move_chan_cfm(pi->conn, pi, pi->scid,
+						L2CAP_MOVE_CHAN_UNCONFIRMED);
+			l2cap_sock_set_timer(sk, L2CAP_MOVE_TIMEOUT);
+		}
+		ampchan = pi->ampchan;
+		ampcon = pi->ampcon;
+		pi->ampchan = NULL;
+		pi->ampcon = NULL;
+		if (ampchan) {
+			if (hci_chan_put(ampchan))
+				ampcon->l2cap_data = NULL;
+			else
+				l2cap_deaggregate(ampchan, pi);
+		}
 	}
 
 	l2cap_chan_del(chan, 0);
@@ -2895,13 +3059,21 @@ static inline int l2cap_information_rsp(struct l2cap_conn *conn, struct l2cap_cm
 			conn->info_state & L2CAP_INFO_FEAT_MASK_REQ_DONE)
 		return 0;
 
-	del_timer(&conn->info_timer);
+	l = &conn->chan_list;
 
-	if (result != L2CAP_IR_SUCCESS) {
-		conn->info_state |= L2CAP_INFO_FEAT_MASK_REQ_DONE;
-		conn->info_ident = 0;
+	read_lock(&l->lock);
 
-		l2cap_conn_start(conn);
+	for (sk = l->head; sk; sk = l2cap_pi(sk)->next_c) {
+		bh_lock_sock(sk);
+		/* TODO MM/PK - What to do if connection is LOCAL_BUSY?  */
+		if (l2cap_pi(sk)->ampchan == chan) {
+			struct hci_conn *ampcon = l2cap_pi(sk)->ampcon;
+			l2cap_pi(sk)->ampchan = NULL;
+			l2cap_pi(sk)->ampcon = NULL;
+			if (hci_chan_put(chan))
+				ampcon->l2cap_data = NULL;
+			else
+				l2cap_deaggregate(chan, l2cap_pi(sk));
 
 		return 0;
 	}

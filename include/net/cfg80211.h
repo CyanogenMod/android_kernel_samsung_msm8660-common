@@ -1653,6 +1653,8 @@ struct cfg80211_ops {
  * @WIPHY_FLAG_REPORTS_OBSS: the device will report beacons from other BSSes
  *	when there are virtual interfaces in AP mode by calling
  *	cfg80211_report_obss_beacon().
+ * @WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD: When operating as an AP, the device
+ *      responds to probe-requests in hardware.
  */
 enum wiphy_flags {
 	WIPHY_FLAG_CUSTOM_REGULATORY		= BIT(0),
@@ -1667,12 +1669,13 @@ enum wiphy_flags {
 	WIPHY_FLAG_MESH_AUTH			= BIT(10),
 	WIPHY_FLAG_SUPPORTS_SCHED_SCAN		= BIT(11),
 	WIPHY_FLAG_ENFORCE_COMBINATIONS		= BIT(12),
-	WIPHY_FLAG_SUPPORTS_FW_ROAM		= BIT(13),
-	WIPHY_FLAG_AP_UAPSD			= BIT(14),
-	WIPHY_FLAG_SUPPORTS_TDLS		= BIT(15),
-	WIPHY_FLAG_TDLS_EXTERNAL_SETUP		= BIT(16),
-	WIPHY_FLAG_HAVE_AP_SME			= BIT(17),
-	WIPHY_FLAG_REPORTS_OBSS			= BIT(18),
+	WIPHY_FLAG_SUPPORTS_FW_ROAM             = BIT(13),
+	WIPHY_FLAG_AP_UAPSD                     = BIT(14),
+	WIPHY_FLAG_SUPPORTS_TDLS                = BIT(15),
+	WIPHY_FLAG_TDLS_EXTERNAL_SETUP          = BIT(16),
+	WIPHY_FLAG_HAVE_AP_SME                  = BIT(17),
+	WIPHY_FLAG_REPORTS_OBSS                 = BIT(18),
+	WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD        = BIT(19),
 };
 
 /**
@@ -1936,6 +1939,13 @@ struct wiphy {
 
 	u32 available_antennas_tx;
 	u32 available_antennas_rx;
+
+	/*
+	* Bitmap of supported protocols for probe response offloading
+	* see &enum nl80211_probe_resp_offload_support_attr. Only valid
+	* when the wiphy flag @WIPHY_FLAG_AP_PROBE_RESP_OFFLOAD is set.
+	*/
+	u32 probe_resp_offload;
 
 	/* If multiple wiphys are registered and you're handed e.g.
 	 * a regular netdev with assigned ieee80211_ptr, you won't
@@ -3041,6 +3051,32 @@ void cfg80211_roamed(struct net_device *dev,
 		     const u8 *bssid,
 		     const u8 *req_ie, size_t req_ie_len,
 		     const u8 *resp_ie, size_t resp_ie_len, gfp_t gfp);
+
+/**
+ * cfg80211_roamed_bss - notify cfg80211 of roaming
+ *
+ * @dev: network device
+ * @bss: entry of bss to which STA got roamed
+ * @req_ie: association request IEs (maybe be %NULL)
+ * @req_ie_len: association request IEs length
+ * @resp_ie: association response IEs (may be %NULL)
+ * @resp_ie_len: assoc response IEs length
+ * @gfp: allocation flags
+ *
+ * This is just a wrapper to notify cfg80211 of roaming event with driver
+ * passing bss to avoid a race in timeout of the bss entry. It should be
+ * called by the underlying driver whenever it roamed from one AP to another
+ * while connected. Drivers which have roaming implemented in firmware
+ * may use this function to avoid a race in bss entry timeout where the bss
+ * entry of the new AP is seen in the driver, but gets timed out by the time
+ * it is accessed in __cfg80211_roamed() due to delay in scheduling
+ * rdev->event_work. In case of any failures, the reference is released
+ * either in cfg80211_roamed_bss() or in __cfg80211_romed(), Otherwise,
+ * it will be released while diconneting from the current bss.
+ */
+void cfg80211_roamed_bss(struct net_device *dev, struct cfg80211_bss *bss,
+			 const u8 *req_ie, size_t req_ie_len,
+			 const u8 *resp_ie, size_t resp_ie_len, gfp_t gfp);
 
 /**
  * cfg80211_disconnected - notify cfg80211 that connection was dropped

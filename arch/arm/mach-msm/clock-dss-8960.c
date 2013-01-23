@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -97,6 +97,8 @@ int hdmi_pll_enable(void)
 {
 	unsigned int val;
 	u32 ahb_en_reg, ahb_enabled;
+	unsigned int timeout_count;
+	int pll_lock_retry = 10;
 
 	ahb_en_reg = readl_relaxed(AHB_EN_REG);
 	ahb_enabled = ahb_en_reg & BIT(4);
@@ -110,6 +112,12 @@ int hdmi_pll_enable(void)
 	writel_relaxed(0x8D, HDMI_PHY_PLL_LOCKDET_CFG2);
 	writel_relaxed(0x10, HDMI_PHY_PLL_LOCKDET_CFG0);
 	writel_relaxed(0x1A, HDMI_PHY_PLL_LOCKDET_CFG1);
+	/* Wait for a short time before de-asserting
+	 * to allow the hardware to complete its job.
+	 * This much of delay should be fine for hardware
+	 * to assert and de-assert.
+	 */
+	udelay(10);
 	/* De-assert PLL S/W reset */
 	writel_relaxed(0x0D, HDMI_PHY_PLL_LOCKDET_CFG2);
 
@@ -118,6 +126,11 @@ int hdmi_pll_enable(void)
 	/* Assert PHY S/W reset */
 	writel_relaxed(val, HDMI_PHY_REG_12);
 	val &= ~BIT(5);
+	/* Wait for a short time before de-asserting
+	   to allow the hardware to complete its job.
+	   This much of delay should be fine for hardware
+	   to assert and de-assert. */
+	udelay(10);
 	/* De-assert PHY S/W reset */
 	writel_relaxed(val, HDMI_PHY_REG_12);
 	writel_relaxed(0x3f, HDMI_PHY_REG_2);
@@ -135,11 +148,45 @@ int hdmi_pll_enable(void)
 	writel_relaxed(val, HDMI_PHY_PLL_PWRDN_B);
 	writel_relaxed(0x80, HDMI_PHY_REG_2);
 
-	while (!(readl_relaxed(HDMI_PHY_PLL_STATUS0) & BIT(0)))
-		cpu_relax();
+	timeout_count = 1000;
+	while (!(readl_relaxed(HDMI_PHY_PLL_STATUS0) & BIT(0)) &&
+			timeout_count && pll_lock_retry) {
+		if (--timeout_count == 0) {
+			/*
+			 * PLL has still not locked.
+			 * Do a software reset and try again
+			 * Assert PLL S/W reset first
+			 */
+			writel_relaxed(0x8D, HDMI_PHY_PLL_LOCKDET_CFG2);
+
+			/* Wait for a short time before de-asserting
+			 * to allow the hardware to complete its job.
+			 * This much of delay should be fine for hardware
+			 * to assert and de-assert.
+			 */
+			udelay(10);
+			writel_relaxed(0x0D, HDMI_PHY_PLL_LOCKDET_CFG2);
+
+			/*
+			 * Wait for a short duration for the PLL calibration
+			 * before checking if the PLL gets locked
+			 */
+			udelay(350);
+
+			timeout_count = 1000;
+			pll_lock_retry--;
+		}
+	}
 
 	if (!ahb_enabled)
 		writel_relaxed(ahb_en_reg & ~BIT(4), AHB_EN_REG);
+
+	if (!pll_lock_retry) {
+		pr_err("%s: HDMI PLL not locked\n", __func__);
+		hdmi_pll_disable();
+		return -EAGAIN;
+	}
+
 	hdmi_pll_on = 1;
 	return 0;
 }
@@ -197,24 +244,19 @@ int hdmi_pll_set_rate(unsigned rate)
 	switch (rate) {
 	case 27030000:
 		/* 480p60/480i60 case */
-		writel_relaxed(0x32, HDMI_PHY_PLL_REFCLK_CFG);
+		writel_relaxed(0xA, HDMI_PHY_PLL_PWRDN_B);
+		writel_relaxed(0x38, HDMI_PHY_PLL_REFCLK_CFG);
 		writel_relaxed(0x2, HDMI_PHY_PLL_CHRG_PUMP_CFG);
-		writel_relaxed(0x08, HDMI_PHY_PLL_LOOP_FLT_CFG0);
-		writel_relaxed(0x77, HDMI_PHY_PLL_LOOP_FLT_CFG1);
-		writel_relaxed(0x2C, HDMI_PHY_PLL_IDAC_ADJ_CFG);
-		writel_relaxed(0x6, HDMI_PHY_PLL_I_VI_KVCO_CFG);
-		writel_relaxed(0x7b, HDMI_PHY_PLL_SDM_CFG0);
-		writel_relaxed(0x01, HDMI_PHY_PLL_SDM_CFG1);
-		writel_relaxed(0x4C, HDMI_PHY_PLL_SDM_CFG2);
-		writel_relaxed(0xC0, HDMI_PHY_PLL_SDM_CFG3);
+		writel_relaxed(0x20, HDMI_PHY_PLL_LOOP_FLT_CFG0);
+		writel_relaxed(0xFF, HDMI_PHY_PLL_LOOP_FLT_CFG1);
+		writel_relaxed(0x00, HDMI_PHY_PLL_SDM_CFG0);
+		writel_relaxed(0x4E, HDMI_PHY_PLL_SDM_CFG1);
+		writel_relaxed(0xD7, HDMI_PHY_PLL_SDM_CFG2);
+		writel_relaxed(0x03, HDMI_PHY_PLL_SDM_CFG3);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SDM_CFG4);
-		writel_relaxed(0x9A, HDMI_PHY_PLL_SSC_CFG0);
-		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG1);
-		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG2);
-		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG3);
 		writel_relaxed(0x2A, HDMI_PHY_PLL_VCOCAL_CFG0);
 		writel_relaxed(0x03, HDMI_PHY_PLL_VCOCAL_CFG1);
-		writel_relaxed(0x2B, HDMI_PHY_PLL_VCOCAL_CFG2);
+		writel_relaxed(0x3B, HDMI_PHY_PLL_VCOCAL_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG3);
 		writel_relaxed(0x86, HDMI_PHY_PLL_VCOCAL_CFG4);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG5);
@@ -230,6 +272,7 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x33, HDMI_PHY_PLL_LOOP_FLT_CFG1);
 		writel_relaxed(0x2C, HDMI_PHY_PLL_IDAC_ADJ_CFG);
 		writel_relaxed(0x6, HDMI_PHY_PLL_I_VI_KVCO_CFG);
+		writel_relaxed(0xA, HDMI_PHY_PLL_PWRDN_B);
 		writel_relaxed(0x77, HDMI_PHY_PLL_SDM_CFG0);
 		writel_relaxed(0x4C, HDMI_PHY_PLL_SDM_CFG1);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SDM_CFG2);
@@ -239,9 +282,12 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG1);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG2);
 		writel_relaxed(0x20, HDMI_PHY_PLL_SSC_CFG3);
+		writel_relaxed(0x10, HDMI_PHY_PLL_LOCKDET_CFG0);
+		writel_relaxed(0x1A, HDMI_PHY_PLL_LOCKDET_CFG1);
+		writel_relaxed(0x0D, HDMI_PHY_PLL_LOCKDET_CFG2);
 		writel_relaxed(0xF4, HDMI_PHY_PLL_VCOCAL_CFG0);
 		writel_relaxed(0x02, HDMI_PHY_PLL_VCOCAL_CFG1);
-		writel_relaxed(0x2B, HDMI_PHY_PLL_VCOCAL_CFG2);
+		writel_relaxed(0x3B, HDMI_PHY_PLL_VCOCAL_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG3);
 		writel_relaxed(0x86, HDMI_PHY_PLL_VCOCAL_CFG4);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG5);
@@ -257,6 +303,7 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x33, HDMI_PHY_PLL_LOOP_FLT_CFG1);
 		writel_relaxed(0x2C, HDMI_PHY_PLL_IDAC_ADJ_CFG);
 		writel_relaxed(0x6, HDMI_PHY_PLL_I_VI_KVCO_CFG);
+		writel_relaxed(0xA, HDMI_PHY_PLL_PWRDN_B);
 		writel_relaxed(0x7B, HDMI_PHY_PLL_SDM_CFG0);
 		writel_relaxed(0x01, HDMI_PHY_PLL_SDM_CFG1);
 		writel_relaxed(0x4C, HDMI_PHY_PLL_SDM_CFG2);
@@ -266,9 +313,12 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG1);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG3);
+		writel_relaxed(0x10, HDMI_PHY_PLL_LOCKDET_CFG0);
+		writel_relaxed(0x1A, HDMI_PHY_PLL_LOCKDET_CFG1);
+		writel_relaxed(0x0D, HDMI_PHY_PLL_LOCKDET_CFG2);
 		writel_relaxed(0x2a, HDMI_PHY_PLL_VCOCAL_CFG0);
 		writel_relaxed(0x03, HDMI_PHY_PLL_VCOCAL_CFG1);
-		writel_relaxed(0x2B, HDMI_PHY_PLL_VCOCAL_CFG2);
+		writel_relaxed(0x3B, HDMI_PHY_PLL_VCOCAL_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG3);
 		writel_relaxed(0x86, HDMI_PHY_PLL_VCOCAL_CFG4);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG5);
@@ -280,12 +330,14 @@ int hdmi_pll_set_rate(unsigned rate)
 		/* 720p60/720p50/1080i60/1080i50
 		 * 1080p24/1080p30/1080p25 case
 		 */
+		writel_relaxed(0xA, HDMI_PHY_PLL_PWRDN_B);
 		writel_relaxed(0x12, HDMI_PHY_PLL_REFCLK_CFG);
 		writel_relaxed(0x01, HDMI_PHY_PLL_LOOP_FLT_CFG0);
 		writel_relaxed(0x33, HDMI_PHY_PLL_LOOP_FLT_CFG1);
 		writel_relaxed(0x76, HDMI_PHY_PLL_SDM_CFG0);
 		writel_relaxed(0xE6, HDMI_PHY_PLL_VCOCAL_CFG0);
 		writel_relaxed(0x02, HDMI_PHY_PLL_VCOCAL_CFG1);
+		writel_relaxed(0x3B, HDMI_PHY_PLL_VCOCAL_CFG2);
 	break;
 
 	case 148500000:
@@ -296,6 +348,7 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x33, HDMI_PHY_PLL_LOOP_FLT_CFG1);
 		writel_relaxed(0x2C, HDMI_PHY_PLL_IDAC_ADJ_CFG);
 		writel_relaxed(0x6, HDMI_PHY_PLL_I_VI_KVCO_CFG);
+		writel_relaxed(0xA, HDMI_PHY_PLL_PWRDN_B);
 		writel_relaxed(0x76, HDMI_PHY_PLL_SDM_CFG0);
 		writel_relaxed(0x01, HDMI_PHY_PLL_SDM_CFG1);
 		writel_relaxed(0x4C, HDMI_PHY_PLL_SDM_CFG2);
@@ -305,9 +358,12 @@ int hdmi_pll_set_rate(unsigned rate)
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG1);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_SSC_CFG3);
+		writel_relaxed(0x10, HDMI_PHY_PLL_LOCKDET_CFG0);
+		writel_relaxed(0x1A, HDMI_PHY_PLL_LOCKDET_CFG1);
+		writel_relaxed(0x0D, HDMI_PHY_PLL_LOCKDET_CFG2);
 		writel_relaxed(0xe6, HDMI_PHY_PLL_VCOCAL_CFG0);
 		writel_relaxed(0x02, HDMI_PHY_PLL_VCOCAL_CFG1);
-		writel_relaxed(0x2B, HDMI_PHY_PLL_VCOCAL_CFG2);
+		writel_relaxed(0x3B, HDMI_PHY_PLL_VCOCAL_CFG2);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG3);
 		writel_relaxed(0x86, HDMI_PHY_PLL_VCOCAL_CFG4);
 		writel_relaxed(0x00, HDMI_PHY_PLL_VCOCAL_CFG5);

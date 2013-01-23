@@ -1364,13 +1364,10 @@ static int pair_device(struct sock *sk, u16 index, unsigned char *data, u16 len)
 
 	hci_dev_lock_bh(hdev);
 
-	if (cp->io_cap == 0x03) {
-		sec_level = BT_SECURITY_MEDIUM;
-		auth_type = HCI_AT_DEDICATED_BONDING;
-	} else {
-		sec_level = BT_SECURITY_HIGH;
-		auth_type = HCI_AT_DEDICATED_BONDING_MITM;
-	}
+	io_cap = cp->io_cap;
+
+	sec_level = BT_SECURITY_MEDIUM;
+	auth_type = HCI_AT_DEDICATED_BONDING;
 
 	conn = hci_connect(hdev, ACL_LINK, 0, &cp->bdaddr, sec_level, auth_type);
 	if (IS_ERR(conn)) {
@@ -2130,6 +2127,37 @@ int mgmt_user_confirm_request(u16 index, bdaddr_t *bdaddr, __le32 value,
 
 	BT_DBG("hci%u", index);
 
+	hdev = hci_dev_get(index);
+
+	if (!hdev)
+		return -ENODEV;
+
+	conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, bdaddr);
+
+	ev.auto_confirm = 0;
+
+	if (!conn || event != HCI_EV_USER_CONFIRM_REQUEST)
+		goto no_auto_confirm;
+
+	loc_cap = (conn->io_capability == 0x04) ? 0x01 : conn->io_capability;
+	rem_cap = conn->remote_cap;
+	loc_mitm = conn->auth_type & 0x01;
+	rem_mitm = conn->remote_auth & 0x01;
+
+	if ((conn->auth_type & HCI_AT_DEDICATED_BONDING) &&
+			conn->auth_initiator && rem_cap == 0x03)
+		ev.auto_confirm = 1;
+	else if (loc_cap == 0x01 && (rem_cap == 0x00 || rem_cap == 0x03)) {
+		if (!loc_mitm && !rem_mitm)
+			value = 0;
+		goto no_auto_confirm;
+	}
+
+
+	if ((!loc_mitm || rem_cap == 0x03) && (!rem_mitm || loc_cap == 0x03))
+		ev.auto_confirm = 1;
+
+no_auto_confirm:
 	bacpy(&ev.bdaddr, bdaddr);
 	ev.confirm_hint = confirm_hint;
 	put_unaligned_le32(value, &ev.value);

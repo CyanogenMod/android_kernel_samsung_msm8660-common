@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2012 Code Aurora Forum.  All rights reserved.
+   Copyright (c) 2000-2001, 2010, Code Aurora Forum. All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -62,7 +62,7 @@ static void hci_le_connect(struct hci_conn *conn)
 	cp.peer_addr_type = conn->dst_type;
 	cp.conn_interval_min = cpu_to_le16(0x0008);
 	cp.conn_interval_max = cpu_to_le16(0x0100);
-	cp.supervision_timeout = cpu_to_le16(0x0064);
+	cp.supervision_timeout = cpu_to_le16(1000);
 	cp.min_ce_len = cpu_to_le16(0x0001);
 	cp.max_ce_len = cpu_to_le16(0x0001);
 
@@ -360,7 +360,6 @@ struct hci_conn *hci_conn_add(struct hci_dev *hdev, int type,
 	switch (type) {
 	case ACL_LINK:
 		conn->pkt_type = hdev->pkt_type & ACL_PTYPE_MASK;
-		conn->link_policy = hdev->link_policy;
 		break;
 	case SCO_LINK:
 		if (!pkt_type)
@@ -414,9 +413,10 @@ int hci_conn_del(struct hci_conn *conn)
 
 	BT_DBG("%s conn %p handle %d", hdev->name, conn, conn->handle);
 
-	/* Make sure no timers are running */
 	del_timer(&conn->idle_timer);
+
 	del_timer(&conn->disc_timer);
+
 	del_timer(&conn->auto_accept_timer);
 
 	if (conn->type == ACL_LINK) {
@@ -508,7 +508,6 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 	struct hci_conn *acl;
 	struct hci_conn *sco;
 	struct hci_conn *le;
-	struct inquiry_entry *ie;
 
 	BT_DBG("%s dst %s", hdev->name, batostr(dst));
 
@@ -546,6 +545,13 @@ struct hci_conn *hci_connect(struct hci_dev *hdev, int type,
 	hci_conn_hold(acl);
 
 	if (acl->state == BT_OPEN || acl->state == BT_CLOSED) {
+		struct inquiry_entry *ie;
+		ie = hci_inquiry_cache_lookup(acl->hdev, &acl->dst);
+		if (ie && (!ie->data.ssp_mode || !acl->hdev->ssp_mode) &&
+				((ie->data.dev_class[1] & 0x1f) != 0x05)) {
+			__u8 auth = AUTH_ENABLED;
+			hci_send_cmd(hdev, HCI_OP_WRITE_AUTH_ENABLE, 1, &auth);
+		}
 		acl->sec_level = BT_SECURITY_LOW;
 		acl->pending_sec_level = sec_level;
 		acl->auth_type = auth_type;

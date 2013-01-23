@@ -17,7 +17,6 @@ obj-y += mdp4_util.o
 ifneq ($(CONFIG_SAMSUNG_8X60_TABLET),y)
 obj-y += mdp4_video_enhance.o
 endif
-obj-y += mdp4_hsic.o
 else
 obj-y += mdp_hw_init.o
 obj-y += mdp_ppp.o

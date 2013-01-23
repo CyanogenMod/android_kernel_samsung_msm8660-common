@@ -713,11 +713,22 @@ static void handle_adsp_rtos_mtoa_app(struct rpc_request_hdr *req)
 	mutex_lock(&module->lock);
 	switch (event) {
 	case RPC_ADSP_RTOS_MOD_READY:
-		MM_INFO("module %s: READY\n", module->name);
-		module->state = ADSP_STATE_ENABLED;
-		wake_up(&module->state_wait);
-		adsp_set_image(module->info, image);
-		break;
+		if (module->state == ADSP_STATE_ENABLING) {
+			MM_INFO("module %s: READY\n", module->name);
+			module->state = ADSP_STATE_ENABLED;
+			wake_up(&module->state_wait);
+			adsp_set_image(module->info, image);
+			break;
+		} else {
+			MM_ERR("module %s got READY event in state[%d]\n",
+								module->name,
+								module->state);
+			rpc_send_accepted_void_reply(rpc_cb_server_client,
+						req->xid,
+						RPC_ACCEPTSTAT_GARBAGE_ARGS);
+			mutex_unlock(&module->lock);
+			return;
+		}
 	case RPC_ADSP_RTOS_MOD_DISABLE:
 		MM_INFO("module %s: DISABLED\n", module->name);
 		module->state = ADSP_STATE_DISABLED;
@@ -1198,7 +1209,7 @@ static int msm_adsp_probe(struct platform_device *pdev)
 			clk_set_rate(mod->clk, adsp_info.module[i].clk_rate);
 		mod->verify_cmd = adsp_info.module[i].verify_cmd;
 		mod->patch_event = adsp_info.module[i].patch_event;
-		INIT_HLIST_HEAD(&mod->pmem_regions);
+		INIT_HLIST_HEAD(&mod->ion_regions);
 		mod->pdev.name = adsp_info.module[i].pdev_name;
 		mod->pdev.id = -1;
 		adsp_info.id_to_module[i] = mod;
