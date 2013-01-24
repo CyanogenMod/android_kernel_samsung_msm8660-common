@@ -136,7 +136,7 @@ int load_565rle_image(char *filename, bool bf_supported)
 	unsigned count, max;
 	unsigned short *data, *bits, *ptr;
 	struct fb_info *info;
-#ifndef CONFIG_FRAMEBUFFER_CONSOLE 
+#if 0
 	struct module *owner; 
 #endif 	
 	info = registered_fb[0];
@@ -146,7 +146,7 @@ int load_565rle_image(char *filename, bool bf_supported)
 			__func__);
 		return -ENODEV;
 	}
-#ifndef CONFIG_FRAMEBUFFER_CONSOLE 
+#if 0
 	owner = info->fbops->owner; 
 	if (!try_module_get(owner)) 
 		return NULL; 
