@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -56,6 +56,8 @@
 #define VCD_I_SLICE_DELIVERY_MODE (VCD_START_BASE + 0x28)
 #define VCD_I_ENABLE_VUI_BITSTREAM_RESTRICT_FLAG (VCD_START_BASE + 0x2F)
 
+#define VCD_I_SET_EXT_METABUFFER (VCD_START_BASE + 0x2C)
+#define VCD_I_FREE_EXT_METABUFFER (VCD_START_BASE + 0x2D)
 
 #define VCD_START_REQ      (VCD_START_BASE + 0x1000)
 #define VCD_I_REQ_IFRAME   (VCD_START_REQ + 0x1)
@@ -116,6 +118,7 @@ enum vcd_perf_level {
 
 #define VCD_METADATA_EXT_DATA       0x0800
 #define VCD_METADATA_USER_DATA      0x1000
+#define VCD_METADATA_SEPARATE_BUF   0x2000
 
 struct vcd_property_meta_data_enable {
 	u32 meta_data_enable_flag;
@@ -377,5 +380,21 @@ struct vcd_property_sps_pps_for_idr_enable {
 
 struct vcd_property_bitstream_restrict_enable {
 	u32 bitstream_restrict_enable_flag;
+};
+
+struct vcd_property_meta_buffer {
+	u8 *kernel_virtual_addr;
+	u8 *physical_addr;
+	u32 size;
+	u32 count;
+	int pmem_fd;
+	u32 offset;
+	u8 *dev_addr;
+	void *client_data;
+	u8 *kernel_virt_addr_iommu;
+	u8 *physical_addr_iommu;
+	int pmem_fd_iommu;
+	u8 *dev_addr_iommu;
+	void *client_data_iommu;
 };
 #endif
