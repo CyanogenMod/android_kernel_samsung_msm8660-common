@@ -2230,7 +2230,7 @@ static int __devinit ld9040_probe(struct platform_device *pdev)
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	lcd.early_suspend.suspend = ld9040_early_suspend;
 	lcd.early_suspend.resume = ld9040_late_resume;
-	lcd.early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 10;
+	lcd.early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	register_early_suspend(&lcd.early_suspend);
 #endif
 
