@@ -2045,13 +2045,16 @@ bool hdmi_common_get_video_format_from_drv_data(struct msm_fb_data_type *mfd)
 	uint32 format;
 	struct fb_var_screeninfo *var = &mfd->fbi->var;
 	bool changed = TRUE;
+	uint32_t userformat = 0;
+	userformat = var->reserved[3] >> 16;
 
-	if ((var->reserved[3] > 0) && (var->reserved[3] <= HDMI_VFRMT_MAX)) {
-		format = var->reserved[3] - 1;
+	if ((userformat > 0) && (userformat <= HDMI_VFRMT_MAX)) {
+		format = userformat-1;
 		DEV_DBG("reserved format is %d\n", format);
 	} else {
-		DEV_DBG("detecting resolution from %dx%d use var->reserved[3]"
-			" to specify mode", mfd->var_xres, mfd->var_yres);
+		DEV_DBG("detecting resolution from %dx%d use top 2 bytes of"
+			" var->reserved[3] to specify mode", mfd->var_xres,
+			mfd->var_yres);
 		switch (mfd->var_xres) {
 		default:
 		case  640:
