@@ -3551,7 +3551,7 @@ end:
 	return ret;
 }
 
-int mdp4_overlay_commit(struct fb_info *info)
+int mdp4_overlay_commit(struct fb_info *info, int mixer)
 {
 	int ret = 0;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
@@ -3561,6 +3561,9 @@ int mdp4_overlay_commit(struct fb_info *info)
 
 	if (!mfd->panel_power_on) /* suspended */
 		return -EINVAL;
+
+	if (mixer >= MDP4_MIXER_MAX)
+		return -EPERM;
 
 	mutex_lock(&mfd->dma->ov_mutex);
 
