@@ -72,13 +72,6 @@ enum ion_heap_type {
 
 enum ion_heap_ids {
 	INVALID_HEAP_ID = -1,
-	/* In a system with the "Mini Ion Upgrade" (such as this one)
-	 * the heap_mask and caching flag end up sharing a spot in
-	 * ion_allocation_data.flags. We should make sure to never use
-	 * the 0th bit for a heap because that's where the caching bit
-	 * ends up.
-	 */
-	ION_BOGUS_HEAP_DO_NOT_USE = 0,
 	ION_CP_MM_HEAP_ID = 8,
 	ION_CP_MFC_HEAP_ID = 12,
 	ION_CP_WB_HEAP_ID = 16, /* 8660 only */
@@ -695,7 +688,6 @@ static inline int msm_ion_do_cache_op(struct ion_client *client,
 struct ion_allocation_data {
 	size_t len;
 	size_t align;
-	unsigned int heap_mask;
 	unsigned int flags;
 	struct ion_handle *handle;
 };
@@ -816,7 +808,7 @@ struct ion_flag_data {
  * descriptor obtained from ION_IOC_SHARE and returns the struct with the handle
  * filed set to the corresponding opaque handle.
  */
-#define ION_IOC_IMPORT		_IOWR(ION_IOC_MAGIC, 5, struct ion_fd_data)
+#define ION_IOC_IMPORT		_IOWR(ION_IOC_MAGIC, 5, int)
 
 /**
  * DOC: ION_IOC_CUSTOM - call architecture specific ion ioctl
@@ -832,21 +824,21 @@ struct ion_flag_data {
  *
  * Clean the caches of the handle specified.
  */
-#define ION_IOC_CLEAN_CACHES	_IOWR(ION_IOC_MAGIC, 20, \
+#define ION_IOC_CLEAN_CACHES	_IOWR(ION_IOC_MAGIC, 7, \
 						struct ion_flush_data)
 /**
  * DOC: ION_MSM_IOC_INV_CACHES - invalidate the caches
  *
  * Invalidate the caches of the handle specified.
  */
-#define ION_IOC_INV_CACHES	_IOWR(ION_IOC_MAGIC, 21, \
+#define ION_IOC_INV_CACHES	_IOWR(ION_IOC_MAGIC, 8, \
 						struct ion_flush_data)
 /**
  * DOC: ION_MSM_IOC_CLEAN_CACHES - clean and invalidate the caches
  *
  * Clean and invalidate the caches of the handle specified.
  */
-#define ION_IOC_CLEAN_INV_CACHES	_IOWR(ION_IOC_MAGIC, 22, \
+#define ION_IOC_CLEAN_INV_CACHES	_IOWR(ION_IOC_MAGIC, 9, \
 						struct ion_flush_data)
 
 /**
@@ -855,7 +847,7 @@ struct ion_flag_data {
  * Gets the flags of the current handle which indicate cachability,
  * secure state etc.
  */
-#define ION_IOC_GET_FLAGS		_IOWR(ION_IOC_MAGIC, 23, \
+#define ION_IOC_GET_FLAGS		_IOWR(ION_IOC_MAGIC, 10, \
 						struct ion_flag_data)
 
 
