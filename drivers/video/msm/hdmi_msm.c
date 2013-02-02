@@ -4432,10 +4432,26 @@ static int hdmi_msm_power_ctrl(boolean enable)
 		if (hdmi_prim_display ||
 			external_common_state->hpd_feature_on) {
 			DEV_DBG("%s: Turning HPD ciruitry on\n", __func__);
+
+			if (external_common_state->pre_suspend_hpd_state) {
+				external_common_state->pre_suspend_hpd_state =
+					 false;
+
+				hdmi_msm_send_event(HPD_EVENT_OFFLINE);
+			}
+
 			rc = hdmi_msm_hpd_on();
+			if (rc) {
+				DEV_ERR("%s: HPD ON FAILED\n", __func__);
+				return rc;
+			}
 		}
 	} else {
 		DEV_DBG("%s: Turning HPD ciruitry off\n", __func__);
+
+		external_common_state->pre_suspend_hpd_state =
+			external_common_state->hpd_state;
+
 		hdmi_msm_hpd_off();
 	}
 
