@@ -1041,12 +1041,19 @@ int ieee80211_get_ratemask(struct ieee80211_supported_band *sband,
 			   u32 *mask)
 {
 	int i, j;
+
+	if (!sband)
+		return -EINVAL;
+
 	if (n_rates == 0 || n_rates > NL80211_MAX_SUPP_RATES)
 		return -EINVAL;
+
 	*mask = 0;
+
 	for (i = 0; i < n_rates; i++) {
 		int rate = (rates[i] & 0x7f) * 5;
 		bool found = false;
+
 		for (j = 0; j < sband->n_bitrates; j++) {
 			if (sband->bitrates[j].bitrate == rate) {
 				found = true;
@@ -1062,5 +1069,6 @@ int ieee80211_get_ratemask(struct ieee80211_supported_band *sband,
 	 * didn't accept a 0-length rates array nor allowed
 	 * entries in the array that didn't exist
 	 */
+
 	return 0;
 }
