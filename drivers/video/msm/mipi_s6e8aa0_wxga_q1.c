@@ -1810,7 +1810,7 @@ if(Is_There_cmc624())
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	 s6e8aa0_lcd.early_suspend.suspend = early_suspend;
 	 s6e8aa0_lcd.early_suspend.resume = late_resume;
-	 s6e8aa0_lcd.early_suspend.level = EARLY_SUSPEND_LEVEL_DISABLE_FB - 10;
+	 s6e8aa0_lcd.early_suspend.level = LCD_OFF_GAMMA_VALUE;
 	 register_early_suspend(&s6e8aa0_lcd.early_suspend);
 #endif
 
