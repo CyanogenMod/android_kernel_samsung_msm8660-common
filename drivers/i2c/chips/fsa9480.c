@@ -712,12 +712,9 @@ static const struct attribute_group fsa9480_group = {
 
 void fsa9480_otg_set_autosw_pba(void)
 {
-	unsigned int data = 0;
-	int ret;
 	struct i2c_client *client = local_usbsw->client;
 	dev_info(&client->dev, "%s\n", __func__);
-	i2c_smbus_write_byte_data(client,
-						FSA9480_REG_CTRL, 0x1E);
+	i2c_smbus_write_byte_data(client, FSA9480_REG_CTRL, 0x1E);
 }
 EXPORT_SYMBOL(fsa9480_otg_set_autosw_pba);
 

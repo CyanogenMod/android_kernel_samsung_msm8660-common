@@ -240,7 +240,7 @@ static int get_time_for_vibetonz(struct timed_output_dev *dev)
 
 	if (hrtimer_active(&timer)) {
 		ktime_t r = hrtimer_get_remaining(&timer);
-		remaining = r.tv.sec * 1000 + r.tv.nsec / 1000000;
+		remaining = ktime_to_ms(r);/*returning time in ms*/
 	} else
 		remaining = 0;
 
@@ -301,13 +301,13 @@ static ssize_t write(struct file *file, const char *buf, size_t count,
 static long unlocked_ioctl(struct file *file, unsigned int cmd,
 	unsigned long arg);
 static const struct file_operations fops = {
-    .owner =    THIS_MODULE,
-    .read =     read,
-    .write =    write,
-    .unlocked_ioctl =   unlocked_ioctl,
-    .open =     open,
-    .release =          release,
-	.llseek =	default_llseek
+	.owner = THIS_MODULE,
+	.read =  read,
+	.write = write,
+	.unlocked_ioctl = unlocked_ioctl,
+	.open = open,
+	.release =  release,
+	.llseek = default_llseek
 };
 
 static struct miscdevice miscdev = {

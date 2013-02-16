@@ -746,8 +746,12 @@ static int sec_bat_check_detbat(struct sec_bat_info *info)
 	union power_supply_propval value;
 	static int cnt;
 	int vf_state = BAT_DETECTED;
+#ifndef ADC_QUEUE_FEATURE
 	int ret = 0;
-
+#endif
+#if defined(CONFIG_TARGET_LOCALE_USA)
+	int adc_data = 0, adc_physical = 0;
+#endif
 	if (!psy) {
 		dev_err(info->dev, "%s: fail to get charger ps\n", __func__);
 		return -ENODEV;
@@ -766,8 +770,7 @@ static int sec_bat_check_detbat(struct sec_bat_info *info)
 			return 0;
 	}
 #else /* ADC_QUEUE_FEATURE */	
-		ret = sec_bat_read_adc(info, CHANNEL_ADC_BATT_ID,
-										&adc_data, &adc_physical);
+		ret = sec_bat_read_adc(info, CHANNEL_ADC_BATT_ID, &adc_data, &adc_physical);
 #endif /* ADC_QUEUE_FEATURE */	
 	
 
@@ -787,9 +790,6 @@ static int sec_bat_check_detbat(struct sec_bat_info *info)
 		}
 	}
 #elif defined(CONFIG_TARGET_LOCALE_USA)
-
-	int adc_data = 0, adc_physical = 0;
-
 #ifdef ADC_QUEUE_FEATURE
 	if (sec_bat_get_adc_depot(info, CHANNEL_ADC_BATT_ID,
 		&adc_data, &adc_physical) < 0) {

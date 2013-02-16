@@ -1327,7 +1327,7 @@ void mmc_init_erase(struct mmc_card *card)
 		}
 	}
 }
-
+#if 0
 static unsigned int mmc_mmc_erase_timeout(struct mmc_card *card,
 				          unsigned int arg, unsigned int qty)
 {
@@ -1555,7 +1555,7 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 out:
 	return err;
 }
-
+#endif
 /**
  * mmc_erase - erase sectors.
  * @card: card to erase
@@ -1568,8 +1568,6 @@ out:
 int mmc_erase(struct mmc_card *card, unsigned int from, unsigned int nr,
 	      unsigned int arg)
 {
-	unsigned int rem, to = from + nr;
-
 	printk("%s: mmc_erase() disabled for protection. from = %u, nr = %u, arg = %u\n",
 			__func__,from,nr,arg);
 	return -EOPNOTSUPP;

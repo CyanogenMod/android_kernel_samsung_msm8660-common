@@ -35,7 +35,6 @@ static struct usb_interface_descriptor intf_desc = {
 	.bDescriptorType    =	USB_DT_INTERFACE,
 	.bNumEndpoints      =	2,
 	.bInterfaceClass    =	0xFF,
-#define CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	.bInterfaceSubClass =	0x10,
 	.bInterfaceProtocol =	0x01,

@@ -594,18 +594,13 @@ static void gp2a_work_func_light(struct work_struct *work)
 {
 	struct sensor_data *data = container_of((struct delayed_work *)work,
 							struct sensor_data, work);
-
-	int i;
-	int adc = 0;
-
-	adc = lightsensor_get_adcvalue();
+	int adc = lightsensor_get_adcvalue();
 
 #if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_JPN_MODEL_SC_05D)
 	input_report_abs(this_data, ABS_MISC, adc);
 	input_sync(this_data);
 #else
-
-	for (i = 0; ARRAY_SIZE(adc_table); i++)
+	for (int i = 0; ARRAY_SIZE(adc_table); i++)
 		if (adc <= adc_table[i])
 			break;
 

@@ -773,7 +773,7 @@ static long audio_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 
 	case AUDIO_SET_VOLUME:
-		pr_debug("AUDIO_SET_VOLUME %d, audio->volume=%d", arg, audio->volume);
+		pr_debug("AUDIO_SET_VOLUME %d, audio->volume=%d", (int)arg, audio->volume);
 		//pr_info("AUDIO_SET_VOLUME %d, audio->volume=%d, mute=%d", (int)arg, audio->volume, audlpa_mute);
 #ifdef LPA_MUTE_CTRL
 		audio->volume = arg;

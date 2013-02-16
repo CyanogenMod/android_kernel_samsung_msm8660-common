@@ -246,8 +246,15 @@ void fill_black_screen(bool on, uint8 pipe_num, uint8 mixer_num);
 int msm_fb_check_frame_rate(struct msm_fb_data_type *mfd,
 				struct fb_info *info);
 
+
+
 #ifdef CONFIG_FB_MSM_LOGO
 #define INIT_IMAGE_FILE "/initlogo.rle"
-int load_565rle_image(char *filename, bool bf_supported);
+extern int load_565rle_image(char *filename, bool bf_supported);
+#define LPM_INIT_IMAGE_FILE "/lpminitlogo.rle"
+#if (defined(CONFIG_TARGET_SERIES_P5LTE) || defined(CONFIG_TARGET_SERIES_P8LTE)) && defined(CONFIG_TARGET_LOCALE_KOR)
+#define CHARGING_IMAGE_FILE "/charging_image.rle"
+#endif
+extern unsigned int is_lpcharging_state(void);
 #endif
 #endif /* MSM_FB_H */

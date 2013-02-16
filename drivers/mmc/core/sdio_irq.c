@@ -32,7 +32,6 @@ static int process_sdio_pending_irqs(struct mmc_host *host)
 	struct mmc_card *card = host->card;
 	int i, ret, count;
 	unsigned char pending;
-	struct sdio_func *func;
 
 	ret = mmc_io_rw_direct(card, 0, 0, SDIO_CCCR_INTx, 0, &pending);
 	if (ret) {

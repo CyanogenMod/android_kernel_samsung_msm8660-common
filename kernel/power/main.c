@@ -349,7 +349,6 @@ static int verify_cpufreq_target(unsigned int target)
 
 int set_freq_limit(unsigned long id, unsigned int freq)
 {
-	int ret = 0;
 	unsigned int min = MIN_FREQ_LIMIT;
 	unsigned int max = MAX_FREQ_LIMIT;
 	unsigned int cur = 0;	

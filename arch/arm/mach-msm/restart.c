@@ -248,14 +248,12 @@ void arch_reset(char mode, const char *cmd)
 		} else if (!strncmp(cmd, "recovery", 8)) {
 			__raw_writel(RESTART_RECOVERY_MODE, restart_reason);
 		} else if (!strncmp(cmd, "download", 8)) {
-			unsigned long code = 0;
-			strict_strtoul(cmd + 8, 16, &code);
-			code = code & 0xff;
+			unsigned long code;
+			code = simple_strtoul(cmd + 8, NULL, 16) & 0xff;
 			__raw_writel(RESTART_HOMEDOWN_MODE + code, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
-			unsigned long code = 0;
-			strict_strtoul(cmd + 4, 16, &code);
-			code = code & 0xff;
+			unsigned long code;
+			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
 			__raw_writel(0x6f656d00 | code, restart_reason);
 #ifdef CONFIG_SEC_DEBUG
 		} else if (!strncmp(cmd, "sec_debug_hw_reset", 18)) {

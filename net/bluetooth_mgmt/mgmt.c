@@ -129,6 +129,7 @@ struct pending_cmd {
 };
 
 /* HCI to MGMT error code conversion table */
+#if 0
 static u8 mgmt_status_table[] = {
 	MGMT_STATUS_SUCCESS,
 	MGMT_STATUS_UNKNOWN_COMMAND,	/* Unknown Command */
@@ -192,6 +193,7 @@ static u8 mgmt_status_table[] = {
 	MGMT_STATUS_CONNECT_FAILED,	/* Connection Establishment Failed */
 	MGMT_STATUS_CONNECT_FAILED,	/* MAC Connection Failed */
 };
+#endif
 
 static u8 mgmt_status(u8 hci_status)
 {
@@ -1460,7 +1462,6 @@ static int pin_code_reply(struct sock *sk, u16 index, void *data, u16 len)
 	struct hci_dev *hdev;
 	struct hci_conn *conn;
 	struct mgmt_cp_pin_code_reply *cp = data;
-	struct mgmt_cp_pin_code_neg_reply ncp;
 	struct hci_cp_pin_code_reply reply;
 	struct pending_cmd *cmd;
 	int err;
