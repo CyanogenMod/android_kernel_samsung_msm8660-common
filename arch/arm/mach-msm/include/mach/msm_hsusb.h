@@ -179,7 +179,7 @@ struct msm_otg_platform_data {
 	int (*accessory_irq_gpio)(void);
 #endif
 #ifdef CONFIG_USB_HOST_NOTIFY
-	void (*set_autosw_pba)();
+	void (*set_autosw_pba)(void);
 #endif
 
 	struct pm_qos_request_list pm_qos_req_dma;
