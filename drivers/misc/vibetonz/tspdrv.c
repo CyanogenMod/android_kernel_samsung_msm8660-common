@@ -240,7 +240,7 @@ static int get_time_for_vibetonz(struct timed_output_dev *dev)
 
 	if (hrtimer_active(&timer)) {
 		ktime_t r = hrtimer_get_remaining(&timer);
-		remaining = r.tv.sec * 1000 + r.tv.nsec / 1000000;
+		remaining = ktime_to_ms(r);/*returning time in ms*/
 	} else
 		remaining = 0;
 
