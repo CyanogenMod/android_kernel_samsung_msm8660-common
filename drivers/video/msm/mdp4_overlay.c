@@ -2678,16 +2678,6 @@ static int mdp4_calc_pipe_mdp_clk(struct msm_fb_data_type *mfd,
 		return ret;
 	}
 
-	/* QC1115
-	// QC : 11-06-2012
-	if ((pipe->src_h < pipe->dst_h) && (pipe->src_w < pipe->dst_w)) {
-		if (((pipe->src_h * 20) >= pipe->dst_h) && ((pipe->src_w * 20) >= pipe->dst_w)) {
-			pr_err("**** %s: <20x Overscaling case!\n", __func__);
-			pipe->req_clk = mdp_max_clk;
-			return 0;
-		}
-	}*/	
-
 	/*
 	 * For the scaling cases, make more margin by removing porch
 	 * values and adding extra 20%.
@@ -3444,20 +3434,6 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 	}
 	mdp4_overlay_reg_flush(pipe, 1);
 	mdp4_mixer_stage_down(pipe, 0);
-
-#if defined(CONFIG_EUR_MODEL_GT_I9210)
-#if defined(CONFIG_ARCH_MSM8X60)
-	/* fixed double bus clock issue on idle state */
-	//mdp4_overlay_mdp_perf_req(mfd, ctrl->plist);
-	//mdp4_overlay_mdp_perf_upd(mfd, 0);
-#endif
-#else
-#if defined(CONFIG_ARCH_MSM8X60)
-	/* fixed double bus clock issue on idle state */
-	mdp4_overlay_mdp_perf_req(mfd, ctrl->plist);
-	mdp4_overlay_mdp_perf_upd(mfd, 0);
-#endif
-#endif
 
 	if (pipe->mixer_num == MDP4_MIXER0) {
 	} else {	/* mixer1, DTV, ATV */
