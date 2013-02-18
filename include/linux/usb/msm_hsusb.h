@@ -185,7 +185,7 @@ struct msm_otg_platform_data {
 	bool enable_dcd;
 	struct msm_bus_scale_pdata *bus_scale_table;
 #ifdef CONFIG_USB_HOST_NOTIFY
-	void (*set_autosw_pba)();
+	void (*set_autosw_pba)(void);
 #endif
 };
 
