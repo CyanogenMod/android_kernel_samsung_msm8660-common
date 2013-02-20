@@ -423,6 +423,19 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		/* Do not allow un-secure heap if secure is specified */
 		if (secure_allocation && (heap->type != ION_HEAP_TYPE_CP))
 			continue;
+
+		if (heap->id == ION_CP_MM_HEAP_ID) {
+			if (client->task == NULL)
+				printk(KERN_WARNING "MM ION alloc request from %s (%d)\n",
+					client->name, client->pid);
+			else {
+				char task_comm[TASK_COMM_LEN];
+				get_task_comm(task_comm, client->task);
+				printk(KERN_WARNING "MM ION alloc request from %s (%d)\n",
+					task_comm, client->pid);
+			}
+		}
+
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
@@ -1235,12 +1248,7 @@ int ion_handle_get_flags(struct ion_client *client, struct ion_handle *handle,
 	}
 	buffer = handle->buffer;
 	mutex_lock(&buffer->lock);
-	/*
-	 * Make sure we only return FLAGS. buffer->flags also holds
-	 * the heap_mask, so we need to make sure we're only looking
-	 * at the supported Ion flags.
-	 */
-	*flags = buffer->flags & (ION_FLAG_CACHED | ION_SECURE);
+	*flags = buffer->flags;
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
 
