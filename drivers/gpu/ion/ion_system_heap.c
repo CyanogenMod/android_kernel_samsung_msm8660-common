@@ -210,8 +210,7 @@ int ion_system_heap_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 	return 0;
 }
 
-static int ion_system_print_debug(struct ion_heap *heap, struct seq_file *s,
-				  const struct rb_root *unused)
+static int ion_system_print_debug(struct ion_heap *heap, struct seq_file *s)
 {
 	seq_printf(s, "total bytes currently allocated: %lx\n",
 			(unsigned long) atomic_read(&system_heap_allocated));
@@ -438,8 +437,7 @@ int ion_system_contig_heap_cache_ops(struct ion_heap *heap,
 }
 
 static int ion_system_contig_print_debug(struct ion_heap *heap,
-					 struct seq_file *s,
-					 const struct rb_root *unused)
+					 struct seq_file *s)
 {
 	seq_printf(s, "total bytes currently allocated: %lx\n",
 		(unsigned long) atomic_read(&system_contig_heap_allocated));
