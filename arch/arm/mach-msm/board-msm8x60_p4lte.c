@@ -9976,10 +9976,11 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #else
 #ifdef CONFIG_SAMSUNG_MEMORY_LAYOUT_ARRANGE
 	.mem_hid = MEMTYPE_PMEM_MDP,
-#else	
+#else
 	.mem_hid = MEMTYPE_EBI1,
-#endif	
 #endif
+#endif
+	.mdp_iommu_split_domain = 0,
 };
 
 static void __init reserve_mdp_memory(void)
