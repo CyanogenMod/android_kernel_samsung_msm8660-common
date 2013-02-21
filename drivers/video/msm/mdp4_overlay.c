@@ -2702,11 +2702,11 @@ static int mdp4_calc_pipe_mdp_clk(struct msm_fb_data_type *mfd,
 	/*
 	 * If the calculated mdp clk is less than panel pixel clk,
 	 * most likely due to upscaling, mdp clk rate will be set to
-	 * greater than pclk. Now the driver uses 1.15 as the
+	 * greater than pclk. Now the driver uses 2 as the
 	 * factor. Ideally this factor is passed from board file.
 	 */
 	if (rst < pclk) {
-		rst = ((pclk >> shift) * 23 / 20) << shift;
+		rst = ((pclk >> shift) * 2) << shift;
 		pr_debug("%s calculated mdp clk is less than pclk.\n",
 			__func__);
 	}
