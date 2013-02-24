@@ -2727,7 +2727,7 @@ static int mdp4_calc_pipe_mdp_bw(struct msm_fb_data_type *mfd,
 	}
 
 	fps = mdp_get_panel_framerate(mfd);
-	quota = pipe->src_w * pipe->src_h * fps * pipe->bpp;
+	quota = pipe->src_w * pipe->src_h * fps * pipe->bpp * 2;
 
 	quota >>= shift;
 	/* factor 1.15 for ab */
@@ -2890,12 +2890,16 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd,
 		 ab_quota_total, perf_req->mdp_ab_bw,
 		 ib_quota_total, perf_req->mdp_ib_bw);
 
-	if (ab_quota_total > mdp_max_bw)
-		pr_warn("%s: req ab bw=%llu is larger than max bw=%llu",
+	if (ab_quota_total > mdp_max_bw) {
+		pr_debug("%s: req ab bw=%llu is larger than max bw=%llu",
 			__func__, ab_quota_total, mdp_max_bw);
-	if (ib_quota_total > mdp_max_bw)
-		pr_warn("%s: req ib bw=%llu is larger than max bw=%llu",
+		ab_quota_total = mdp_max_bw;
+	}
+	if (ib_quota_total > mdp_max_bw) {
+		pr_debug("%s: req ib bw=%llu is larger than max bw=%llu",
 			__func__, ib_quota_total, mdp_max_bw);
+		ib_quota_total = mdp_max_bw;
+	}
 
 	pr_debug("%s %d: pid %d cnt %d clk %d ov0_blt %d, ov1_blt %d\n",
 		 __func__, __LINE__, current->pid, cnt,
