@@ -285,6 +285,31 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 	return cnt;
 }
 
+static void mdp4_lcdc_vsync_irq_ctrl(int cndx, int enable)
+{
+	struct vsycn_ctrl *vctrl;
+	static int vsync_irq_cnt;
+
+	vctrl = &vsync_ctrl_db[cndx];
+
+	mutex_lock(&vctrl->update_lock);
+	if (enable) {
+		if (vsync_irq_cnt == 0)
+			vsync_irq_enable(INTR_PRIMARY_VSYNC,
+						MDP_PRIM_VSYNC_TERM);
+		vsync_irq_cnt++;
+	} else {
+		if (vsync_irq_cnt) {
+			vsync_irq_cnt--;
+			if (vsync_irq_cnt == 0)
+				vsync_irq_disable(INTR_PRIMARY_VSYNC,
+						MDP_PRIM_VSYNC_TERM);
+		}
+	}
+	pr_debug("%s: enable=%d cnt=%d\n", __func__, enable, vsync_irq_cnt);
+	mutex_unlock(&vctrl->update_lock);
+}
+
 void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable)
 {
 	struct vsycn_ctrl *vctrl;
@@ -299,16 +324,13 @@ void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable)
 
 	vctrl->vsync_irq_enabled = enable;
 
-	if (enable)
-		vsync_irq_enable(INTR_PRIMARY_VSYNC, MDP_PRIM_VSYNC_TERM);
-	else
-		vsync_irq_disable(INTR_PRIMARY_VSYNC, MDP_PRIM_VSYNC_TERM);
+	mdp4_lcdc_vsync_irq_ctrl(cndx, enable);
 
 	if (vctrl->vsync_irq_enabled &&  atomic_read(&vctrl->suspend) == 0)
 		atomic_set(&vctrl->vsync_resume, 1);
 }
 
-void mdp4_lcdc_wait4vsync(int cndx, long long *vtime)
+void mdp4_lcdc_wait4vsync(int cndx)
 {
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
@@ -322,13 +344,10 @@ void mdp4_lcdc_wait4vsync(int cndx, long long *vtime)
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
 
-	if (atomic_read(&vctrl->suspend) > 0) {
-		*vtime = -1;
+	if (atomic_read(&vctrl->suspend) > 0)
 		return;
-	}
 
-	/* start timing generator & mmu if they are not started yet */
-	mdp4_overlay_lcdc_start();
+	mdp4_lcdc_vsync_irq_ctrl(cndx, 1);
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 
@@ -339,9 +358,8 @@ void mdp4_lcdc_wait4vsync(int cndx, long long *vtime)
 
 	if (!wait_for_completion_timeout(&vctrl->vsync_comp, msecs_to_jiffies(100)))
 		pr_err("%s %d  TIMEOUT_\n", __func__, __LINE__);
+	mdp4_lcdc_vsync_irq_ctrl(cndx, 0);
 	mdp4_stat.wait4vsync0++;
-
-	*vtime = vctrl->vsync_time.tv64;
 }
 
 static void mdp4_lcdc_wait4dmap(int cndx)
@@ -670,10 +688,24 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	mdp_histogram_ctrl_all(TRUE);
+	mdp4_overlay_lcdc_start();
 
 	return ret;
 }
 
+/* timing generator off */
+static void mdp4_lcdc_tg_off(struct vsycn_ctrl *vctrl)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&vctrl->spin_lock, flags);
+	INIT_COMPLETION(vctrl->vsync_comp);
+	vctrl->wait_vsync_cnt++;
+	MDP_OUTP(MDP_BASE + LCDC_BASE, 0); /* turn off timing generator */
+	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
+
+	mdp4_lcdc_wait4vsync(0);
+}
 int mdp4_lcdc_off(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -689,10 +721,9 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
 
-	atomic_set(&vctrl->suspend, 1);
-	atomic_set(&vctrl->vsync_resume, 0);
+	mdp4_lcdc_wait4vsync(cndx);
 
-	msleep(20);	/* >= 17 ms */
+	atomic_set(&vctrl->vsync_resume, 0);
 
 	complete_all(&vctrl->vsync_comp);
 
@@ -706,8 +737,6 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 	}
 
 	mdp_histogram_ctrl_all(FALSE);
-
-	MDP_OUTP(MDP_BASE + LCDC_BASE, 0);
 
 	lcdc_enabled = 0;
 
@@ -742,6 +771,10 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 				vctrl->base_pipe->pipe_ndx, 1);
 		}
 	}
+
+	mdp4_lcdc_tg_off(vctrl);
+
+	atomic_set(&vctrl->suspend, 1);
 
 	/* MDP clock disable */
 	mdp_clk_ctrl(0);
