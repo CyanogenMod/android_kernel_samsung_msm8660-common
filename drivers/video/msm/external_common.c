@@ -1401,7 +1401,7 @@ static void add_supported_video_format(
 		if (video_format == external_common_state->video_resolution) {
 			DEV_DBG("%s: Default resolution %d [%s] supported\n",
 					__func__, video_format,
-					video_format_2string(video_format));
+					msm_hdmi_mode_2string(video_format));
 		}
 	}
 }
@@ -2027,8 +2027,8 @@ bool hdmi_common_get_video_format_from_drv_data(struct msm_fb_data_type *mfd)
 	uint32_t userformat = 0;
 	userformat = var->reserved[3] >> 16;
 
-	if ((userformat > 0) && (userformat <= HDMI_VFRMT_MAX)) {
-		format = userformat-1;
+	if (userformat) {
+		format = userformat;
 		DEV_DBG("reserved format is %d\n", format);
 	} else {
 		DEV_DBG("detecting resolution from %dx%d use top 2 bytes of"
