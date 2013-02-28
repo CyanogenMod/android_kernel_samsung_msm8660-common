@@ -16,6 +16,8 @@
 #include <linux/module.h>
 #include <kgsl_device.h>
 
+#include "kgsl_trace.h"
+
 static void _add_event_to_list(struct list_head *head, struct kgsl_event *event)
 {
 	struct list_head *n;
@@ -67,6 +69,7 @@ int kgsl_add_event(struct kgsl_device *device, u32 ts,
 	 */
 
 	if (timestamp_cmp(cur_ts, ts) >= 0) {
+		trace_kgsl_fire_event(ts, 0);
 		cb(device, priv, ts);
 		return 0;
 	}
@@ -80,6 +83,9 @@ int kgsl_add_event(struct kgsl_device *device, u32 ts,
 	event->priv = priv;
 	event->func = cb;
 	event->owner = owner;
+	event->created = jiffies;
+
+	trace_kgsl_register_event(ts);
 
 	_add_event_to_list(&device->events, event);
 
@@ -120,6 +126,9 @@ void kgsl_cancel_events(struct kgsl_device *device,
 		 * the callback knows how far the GPU made it before things went
 		 * explosion
 		 */
+
+		trace_kgsl_fire_event(cur, jiffies - event->created);
+
 		if (event->func)
 			event->func(device, event->priv, cur);
 
@@ -146,6 +155,9 @@ static inline void _process_event_list(struct kgsl_device *device,
 		 * confused if they don't bother comparing the current timetamp
 		 * to the timestamp they wanted
 		 */
+
+		trace_kgsl_fire_event(event->timestamp,
+			jiffies - event->created);
 
 		if (event->func)
 			event->func(device, event->priv, event->timestamp);

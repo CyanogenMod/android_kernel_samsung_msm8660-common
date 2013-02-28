@@ -372,6 +372,36 @@ DEFINE_EVENT(kgsl_mem_timestamp_template, kgsl_mem_timestamp_free,
 	TP_ARGS(mem_entry, curr_ts)
 );
 
+TRACE_EVENT(kgsl_register_event,
+		TP_PROTO(unsigned int timestamp),
+		TP_ARGS(timestamp),
+		TP_STRUCT__entry(
+			__field(unsigned int, timestamp)
+		),
+		TP_fast_assign(
+			__entry->timestamp = timestamp;
+		),
+		TP_printk(
+			"ts=%d",
+			__entry->timestamp)
+);
+
+TRACE_EVENT(kgsl_fire_event,
+		TP_PROTO(unsigned int ts,
+			unsigned int age),
+		TP_ARGS(ts, age),
+		TP_STRUCT__entry(
+			__field(unsigned int, ts)
+			__field(unsigned int, age)
+		),
+		TP_fast_assign(
+			__entry->ts = ts;
+			__entry->age = age;
+		),
+		TP_printk(
+			"ts=%d age=%u",
+			__entry->ts, __entry->age)
+);
 
 TRACE_EVENT(kgsl_timestamp_event,
 		TP_PROTO(unsigned int ts,
