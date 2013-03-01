@@ -125,6 +125,8 @@ void kgsl_cancel_events(struct kgsl_device *device,
 
 		list_del(&event->list);
 		kfree(event);
+
+		kgsl_active_count_put(device);
 	}
 }
 EXPORT_SYMBOL(kgsl_cancel_events);
@@ -150,6 +152,8 @@ static inline void _process_event_list(struct kgsl_device *device,
 
 		list_del(&event->list);
 		kfree(event);
+
+		kgsl_active_count_put(device);
 	}
 }
 

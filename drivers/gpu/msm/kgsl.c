@@ -788,10 +788,7 @@ static long kgsl_ioctl_device_waittimestamp(struct kgsl_device_private
 	trace_kgsl_waittimestamp_exit(dev_priv->device, result);
 
 	/* Fire off any pending suspend operations that are in flight */
-
-	INIT_COMPLETION(dev_priv->device->suspend_gate);
-	dev_priv->device->active_cnt--;
-	complete(&dev_priv->device->suspend_gate);
+	kgsl_active_count_put(dev_priv->device);
 
 	return result;
 }
