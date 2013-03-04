@@ -231,6 +231,7 @@ int kgsl_device_snapshot(struct kgsl_device *device, int hang)
 	struct kgsl_snapshot_header *header = device->snapshot;
 	int remain = device->snapshot_maxsize - sizeof(*header);
 	void *snapshot;
+	struct timespec boot;
 
 	/*
 	 * The first hang is always the one we are interested in. To
@@ -276,7 +277,13 @@ int kgsl_device_snapshot(struct kgsl_device *device, int hang)
 	snapshot = kgsl_snapshot_add_section(device, KGSL_SNAPSHOT_SECTION_END,
 		snapshot, &remain, NULL, NULL);
 
-	device->snapshot_timestamp = get_seconds();
+	/*
+	 * The timestamp is the seconds since boot so it is easier to match to
+	 * the kernel log
+	 */
+
+	getboottime(&boot);
+	device->snapshot_timestamp = get_seconds() - boot.tv_sec;
 	device->snapshot_size = (int) (snapshot - device->snapshot);
 
 	/* Freeze the snapshot on a hang until it gets read */
@@ -347,7 +354,7 @@ exit:
 /* Show the timestamp of the last collected snapshot */
 static ssize_t timestamp_show(struct kgsl_device *device, char *buf)
 {
-	return snprintf(buf, PAGE_SIZE, "%x\n", device->snapshot_timestamp);
+	return snprintf(buf, PAGE_SIZE, "%d\n", device->snapshot_timestamp);
 }
 
 /* manually trigger a new snapshot to be collected */
