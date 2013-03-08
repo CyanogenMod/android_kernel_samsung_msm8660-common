@@ -1760,6 +1760,8 @@ static long kgsl_ioctl_timestamp_event(struct kgsl_device_private *dev_priv,
 	struct kgsl_timestamp_event *param = data;
 	int ret;
 
+	trace_kgsl_timestamp_event(param->timestamp, param->type);
+
 	switch (param->type) {
 	case KGSL_TIMESTAMP_EVENT_GENLOCK:
 		ret = kgsl_add_genlock_event(dev_priv->device,

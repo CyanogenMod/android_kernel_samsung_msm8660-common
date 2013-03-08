@@ -373,6 +373,23 @@ DEFINE_EVENT(kgsl_mem_timestamp_template, kgsl_mem_timestamp_free,
 );
 
 
+TRACE_EVENT(kgsl_timestamp_event,
+		TP_PROTO(unsigned int ts,
+			unsigned int type),
+		TP_ARGS(ts, type),
+		TP_STRUCT__entry(
+			__field(unsigned int, ts)
+			__field(unsigned int, type)
+		),
+		TP_fast_assign(
+			__entry->ts = ts;
+			__entry->type = type;
+		),
+		TP_printk(
+			"ts=%d type=%d",
+			__entry->ts, __entry->type)
+);
+
 #endif /* _KGSL_TRACE_H */
 
 /* This part must be outside protection */
