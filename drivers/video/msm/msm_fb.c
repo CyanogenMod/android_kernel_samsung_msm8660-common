@@ -1775,6 +1775,12 @@ static int msm_fb_open(struct fb_info *info, int user)
 			goto msm_fb_open_exit;
 	}
 
+	if (mfd->op_enable == 0) {
+		/* if system is in suspend mode, do not unblank */
+		mfd->ref_cnt++;
+		return 0;
+	}
+
 	if (!mfd->ref_cnt) {
 		if (!bf_supported ||
 			(info->node != 1 && info->node != 2))
