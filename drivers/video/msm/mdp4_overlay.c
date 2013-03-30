@@ -118,6 +118,20 @@ struct mdp4_overlay_perf perf_current = {
 	.mdp_bw = OVERLAY_PERF_LEVEL4,
 };
 
+void  mdp4_overlay_free_base_pipe(struct msm_fb_data_type *mfd)
+{
+	if (!hdmi_prim_display && mfd->index == 0) {
+		if (ctrl->panel_mode & MDP4_PANEL_DSI_VIDEO)
+			mdp4_dsi_video_free_base_pipe(mfd);
+		else if (ctrl->panel_mode & MDP4_PANEL_DSI_CMD)
+			mdp4_dsi_cmd_free_base_pipe(mfd);
+		else if (ctrl->panel_mode & MDP4_PANEL_LCDC)
+			mdp4_lcdc_free_base_pipe(mfd);
+	} else if (hdmi_prim_display || mfd->index == 1) {
+		mdp4_dtv_free_base_pipe(mfd);
+	}
+}
+
 static struct ion_client *display_iclient;
 
 
