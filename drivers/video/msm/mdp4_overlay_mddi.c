@@ -346,7 +346,7 @@ int mdp4_mddi_pipe_commit(void)
 			* which will be freed at next
 			* pipe_commit
 			*/
-			mdp4_overlay_iommu_pipe_free(pipe->pipe_ndx, 0);
+			//mdp4_overlay_iommu_pipe_free(pipe->pipe_ndx, 0);
 			pipe->pipe_used = 0; /* clear */
 		}
 	}
