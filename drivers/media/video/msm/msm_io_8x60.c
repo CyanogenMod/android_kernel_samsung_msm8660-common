@@ -92,9 +92,11 @@ static struct clk *camio_vpe_pclk;
 static struct regulator *fs_vfe;
 static struct regulator *fs_ijpeg;
 static struct regulator *fs_vpe;
+#if 0 //samsung (LTE) , not used.[[ 
 static struct regulator *ldo15;
 static struct regulator *lvs0;
 static struct regulator *ldo25;
+#endif // ]]
 
 static struct msm_camera_io_ext camio_ext;
 static struct msm_camera_io_clk camio_clk;
@@ -182,6 +184,7 @@ void msm_io_memcpy(void __iomem *dest_addr, void __iomem *src_addr, u32 len)
 
 static void msm_camera_vreg_enable(void)
 {
+#if 0 //samsung (LTE) , not used.[[ 
 	ldo15 = regulator_get(NULL, "8058_l15");
 	if (IS_ERR(ldo15)) {
 		pr_err("%s: VREG LDO15 get failed\n", __func__);
@@ -212,7 +215,7 @@ static void msm_camera_vreg_enable(void)
 	if (IS_ERR(ldo25)) {
 		pr_err("%s: VREG LDO25 get failed\n", __func__);
 		ldo25 = NULL;
-		goto lvs0_disable;
+		goto ldo25_disable;
 	}
 	if (regulator_set_voltage(ldo25, 1200000, 1200000)) {
 		pr_err("%s: VREG LDO25 set voltage failed\n",  __func__);
@@ -222,6 +225,8 @@ static void msm_camera_vreg_enable(void)
 		pr_err("%s: VREG LDO25 enable failed\n", __func__);
 		goto ldo25_put;
 	}
+
+#endif // ]]
 
 	fs_vfe = regulator_get(NULL, "fs_vfe");
 	if (IS_ERR(fs_vfe)) {
@@ -234,6 +239,7 @@ static void msm_camera_vreg_enable(void)
 	}
 	return;
 
+#if 0 //samsung (LTE) , not used.[[ 
 ldo25_disable:
 	regulator_disable(ldo25);
 ldo25_put:
@@ -246,10 +252,12 @@ ldo15_disable:
 	regulator_disable(ldo15);
 ldo15_put:
 	regulator_put(ldo15);
+#endif//]]	
 }
 
 static void msm_camera_vreg_disable(void)
 {
+#if 0 //samsung (LTE) , not used.[[ 
 	if (ldo15) {
 		regulator_disable(ldo15);
 		regulator_put(ldo15);
@@ -264,10 +272,13 @@ static void msm_camera_vreg_disable(void)
 		regulator_disable(ldo25);
 		regulator_put(ldo25);
 	}
+#endif //]]
+	//dump_stack();
 
 	if (fs_vfe) {
 		regulator_disable(fs_vfe);
 		regulator_put(fs_vfe);
+		fs_vfe = NULL;
 	}
 }
 
@@ -671,30 +682,152 @@ void msm_camio_disable(struct platform_device *pdev)
 
 int msm_camio_sensor_clk_on(struct platform_device *pdev)
 {
-	int rc = 0;
 	struct msm_camera_sensor_info *sinfo = pdev->dev.platform_data;
 	struct msm_camera_device_platform_data *camdev = sinfo->pdata;
+	unsigned int mclk_cfg;
+	int rc = 0;
+	
+	pr_info("%s\n", __func__);
+
 	camio_dev = pdev;
 	camio_ext = camdev->ioext;
 	camio_clk = camdev->ioclk;
+
+	// Disable MCLK 
+	mclk_cfg = GPIO_CFG(32, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);
 
 	msm_camera_vreg_enable();
 	msleep(10);
 	rc = camdev->camera_gpio_on();
 	if (rc < 0)
 		return rc;
+#if !defined (CONFIG_SENSOR_ISX012)
+	// ldo on
+	if (sinfo->sensor_platform_info->sensor_power_control(1)) {
+		pr_info("power on ldo fail\n");
+		
+	}
+
+	//  MCLK
+	rc = msm_camio_clk_enable(CAMIO_CAM_MCLK_CLK);  //MCLK ON
+	
+	mclk_cfg = GPIO_CFG(32, 1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);	
+
+#if defined (CONFIG_SENSOR_SR200PC20M)
+	msleep(30); // min 30ms
+#else
+	msleep(3); // min 350ns
+#endif
+
+	// reset high 
+	if (sinfo->sensor_platform_info->sensor_reset) {
+		gpio_set_value_cansleep(sinfo->sensor_platform_info->sensor_reset, 1);
+		msleep(5);
+	}
+	pr_info("%s : X\n", __func__);
+	return rc;
+
+#else
 	return msm_camio_clk_enable(CAMIO_CAM_MCLK_CLK);
+#endif
 }
+
 
 int msm_camio_sensor_clk_off(struct platform_device *pdev)
 {
 	struct msm_camera_sensor_info *sinfo = pdev->dev.platform_data;
 	struct msm_camera_device_platform_data *camdev = sinfo->pdata;
+	unsigned int mclk_cfg;
+#if !defined (CONFIG_SENSOR_ISX012)
+	int rc = 0;
+#endif
+
+	pr_info("%s\n", __func__);
+
+#if !defined (CONFIG_SENSOR_ISX012)
+	//reset low
+	if (sinfo->sensor_platform_info->sensor_reset) {
+		gpio_set_value_cansleep(sinfo->sensor_platform_info->sensor_reset, 0);
+	}
+	msleep(3);
+
+	// Disable MCLK 
+	mclk_cfg = GPIO_CFG(32, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);	
+
+	// ldo off
+	if (sinfo->sensor_platform_info->sensor_power_control(0)){
+		pr_info("power off ldo fail\n");
+		// false routine
+	}
+	
+	msm_camera_vreg_disable();
+	camdev->camera_gpio_off();
+	rc = msm_camio_clk_disable(CAMIO_CAM_MCLK_CLK);
+	pr_info("%s : X\n", __func__);
+	return rc;
+
+#else
+	// Disable MCLK 
+	mclk_cfg = GPIO_CFG(32, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);	
 	msm_camera_vreg_disable();
 	camdev->camera_gpio_off();
 	return msm_camio_clk_disable(CAMIO_CAM_MCLK_CLK);
+#endif
 
 }
+
+
+// samsung
+void msm_camio_sensor_reset(struct msm_camera_sensor_info *sinfo)
+{
+	unsigned int mclk_cfg;
+	
+	pr_info("%s\n", __func__);
+//power off
+	//reset low
+	if (sinfo->sensor_platform_info->sensor_reset) {
+		gpio_set_value_cansleep(sinfo->sensor_platform_info->sensor_reset, 0);
+		msleep(3);
+}
+
+	// Disable MCLK 
+	mclk_cfg = GPIO_CFG(32, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);
+	msleep(1);
+
+	// ldo off
+	if (sinfo->sensor_platform_info->sensor_power_control(0)){
+		pr_info("power off ldo fail\n");
+		// false routine
+	}
+	
+	msleep(3);
+	
+//power on
+	//ldo on
+	if (sinfo->sensor_platform_info->sensor_power_control(1)) {
+		pr_info("power on ldo fail\n");
+		// false routine
+	}
+	
+	msleep(1);
+	//mclk on
+	mclk_cfg = GPIO_CFG(32, 1, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA);
+	gpio_tlmm_config(mclk_cfg, GPIO_CFG_ENABLE);	
+	msleep(3); // min 30ms
+
+	// reset high 
+	if (sinfo->sensor_platform_info->sensor_reset) {
+		gpio_set_value_cansleep(sinfo->sensor_platform_info->sensor_reset, 1);
+		msleep(5);
+	}
+
+}
+
 
 void msm_camio_vfe_blk_reset(void)
 {
@@ -732,7 +865,7 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 	uint32_t val = 0;
 	int i;
 
-	CDBG("msm_camio_csi_config\n");
+	pr_err("msm_camio_csi_config : E\n");
 	if (csibase != NULL) {
 		/* SOT_ECC_EN enable error correction for SYNC (data-lane) */
 		msm_io_w(0x4, csibase + MIPI_PHY_CONTROL);
@@ -749,7 +882,7 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 			MIPI_PROTOCOL_CONTROL_DATA_FORMAT_SHFT;
 		val |= csi_params->dpcm_scheme <<
 			MIPI_PROTOCOL_CONTROL_DPCM_SCHEME_SHFT;
-		CDBG("%s MIPI_PROTOCOL_CONTROL val=0x%x\n", __func__, val);
+		pr_err("%s MIPI_PROTOCOL_CONTROL val=0x%x\n", __func__, val);
 		msm_io_w(val, csibase + MIPI_PROTOCOL_CONTROL);
 
 		/* settle_cnt is very sensitive to speed!
@@ -759,13 +892,13 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 			(0x0F << MIPI_PHY_D0_CONTROL2_HS_TERM_IMP_SHFT) |
 			(0x1 << MIPI_PHY_D0_CONTROL2_LP_REC_EN_SHFT) |
 			(0x1 << MIPI_PHY_D0_CONTROL2_ERR_SOT_HS_EN_SHFT);
-		CDBG("%s MIPI_PHY_D0_CONTROL2 val=0x%x\n", __func__, val);
+		pr_err("%s MIPI_PHY_D0_CONTROL2 val=0x%x\n", __func__, val);
 		for (i = 0; i < csi_params->lane_cnt; i++)
 			msm_io_w(val, csibase + MIPI_PHY_D0_CONTROL2 + i * 4);
 
 		val = (0x0F << MIPI_PHY_CL_CONTROL_HS_TERM_IMP_SHFT) |
 			(0x1 << MIPI_PHY_CL_CONTROL_LP_REC_EN_SHFT);
-		CDBG("%s MIPI_PHY_CL_CONTROL val=0x%x\n", __func__, val);
+		pr_err("%s MIPI_PHY_CL_CONTROL val=0x%x\n", __func__, val);
 		msm_io_w(val, csibase + MIPI_PHY_CL_CONTROL);
 
 		val = 0 << MIPI_PHY_D0_CONTROL_HS_REC_EQ_SHFT;
@@ -774,7 +907,7 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 		val =
 		(0x1 << MIPI_PHY_D1_CONTROL_MIPI_CLK_PHY_SHUTDOWNB_SHFT)
 		|(0x1 << MIPI_PHY_D1_CONTROL_MIPI_DATA_PHY_SHUTDOWNB_SHFT);
-		CDBG("%s MIPI_PHY_D1_CONTROL val=0x%x\n", __func__, val);
+		pr_err("%s MIPI_PHY_D1_CONTROL val=0x%x\n", __func__, val);
 		msm_io_w(val, csibase + MIPI_PHY_D1_CONTROL);
 
 		msm_io_w(0x00000000, csibase + MIPI_PHY_D2_CONTROL);
@@ -806,9 +939,9 @@ int msm_camio_csi_config(struct msm_camera_csi_params *csi_params)
 		/*clear IRQ bits*/
 		msm_io_w(0xF017F3C0, csibase + MIPI_INTERRUPT_STATUS);
 	} else {
-		pr_info("CSIBASE is NULL");
+		pr_err("CSIBASE is NULL");
 	}
-
+	pr_err("msm_camio_csi_config : X\n");
 	return rc;
 }
 
@@ -894,6 +1027,7 @@ int msm_cam_core_reset(void)
 {
 	struct clk *clk1;
 	int rc = 0;
+	pr_info("%s\n", __func__);
 	clk1 = clk_get(&camio_dev->dev, "csi_vfe_clk");
 	if (IS_ERR(clk1)) {
 		pr_err("%s: did not get csi_vfe_clk\n", __func__);

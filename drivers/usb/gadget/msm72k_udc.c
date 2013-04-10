@@ -45,6 +45,9 @@
 #include <mach/clk.h>
 #include <linux/uaccess.h>
 #include <linux/wakelock.h>
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+#include <linux/usb/composite.h>
+#endif
 
 static const char driver_name[] = "msm72k_udc";
 
@@ -152,6 +155,7 @@ static void usb_do_remote_wakeup(struct work_struct *w);
 #define EPT_PRIME_CHECK_DELAY	(jiffies + msecs_to_jiffies(1000))
 
 struct usb_info {
+	struct usb_gadget		gadget; // for usb lock change position.
 	/* lock for register/queue/device state changes */
 	spinlock_t lock;
 
@@ -200,7 +204,7 @@ struct usb_info {
 	unsigned prime_fail_count;
 	unsigned long dTD_update_fail_count;
 
-	struct usb_gadget		gadget;
+//	struct usb_gadget		gadget;
 	struct usb_gadget_driver	*driver;
 	struct switch_dev sdev;
 
@@ -490,6 +494,15 @@ static void config_ept(struct msm_endpoint *ept)
 {
 	struct usb_info *ui = ept->ui;
 	unsigned cfg = CONFIG_MAX_PKT(ept->ep.maxpacket) | CONFIG_ZLT;
+	const struct usb_endpoint_descriptor *desc = ept->ep.desc;
+	unsigned mult = 0;
+
+	if (desc && ((desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK)
+			== USB_ENDPOINT_XFER_ISOC)) {
+		cfg &= ~(CONFIG_MULT);
+		mult = ((ept->ep.maxpacket >> CONFIG_MULT_SHIFT) + 1) & 0x03;
+		cfg |= (mult << (ffs(CONFIG_MULT) - 1));
+	}
 
 	/* ep0 out needs interrupt-on-setup */
 	if (ept->bit == 0)
@@ -1318,8 +1331,7 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 			/* XXX: we can't seem to detect going offline,
 			 * XXX:  so deconfigure on reset for the time being
 			 */
-			dev_dbg(&ui->pdev->dev,
-					"usb: notify offline\n");
+			printk(KERN_INFO "%s: usb: notify offline\n", __func__);
 			ui->driver->disconnect(&ui->gadget);
 			/* cancel pending ep0 transactions */
 			flush_endpoint(&ui->ep0out);
@@ -1424,7 +1436,7 @@ static void usb_reset(struct usb_info *ui)
 	atomic_set(&ui->configured, 0);
 
 	if (ui->driver) {
-		dev_dbg(&ui->pdev->dev, "usb: notify offline\n");
+		printk(KERN_INFO "%s: usb: notify offline\n", __func__);
 		ui->driver->disconnect(&ui->gadget);
 	}
 
@@ -1486,6 +1498,9 @@ static void usb_do_work(struct work_struct *w)
 	struct msm_otg *otg = to_msm_otg(ui->xceiv);
 	unsigned long iflags;
 	unsigned flags, _vbus;
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	struct usb_composite_dev *cdev;
+#endif
 
 	for (;;) {
 		spin_lock_irqsave(&ui->lock, iflags);
@@ -1560,13 +1575,21 @@ static void usb_do_work(struct work_struct *w)
 				dev_dbg(&ui->pdev->dev,
 					"msm72k_udc: ONLINE -> OFFLINE\n");
 
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+				cdev = get_gadget_data(&ui->gadget);
+//				if (!is_b_sess_vld())
+				{
+					printk("off mute_switch\n");
+					cdev->mute_switch = 0;
+					cdev->force_disconnect = 1;
+				}
+#endif
 				atomic_set(&ui->running, 0);
 				atomic_set(&ui->remote_wakeup, 0);
 				atomic_set(&ui->configured, 0);
 
 				if (ui->driver) {
-					dev_dbg(&ui->pdev->dev,
-						"usb: notify offline\n");
+					printk(KERN_INFO "%s: usb: notify offline\n", __func__);
 					ui->driver->disconnect(&ui->gadget);
 				}
 				/* cancel pending ep0 transactions */
@@ -1665,6 +1688,12 @@ static void usb_do_work(struct work_struct *w)
 				usb_reset(ui);
 				ui->state = USB_STATE_ONLINE;
 				usb_do_work_check_vbus(ui);
+#ifdef CONFIG_USB_SWITCH_FSA9480
+				if (ui->flags & USB_FLAG_VBUS_ONLINE) {
+					if (ui->pdata->check_microusb)
+						ui->pdata->check_microusb();
+				}
+#endif
 				ret = request_irq(otg->irq, usb_interrupt,
 							IRQF_SHARED,
 							ui->pdev->name, ui);
@@ -2001,11 +2030,11 @@ static void usb_debugfs_init(struct usb_info *ui)
 		return;
 
 	debugfs_create_file("status", 0444, dent, ui, &debug_stat_ops);
-	debugfs_create_file("reset", 0222, dent, ui, &debug_reset_ops);
-	debugfs_create_file("cycle", 0222, dent, ui, &debug_cycle_ops);
-	debugfs_create_file("release_wlocks", 0666, dent, ui,
+	debugfs_create_file("reset", 0664, dent, ui, &debug_reset_ops);
+	debugfs_create_file("cycle", 0664, dent, ui, &debug_cycle_ops);
+	debugfs_create_file("release_wlocks", 0664, dent, ui,
 						&debug_wlocks_ops);
-	debugfs_create_file("prime_fail_countt", 0666, dent, ui,
+	debugfs_create_file("prime_fail_countt", 0664, dent, ui,
 						&prime_fail_ops);
 }
 #else
@@ -2020,6 +2049,7 @@ msm72k_enable(struct usb_ep *_ep, const struct usb_endpoint_descriptor *desc)
 			desc->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK;
 
 	_ep->maxpacket = le16_to_cpu(desc->wMaxPacketSize);
+	ept->ep.desc = desc;
 	config_ept(ept);
 	ept->wedged = 0;
 	usb_ept_enable(ept, 1, ep_type);
@@ -2588,6 +2618,8 @@ static int msm72k_probe(struct platform_device *pdev)
 	ui->sdev.name = DRIVER_NAME;
 	ui->sdev.print_name = print_switch_name;
 	ui->sdev.print_state = print_switch_state;
+
+	platform_set_drvdata(pdev,ui); // for usb lock
 
 	retval = switch_dev_register(&ui->sdev);
 	if (retval)

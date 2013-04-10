@@ -1031,11 +1031,15 @@ static struct dentry *ext4_lookup(struct inode *dir, struct dentry *dentry, stru
 	inode = NULL;
 	if (bh) {
 		__u32 ino = le32_to_cpu(de->inode);
-		brelse(bh);
 		if (!ext4_valid_inum(dir->i_sb, ino)) {
+			printk(KERN_ERR "Name of directory entry has bad");
+			printk(KERN_ERR "inode# : %s\n", de->name);
+			print_bh(dir->i_sb, bh, 0, EXT4_BLOCK_SIZE(dir->i_sb));
+			brelse(bh);
 			EXT4_ERROR_INODE(dir, "bad inode number: %u", ino);
 			return ERR_PTR(-EIO);
 		}
+		brelse(bh);
 		inode = ext4_iget(dir->i_sb, ino);
 		if (IS_ERR(inode)) {
 			if (PTR_ERR(inode) == -ESTALE) {

@@ -152,7 +152,7 @@ static void mdp4_lcdc_blt_ov_update(struct mdp4_overlay_pipe *pipe);
 static void mdp4_lcdc_wait4dmap(int cndx);
 static void mdp4_lcdc_wait4ov(int cndx);
 
-int mdp4_lcdc_pipe_commit(void)
+int mdp4_lcdc_pipe_commit(int cndx, int wait)
 {
 
 	int  i, undx;
@@ -164,19 +164,35 @@ int mdp4_lcdc_pipe_commit(void)
 	unsigned long flags;
 	int cnt = 0;
 
-	vctrl = &vsync_ctrl_db[0];
+	vctrl = &vsync_ctrl_db[cndx];
 
 	mutex_lock(&vctrl->update_lock);
 	undx =  vctrl->update_ndx;
 	vp = &vctrl->vlist[undx];
 	pipe = vctrl->base_pipe;
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	if (pipe == NULL) {
+		pr_err("%s: NO base pipe\n", __func__);
+		mutex_unlock(&vctrl->update_lock);
+		return 0;
+	}
+#endif
 	mixer = pipe->mixer_num;
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	/* allow stage_commit without pipes queued
+	 (vp->update_cnt == 0) to unstage pipes after
+	 overlay_unset */
+	/*if (vp->update_cnt == 0) {
+		mutex_unlock(&vctrl->update_lock);
+		return 0;
+	}*/
+#else
 	if (vp->update_cnt == 0) {
 		mutex_unlock(&vctrl->update_lock);
 		return 0;
 	}
-
+#endif
 	vctrl->update_ndx++;
 	vctrl->update_ndx &= 0x01;
 	vp->update_cnt = 0;     /* reset */
@@ -257,9 +273,42 @@ int mdp4_lcdc_pipe_commit(void)
 
 	mdp4_stat.overlay_commit[pipe->mixer_num]++;
 
+	if (wait) {
+		if (pipe->ov_blt_addr)
+			mdp4_lcdc_wait4ov(0);
+		else
+			mdp4_lcdc_wait4dmap(0);
+	}
+
 	return cnt;
 }
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+static void mdp4_lcdc_vsync_irq_ctrl(int cndx, int enable)
+{
+	struct vsycn_ctrl *vctrl;
+	static int vsync_irq_cnt;
+
+	vctrl = &vsync_ctrl_db[cndx];
+
+	mutex_lock(&vctrl->update_lock);
+	if (enable) {
+		if (vsync_irq_cnt == 0)
+			vsync_irq_enable(INTR_PRIMARY_VSYNC,
+						MDP_PRIM_VSYNC_TERM);
+		vsync_irq_cnt++;
+	} else {
+		if (vsync_irq_cnt) {
+			vsync_irq_cnt--;
+			if (vsync_irq_cnt == 0)
+				vsync_irq_disable(INTR_PRIMARY_VSYNC,
+						MDP_PRIM_VSYNC_TERM);
+		}
+	}
+	pr_err("%s: enable=%d cnt=%d\n", __func__, enable, vsync_irq_cnt);
+	mutex_unlock(&vctrl->update_lock);
+}
+#endif
 void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable)
 {
 	struct vsycn_ctrl *vctrl;
@@ -274,16 +323,24 @@ void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable)
 
 	vctrl->vsync_irq_enabled = enable;
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mdp4_lcdc_vsync_irq_ctrl(cndx, enable);
+#else
 	if (enable)
 		vsync_irq_enable(INTR_PRIMARY_VSYNC, MDP_PRIM_VSYNC_TERM);
 	else
 		vsync_irq_disable(INTR_PRIMARY_VSYNC, MDP_PRIM_VSYNC_TERM);
+#endif
 
 	if (vctrl->vsync_irq_enabled &&  atomic_read(&vctrl->suspend) == 0)
 		atomic_set(&vctrl->vsync_resume, 1);
 }
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+void mdp4_lcdc_wait4vsync(int cndx)
+#else
 void mdp4_lcdc_wait4vsync(int cndx, long long *vtime)
+#endif
 {
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
@@ -298,24 +355,37 @@ void mdp4_lcdc_wait4vsync(int cndx, long long *vtime)
 	pipe = vctrl->base_pipe;
 
 	if (atomic_read(&vctrl->suspend) > 0) {
+#if !defined (CONFIG_EUR_MODEL_GT_I9210)
 		*vtime = -1;
+#endif
 		return;
 	}
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mdp4_lcdc_vsync_irq_ctrl(cndx, 1);
+#else
 	/* start timing generator & mmu if they are not started yet */
 	mdp4_overlay_lcdc_start();
+#endif
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	//if (vctrl->wait_vsync_cnt == 0)
+#else
 	if (vctrl->wait_vsync_cnt == 0)
+#endif
 		INIT_COMPLETION(vctrl->vsync_comp);
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
-
+	pr_err("[QC_DEBUG] %s: Waiting... vctrl->wait_vsync_cnt:%d \n", __func__, vctrl->wait_vsync_cnt);
 	wait_for_completion(&vctrl->vsync_comp);
-	mdp4_stat.wait4vsync0++;
-
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mdp4_lcdc_vsync_irq_ctrl(cndx, 0);
+#else
 	*vtime = vctrl->vsync_time.tv64;
+#endif
+	mdp4_stat.wait4vsync0++;
 }
 
 static void mdp4_lcdc_wait4dmap(int cndx)
@@ -377,7 +447,15 @@ ssize_t mdp4_lcdc_show_event(struct device *dev,
 		msecs_to_jiffies(VSYNC_PERIOD * 4));
 	if (ret <= 0) {
 		vctrl->wait_vsync_cnt = 0;
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+		vsync_tick = ktime_to_ns(ktime_get());
+		ret = snprintf(buf, PAGE_SIZE, "VSYNC=%llu", vsync_tick);
+		buf[strlen(buf) + 1] = '\0';
+		return ret;
+		//return -EBUSY;
+#else
 		return -EBUSY;
+#endif
 	}
 
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
@@ -480,6 +558,9 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mutex_lock(&mfd->dma->ov_mutex);
+#endif	
 	vctrl->mfd = mfd;
 	vctrl->dev = mfd->fbi->dev;
 
@@ -611,7 +692,7 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 	hsync_polarity = 0;
 	vsync_polarity = 0;
 #endif
-	data_en_polarity = 0;
+	data_en_polarity = 1;
 
 	ctrl_polarity =
 	    (data_en_polarity << 2) | (vsync_polarity << 1) | (hsync_polarity);
@@ -633,10 +714,29 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
 	mdp_histogram_ctrl_all(TRUE);
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mdp4_overlay_lcdc_start();
+	mutex_unlock(&mfd->dma->ov_mutex);
+#endif
 
 	return ret;
 }
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+/* timing generator off */
+static void mdp4_lcdc_tg_off(struct vsycn_ctrl *vctrl)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&vctrl->spin_lock, flags);
+	INIT_COMPLETION(vctrl->vsync_comp);
+	vctrl->wait_vsync_cnt++;
+	MDP_OUTP(MDP_BASE + LCDC_BASE, 0); /* turn off timing generator */
+	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
+
+	mdp4_lcdc_wait4vsync(0);
+}
+#endif
 int mdp4_lcdc_off(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -647,14 +747,27 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 	unsigned long flags;
 	int need_wait = 0;
 
+	pr_err("[QC_DEBUG] %s Entry\n", __func__);
+	mdp4_mixer_late_commit(); 
+
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
+#if defined (CONFIG_EUR_MODEL_GT_I9210)	
+	mutex_lock(&mfd->dma->ov_mutex);
+#endif
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	pr_err("[QC_DEBUG] vctrl->wait_vsync_cnt: %d\n", vctrl->wait_vsync_cnt);
+	mdp4_lcdc_wait4vsync(cndx);
+
+	atomic_set(&vctrl->vsync_resume, 0);
+#else
 	atomic_set(&vctrl->suspend, 1);
 	atomic_set(&vctrl->vsync_resume, 0);
 
 	msleep(20);	/* >= 17 ms */
+#endif
 
 	complete_all(&vctrl->vsync_comp);
 
@@ -667,8 +780,9 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 			mdp4_lcdc_wait4ov(0);
 	}
 
+#if !defined (CONFIG_EUR_MODEL_GT_I9210)
 	MDP_OUTP(MDP_BASE + LCDC_BASE, 0);
-
+#endif
 	lcdc_enabled = 0;
 
 	mdp_histogram_ctrl_all(FALSE);
@@ -690,10 +804,19 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 		}
 	}
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mdp4_lcdc_tg_off(vctrl);
+
+	atomic_set(&vctrl->suspend, 1);
+#endif
 	/* MDP clock disable */
 	mdp_clk_ctrl(0);
 	mdp_pipe_ctrl(MDP_OVERLAY0_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	mutex_unlock(&mfd->dma->ov_mutex);
+	pr_err("[QC_DEBUG] %s Exit\n", __func__);
+#endif
 	return ret;
 }
 
@@ -781,6 +904,10 @@ void mdp4_dmap_done_lcdc(int cndx)
 	}
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	if (pipe == NULL)
+		return;
+#endif
 
 	spin_lock(&vctrl->spin_lock);
 	vsync_irq_disable(INTR_DMA_P_DONE, MDP_DMAP_TERM);
@@ -801,8 +928,8 @@ void mdp4_dmap_done_lcdc(int cndx)
 	}
 
 	complete_all(&vctrl->dmap_comp);
-
-	if (mdp_rev <= MDP_REV_41)
+	
+	if (mdp_rev <= MDP_REV_41 && pipe->ov_blt_addr == 0)
 		mdp4_mixer_blend_cfg(MDP4_MIXER0);
 
 	mdp4_overlay_dma_commit(cndx);
@@ -819,6 +946,10 @@ void mdp4_overlay0_done_lcdc(int cndx)
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	if (pipe == NULL)
+		return;
+#endif
 
 	spin_lock(&vctrl->spin_lock);
 	vsync_irq_disable(INTR_OVERLAY0_DONE, MDP_OVERLAY0_TERM);
@@ -902,7 +1033,7 @@ void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd)
 	uint8 *buf;
 	unsigned int buf_offset;
 	int bpp;
-	int cndx = 0;
+	int cnt, cndx = 0;
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
 
@@ -931,13 +1062,22 @@ void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd)
 
 	mdp4_overlay_mdp_perf_upd(mfd, 1);
 
-	mdp4_lcdc_pipe_commit();
+	mutex_lock(&mfd->dma->ov_mutex);
+	cnt = mdp4_lcdc_pipe_commit(cndx, 0);
 	mutex_unlock(&mfd->dma->ov_mutex);
 
-	if (pipe->ov_blt_addr)
-		mdp4_lcdc_wait4ov(0);
-	else
-		mdp4_lcdc_wait4dmap(0);
+#if defined (CONFIG_EUR_MODEL_GT_I9210)
+	if (cnt >= 0) 
+#else
+	if (cnt) 
+#endif
+       {
+		if (pipe->ov_blt_addr)
+			mdp4_lcdc_wait4ov(cndx);
+		else
+			mdp4_lcdc_wait4dmap(cndx);
+	}
 
+	mdp4_mixer_late_commit();
 	mdp4_overlay_mdp_perf_upd(mfd, 0);
 }

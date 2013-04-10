@@ -108,6 +108,9 @@
 #include <mach/ion.h>
 
 #define MSM_SHARED_RAM_PHYS 0x40000000
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH
+#define PMIC_GPIO_TKEY_INT	PM8058_GPIO(13) 	/* PMIC GPIO Number 13 */
+#endif
 #define MDM2AP_SYNC 129
 
 #define GPIO_ETHERNET_RESET_N_DRAGON	30
@@ -5918,7 +5921,13 @@ static int pm8058_gpios_init(void)
 
 	return 0;
 }
-
+#ifdef CONFIG_KEYPAD_CYPRESS_TOUCH
+	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_TKEY_INT), &tkey_int);
+	if (rc) {
+		pr_err("%s PMIC_GPIO_TKEY_INT config failed\n", __func__);
+		return rc;
+	}
+#endif
 static const unsigned int ffa_keymap[] = {
 	KEY(0, 0, KEY_FN_F1),	 /* LS - PUSH1 */
 	KEY(0, 1, KEY_UP),	 /* NAV - UP */

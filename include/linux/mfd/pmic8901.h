@@ -46,4 +46,10 @@ struct pm8901_platform_data {
 	int					num_regulators;
 };
 
+#ifdef CONFIG_PMIC8901_PRELOAD_DVDD
+int pm8901_preload_dVdd(void);
+int pm8901_is_old_PCB_with_PM8901(void);
+#endif
+
+
 #endif /* __PMIC8901_H__ */

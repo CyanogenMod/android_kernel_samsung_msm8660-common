@@ -18,6 +18,9 @@
 enum ion_memory_types {
 	ION_EBI_TYPE,
 	ION_SMI_TYPE,
+#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
+	ION_ADSP_TYPE,
+#endif
 };
 
 enum ion_permission_type {

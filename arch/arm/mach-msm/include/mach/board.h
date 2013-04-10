@@ -204,11 +204,16 @@ struct msm_camera_gpio_conf {
 
 struct msm_camera_sensor_platform_info {
 	int mount_angle;
+	int sensor_reset_enable;	
 	int sensor_reset;
+	int sensor_pwd;
+	int vcm_pwd;
+	int vcm_enable;	
 	struct camera_vreg_t *cam_vreg;
 	int num_vreg;
 	int32_t (*ext_power_ctrl) (int enable);
 	struct msm_camera_gpio_conf *gpio_conf;
+	int(*sensor_power_control) (int);	
 };
 
 struct msm_actuator_info {
@@ -233,6 +238,7 @@ struct msm_camera_sensor_info {
 	uint8_t num_resources;
 	struct msm_camera_sensor_flash_data *flash_data;
 	int csi_if;
+	uint32_t irq;  //samsung
 	struct msm_camera_csi_params csi_params;
 	struct msm_camera_sensor_strobe_flash_data *strobe_flash_data;
 	char *eeprom_data;
@@ -420,6 +426,7 @@ struct msm_hdmi_platform_data {
 	int (*gpio_config)(int on);
 	int (*init_irq)(void);
 	bool (*check_hdcp_hw_support)(void);
+	int bootup_ck;
 };
 
 struct msm_i2c_platform_data {
@@ -431,6 +438,8 @@ struct msm_i2c_platform_data {
 	int pri_dat;
 	int aux_clk;
 	int aux_dat;
+	const char *clk;
+	const char *pclk;
 	int src_clk_rate;
 	int use_gsbi_shared_mode;
 	void (*msm_i2c_config_gpio)(int iface, int config_type);

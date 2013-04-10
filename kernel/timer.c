@@ -47,6 +47,8 @@
 #include <asm/timex.h>
 #include <asm/io.h>
 
+#include <mach/sec_debug.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/timer.h>
 
@@ -1063,6 +1065,7 @@ static void call_timer_fn(struct timer_list *timer, void (*fn)(unsigned long),
 
 	trace_timer_expire_entry(timer);
 	fn(data);
+	sec_debug_timer_log(3333, (int)irqs_disabled(), (void*)fn);
 	trace_timer_expire_exit(timer);
 
 	lock_map_release(&lockdep_map);

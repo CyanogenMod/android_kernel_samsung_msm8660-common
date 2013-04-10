@@ -320,6 +320,26 @@ static int msm_fb_create_sysfs(struct platform_device *pdev)
 	if (rc)
 		MSM_FB_ERR("%s: sysfs group creation failed, rc=%d\n", __func__,
 			rc);
+
+	if (!mfd->vsync_sysfs_created) {
+		mfd->dev_attr.attr.name = "vsync_event";
+		mfd->dev_attr.attr.mode = S_IRUGO;
+		mfd->dev_attr.show = mfd->vsync_show;
+		sysfs_attr_init(&mfd->dev_attr.attr);
+	
+		rc = sysfs_create_file(&mfd->fbi->dev->kobj,
+						&mfd->dev_attr.attr);
+		if (rc) {
+			pr_err("%s: sysfs creation failed, ret=%d\n",
+				__func__, rc);
+			return rc;
+		}
+	
+		kobject_uevent(&mfd->fbi->dev->kobj, KOBJ_ADD);
+		pr_debug("%s: kobject_uevent(KOBJ_ADD)\n", __func__);
+		mfd->vsync_sysfs_created = 1;
+	}
+
 	return rc;
 }
 static void msm_fb_remove_sysfs(struct platform_device *pdev)
@@ -389,6 +409,10 @@ static int msm_fb_probe(struct platform_device *pdev)
 #endif
 
 	bf_supported = mdp4_overlay_borderfill_supported();
+
+	/* don't move below */
+	if (mfd->vsync_init != NULL)
+		mfd->vsync_init(0);
 
 	rc = msm_fb_register(mfd);
 	if (rc)
@@ -758,6 +782,11 @@ static void msmfb_early_resume(struct early_suspend *h)
 
 static int unset_bl_level, bl_updated;
 static int bl_level_old;
+
+#ifdef CONFIG_BATTERY_SEC
+extern unsigned int is_lpcharging_state(void);
+#endif
+
 static int mdp_bl_scale_config(struct msm_fb_data_type *mfd,
 						struct mdp_bl_scale_data *data)
 {
@@ -793,6 +822,7 @@ void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 {
 	struct msm_fb_panel_data *pdata;
 	__u32 temp = bkl_lvl;
+
 	if (!mfd->panel_power_on || !bl_updated) {
 		unset_bl_level = bkl_lvl;
 		return;
@@ -875,6 +905,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				mfd->panel_power_on = curr_pwr_state;
 
 			mfd->op_enable = TRUE;
+			bl_updated = 0;
 		}
 		break;
 	}
@@ -1111,8 +1142,16 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	var->grayscale = 0,	/* No graylevels */
 	var->nonstd = 0,	/* standard pixel format */
 	var->activate = FB_ACTIVATE_VBL,	/* activate it at vsync */
+#ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
+	var->height = 103,	/* height of picture in mm */
+	var->width = 58,	/* width of picture in mm */
+#elif defined(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PANEL) || defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
+	var->height = 114,	/* height of picture in mm */
+	var->width = 71,	/* width of picture in mm */
+#else
 	var->height = -1,	/* height of picture in mm */
 	var->width = -1,	/* width of picture in mm */
+#endif
 	var->accel_flags = 0,	/* acceleration flags */
 	var->sync = 0,	/* see FB_SYNC_* */
 	var->rotate = 0,	/* angle we rotate counter clockwise */
@@ -1428,9 +1467,17 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
 #ifdef CONFIG_FB_MSM_LOGO
-	/* Flip buffer */
-	if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
-		;
+	if(mfd->index == 0)
+	{
+#ifdef CONFIG_BATTERY_SEC
+		if (is_lpcharging_state() == 1) {
+			MSM_FB_INFO("[lpm-mode] skip init logo!\n");
+		} else
+#endif /* CONFIG_BATTERY_SEC */
+			/* Flip buffer */
+			if (!load_565rle_image(INIT_IMAGE_FILE, bf_supported))
+				;
+	}
 #endif
 	ret = 0;
 
@@ -1597,9 +1644,11 @@ static int msm_fb_open(struct fb_info *info, int user)
 			pr_debug("%s:%d no mdp_set_dma_pan_info %d\n",
 				__func__, __LINE__, info->node);
 
-		if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable)) {
-			printk(KERN_ERR "msm_fb_open: can't turn on display!\n");
-			return -1;
+		if (mfd->panel_info.type != DTV_PANEL) {
+			if (msm_fb_blank_sub(FB_BLANK_UNBLANK, info, mfd->op_enable)) {
+				printk(KERN_ERR "msm_fb_open: can't turn on display!\n");
+				return -1;
+			}
 		}
 	}
 
@@ -2876,6 +2925,20 @@ static int msmfb_overlay_play_wait(struct fb_info *info, unsigned long *argp)
 	return ret;
 }
 
+static int msmfb_overlay_commit(struct fb_info *info, unsigned long *argp)
+{
+	int ret, ndx;
+
+	ret = copy_from_user(&ndx, argp, sizeof(ndx));
+	if (ret) {
+		printk(KERN_ERR "%s:msmfb_overlay_unset ioctl failed \n",
+			__func__);
+		return ret;
+	}
+
+	return mdp4_overlay_commit(info, ndx);
+}
+
 static int msmfb_overlay_play(struct fb_info *info, unsigned long *argp)
 {
 	int	ret;
@@ -3238,6 +3301,24 @@ static int msmfb_handle_pp_ioctl(struct msm_fb_data_type *mfd,
 
 	return ret;
 }
+static int msmfb_handle_metadata_ioctl(struct msm_fb_data_type *mfd,
+				struct msmfb_metadata *metadata_ptr)
+{
+	int ret;
+	switch (metadata_ptr->op) {
+#ifdef CONFIG_FB_MSM_MDP40
+	case metadata_op_base_blend:
+		ret = mdp4_update_base_blend(mfd,
+						&metadata_ptr->data.blend_cfg);
+		break;
+#endif
+	default:
+		pr_warn("Unsupported request to MDP META IOCTL.\n");
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
 
 static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
@@ -3256,36 +3337,60 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 #endif
 	struct mdp_page_protection fb_page_protection;
 	struct msmfb_mdp_pp mdp_pp;
+	struct msmfb_metadata mdp_metadata;
 	int ret = 0;
 
 	switch (cmd) {
 #ifdef CONFIG_FB_MSM_OVERLAY
 	case MSMFB_OVERLAY_GET:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_get(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_SET:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_set(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_UNSET:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_unset(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
+		break;
+	case MSMFB_OVERLAY_COMMIT:
+		down(&msm_fb_ioctl_ppp_sem);
+		ret = msmfb_overlay_commit(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_PLAY:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_play(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_PLAY_ENABLE:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_play_enable(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_PLAY_WAIT:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_play_wait(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_BLT:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_blt(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_OVERLAY_3D:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_overlay_3d_sbys(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_MIXER_INFO:
+		down(&msm_fb_ioctl_ppp_sem);
 		ret = msmfb_mixer_info(info, argp);
+		up(&msm_fb_ioctl_ppp_sem);
 		break;
 	case MSMFB_WRITEBACK_INIT:
 		ret = msmfb_overlay_ioctl_writeback_init(info);
@@ -3537,6 +3642,13 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 		ret = msmfb_handle_pp_ioctl(mfd, &mdp_pp);
 		break;
 
+	case MSMFB_METADATA_SET:
+		ret = copy_from_user(&mdp_metadata, argp, sizeof(mdp_metadata));
+		if (ret)
+			return ret;
+		ret = msmfb_handle_metadata_ioctl(mfd, &mdp_metadata);
+		break;
+
 	default:
 		MSM_FB_INFO("MDP: unknown ioctl (cmd=%x) received!\n", cmd);
 		ret = -EINVAL;
@@ -3696,6 +3808,15 @@ struct platform_device *msm_fb_add_device(struct platform_device *pdev)
 		fbi_list_index--;
 		return NULL;
 	}
+
+#ifdef CONFIG_SEC_DEBUG
+	if (fbi_list_index == 1) {
+		sec_getlog_supply_fbinfo((void *)(fbi->fix.smem_start),
+					 fbi->var.xres,
+					 fbi->var.yres,
+					 fbi->var.bits_per_pixel, 2);
+	}
+#endif
 	return this_dev;
 }
 EXPORT_SYMBOL(msm_fb_add_device);

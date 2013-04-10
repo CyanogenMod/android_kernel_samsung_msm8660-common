@@ -22,6 +22,9 @@
 
 #include <asm/mach-types.h>
 #include <mach/msm_hsusb.h>
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include <linux/host_notify.h>
+#endif
 
 #define OTGSC_BSVIE            (1 << 27)
 #define OTGSC_IDIE             (1 << 24)
@@ -157,6 +160,11 @@ struct msm_otg {
 #ifdef CONFIG_USB_MSM_ACA
 	struct timer_list	id_timer;	/* drives id_status polling */
 	unsigned		b_max_power;	/* ACA: max power of accessory*/
+#endif
+#ifdef CONFIG_USB_HOST_NOTIFY
+	struct wake_lock wlock_host;
+	struct host_notify_dev ndev;
+	struct delayed_work late_power_work;
 #endif
 };
 

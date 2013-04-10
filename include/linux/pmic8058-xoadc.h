@@ -86,6 +86,7 @@ int32_t pm8058_xoadc_registered(void);
 
 int32_t pm8058_xoadc_calib_device(uint32_t adc_instance);
 
+int32_t pm8058_xoadc_clear_recentQ(void *h);
 #else
 
 static inline int32_t pm8058_xoadc_read_adc_code(uint32_t adc_instance,

@@ -1683,6 +1683,13 @@ static int __devexit msm_rotator_remove(struct platform_device *plat_dev)
 #ifdef CONFIG_PM
 static int msm_rotator_suspend(struct platform_device *dev, pm_message_t state)
 {
+#if defined(CONFIG_ARCH_MSM8X60)
+    /* fixed that bottom current is high after rotator is started */
+#ifdef CONFIG_MSM_BUS_SCALING
+    msm_bus_scale_client_update_request(msm_rotator_dev->bus_client_handle, 0);
+#endif
+#endif
+
 	mutex_lock(&msm_rotator_dev->imem_lock);
 	if (msm_rotator_dev->imem_clk_state == CLK_EN
 		&& msm_rotator_dev->imem_clk) {

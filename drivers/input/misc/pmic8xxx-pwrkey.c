@@ -23,9 +23,15 @@
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/input/pmic8xxx-pwrkey.h>
 
+#include <mach/sec_debug.h>
+#include <linux/string.h>
+#include <linux/delay.h>
+
 #define PON_CNTL_1 0x1C
 #define PON_CNTL_PULL_UP BIT(7)
 #define PON_CNTL_TRIG_DELAY_MASK (0x7)
+
+static int pwrkey_status = 0;
 
 /**
  * struct pmic8xxx_pwrkey - pmic8xxx pwrkey information
@@ -35,15 +41,21 @@
 struct pmic8xxx_pwrkey {
 	struct input_dev *pwr;
 	int key_press_irq;
+	u32	powerkey_state ;
 	const struct pm8xxx_pwrkey_platform_data *pdata;
 };
 
 static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	pwrkey->powerkey_state = 1;
 
+	pwrkey_status = true;
 	input_report_key(pwrkey->pwr, KEY_POWER, 1);
 	input_sync(pwrkey->pwr);
+	#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 1);
+	#endif
 
 	return IRQ_HANDLED;
 }
@@ -51,9 +63,14 @@ static irqreturn_t pwrkey_press_irq(int irq, void *_pwrkey)
 static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 {
 	struct pmic8xxx_pwrkey *pwrkey = _pwrkey;
+	pwrkey->powerkey_state = 0;
 
+	pwrkey_status = false;
 	input_report_key(pwrkey->pwr, KEY_POWER, 0);
 	input_sync(pwrkey->pwr);
+	#if defined(CONFIG_SEC_DEBUG)
+	sec_debug_check_crash_key(KEY_POWER, 0);
+	#endif
 
 	return IRQ_HANDLED;
 }
@@ -83,6 +100,24 @@ static int pmic8xxx_pwrkey_resume(struct device *dev)
 static SIMPLE_DEV_PM_OPS(pm8xxx_pwr_key_pm_ops,
 		pmic8xxx_pwrkey_suspend, pmic8xxx_pwrkey_resume);
 
+static ssize_t  sysfs_powerkey_onoff_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+
+{
+	struct pmic8xxx_pwrkey *pwrkey = dev_get_drvdata(dev);
+	printk(KERN_INFO "inside sysfs_powerkey_onoff_show\n");
+	if (pwrkey->powerkey_state == 1) {
+		printk(KERN_INFO "powerkey is pressed\n");
+		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
+	}
+	else  {
+		printk(KERN_INFO "powerkey is released\n");
+		return snprintf(buf, 5, "%d\n", pwrkey->powerkey_state);
+	}
+}
+
+static DEVICE_ATTR(sec_powerkey_pressed, 0664 , sysfs_powerkey_onoff_show,
+	NULL);
 static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 {
 	struct input_dev *pwr;
@@ -91,7 +126,9 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	int err;
 	unsigned int delay;
 	u8 pon_cntl;
+	int ret ;
 	struct pmic8xxx_pwrkey *pwrkey;
+	struct device *sec_powerkey;
 	const struct pm8xxx_pwrkey_platform_data *pdata =
 					dev_get_platdata(&pdev->dev);
 
@@ -175,7 +212,16 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 
 		goto free_press_irq;
 	}
-
+	sec_powerkey = device_create(sec_class, NULL, 0, NULL,
+	"sec_powerkey");
+	 if (IS_ERR(sec_powerkey))
+		pr_err("Failed to create device(sec_powerkey)!\n");
+	 ret = device_create_file(sec_powerkey, &dev_attr_sec_powerkey_pressed);
+	 if (ret) {
+		pr_err("Failed to create device file in sysfs entries(%s)!\n",
+		dev_attr_sec_powerkey_pressed.attr.name);
+	}
+	dev_set_drvdata(sec_powerkey, pwrkey);
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
 
 	return 0;
@@ -220,6 +266,11 @@ static struct platform_driver pmic8xxx_pwrkey_driver = {
 	},
 };
 
+int pmic8xxx_pwrkey_status(void)
+{
+	return pwrkey_status;
+}
+
 static int __init pmic8xxx_pwrkey_init(void)
 {
 	return platform_driver_register(&pmic8xxx_pwrkey_driver);
@@ -231,6 +282,8 @@ static void __exit pmic8xxx_pwrkey_exit(void)
 	platform_driver_unregister(&pmic8xxx_pwrkey_driver);
 }
 module_exit(pmic8xxx_pwrkey_exit);
+
+EXPORT_SYMBOL(pmic8xxx_pwrkey_status);
 
 MODULE_ALIAS("platform:pmic8xxx_pwrkey");
 MODULE_DESCRIPTION("PMIC8XXX Power Key driver");

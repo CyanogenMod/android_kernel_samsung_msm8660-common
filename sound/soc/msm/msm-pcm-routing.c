@@ -36,8 +36,8 @@ struct msm_pcm_routing_bdai_data {
 	u8 active; /* track if this backend is enabled */
 	unsigned long fe_sessions; /* Front-end sessions */
 	unsigned long port_sessions; /* track Tx BE ports -> Rx BE */
-	unsigned int  sample_rate;
-	unsigned int  channel;
+	unsigned int sample_rate;
+	unsigned int channel;
 };
 
 #define INVALID_SESSION -1
@@ -47,6 +47,7 @@ struct msm_pcm_routing_bdai_data {
 static struct mutex routing_lock;
 
 static int fm_switch_enable;
+
 #define INT_RX_VOL_MAX_STEPS 0x2000
 #define INT_RX_VOL_GAIN 0x2000
 

@@ -13,6 +13,9 @@
 #define __ARCH_ARM_MACH_MSM_GPIOMUX_8X60_H
 
 void __init msm8x60_init_gpiomux(struct msm_gpiomux_configs *cfgs);
+#ifdef CONFIG_BATTERY_SEC
+void __init msm8x60_init_gpiomux_cfg_for_lpm(struct msm_gpiomux_configs *cfgs);
+#endif
 
 extern struct msm_gpiomux_configs msm8x60_surf_ffa_gpiomux_cfgs[] __initdata;
 extern struct msm_gpiomux_configs msm8x60_fluid_gpiomux_cfgs[] __initdata;

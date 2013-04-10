@@ -44,7 +44,18 @@ struct msm_volume msm_vol_ctl;
 EXPORT_SYMBOL(msm_vol_ctl);
 struct pcm_session session_route;
 EXPORT_SYMBOL(session_route);
+
+#if defined (CONFIG_TARGET_LOCALE_USA)
+bool dualmic_enabled = true;
+EXPORT_SYMBOL(dualmic_enabled);
+#endif
+
 static struct snd_kcontrol_new snd_msm_controls[];
+
+extern int voice_set_loopback_mode(int mode);
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+extern int voice_set_extra_volume_mode(int mode);
+#endif
 
 char snddev_name[AUDIO_DEV_CTL_MAX_DEV][44];
 #define MSM_MAX_VOLUME 0x2000
@@ -55,6 +66,10 @@ static int simple_control; /* Count of simple controls*/
 static int src_dev;
 static int dst_dev;
 static int loopback_status;
+static u32 opened_dev1 = -1;
+static u32 opened_dev2 = -1;
+static int last_active_rx_opened_dev = -1;
+static int last_active_tx_opened_dev = -1;
 
 static int msm_scontrol_count_info(struct snd_kcontrol *kcontrol,
 				struct snd_ctl_elem_info *uinfo)
@@ -365,7 +380,17 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 	pr_info("%s:device %s set %d\n", __func__, dev_info->name, set);
 
 	if (set) {
+	        #ifndef CONFIG_USA_MODEL_SGH_T989
+		pr_info("Device %s Opened = %d\n", dev_info->name, dev_info->opened);
+		#endif
 		if (!dev_info->opened) {
+#if defined (CONFIG_TARGET_LOCALE_USA)
+			if(!strcmp(dev_info->name, "dualmic_handset_ef_tx"))
+			{
+				pr_info("%s : dualmic_enabled\n",__func__);
+				dualmic_enabled = 1;
+			}
+#endif
 			set_freq = dev_info->sample_rate;
 			if (!msm_device_is_voice(route_cfg.dev_id)) {
 				msm_get_voc_freq(&tx_freq, &rx_freq);
@@ -386,12 +411,94 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 			}
 			dev_info->set_sample_rate = rc;
 			rc = 0;
+			pr_info("Device trying to open : %s\n", dev_info->name);
 			rc = dev_info->dev_ops.open(dev_info);
 			if (rc < 0) {
-				pr_err("%s:Enabling %s failed\n",
-					__func__, dev_info->name);
-				return rc;
-			}
+/*[[Safeguard code for device open issue -START //balaji.k
+     This fix would work incase of EBUSY error when device is being opened & previous instance of device is not closed */
+				if(rc == -EBUSY) {
+					struct msm_snddev_info * last_dev_info = NULL;
+					int closing_dev = -1;
+					pr_err("DEV_BUSY: Ebusy Error %s : route_cfg.dev_id 1: %d\n", __func__, route_cfg.dev_id);
+
+					//Closing the last active device after sending the broadcast
+					if (dev_info->capability & SNDDEV_CAP_TX) {
+						last_dev_info = audio_dev_ctrl_find_dev(last_active_tx_opened_dev);
+						closing_dev = last_active_tx_opened_dev;
+					}
+					if (dev_info->capability & SNDDEV_CAP_RX) {
+						last_dev_info = audio_dev_ctrl_find_dev(last_active_rx_opened_dev);
+						closing_dev = last_active_rx_opened_dev;
+					}
+
+					// to fix exception error
+					if (IS_ERR(last_dev_info)) {
+						pr_err("last_dev:%s:pass invalid dev_id\n", __func__);
+						rc = PTR_ERR(last_dev_info);
+						return rc;
+					}
+
+					broadcast_event(AUDDEV_EVT_REL_PENDING,
+						closing_dev,
+						SESSION_IGNORE);
+					pr_err("DEV_BUSY:closing Last active Open dev (%d)\n", closing_dev);
+					rc = dev_info->dev_ops.close(last_dev_info);
+					pr_err("DEV_BUSY: %s : route_cfg.dev_id 2: %d\n", __func__, route_cfg.dev_id);
+
+					if (rc < 0) {
+						pr_err("DEV_BUSY  : %s:Snd device failed close!\n", __func__);
+						return rc;
+					} else {
+						// Device close is successful, so broadcasting release event.
+						// Commented these as here we are closing the previous device
+						//if(opened_dev1 == route_cfg.dev_id)
+							opened_dev1 = -1;
+						//else if(opened_dev2 == route_cfg.dev_id)
+							opened_dev2 = -1;
+						last_dev_info->opened= 0;
+						broadcast_event(AUDDEV_EVT_DEV_RLS,
+							closing_dev,
+							SESSION_IGNORE);
+					}
+
+					dev_info = audio_dev_ctrl_find_dev(route_cfg.dev_id);
+					if (IS_ERR(dev_info)) {
+						pr_err("DEV_BUSY: %s:pass invalid dev_id\n", __func__);
+						rc = PTR_ERR(dev_info);
+						return rc;
+					}
+
+					pr_err("DEV_BUSY: Opening the Device Now %s : route_cfg.dev_id : %d\n", __func__, route_cfg.dev_id);
+
+					// Opening the intended device
+					rc = dev_info->dev_ops.open(dev_info);
+
+					if(rc < 0) {
+						pr_err("DEV_BUSY: %s, Device %d:Enabling %s failed\n", __func__, rc, dev_info->name);
+						return rc;
+					} else {
+						// Maintaining the last Opened device- reqd for closing if EBUSY is encountered.
+						if (dev_info->capability & SNDDEV_CAP_TX)
+							last_active_tx_opened_dev = route_cfg.dev_id;
+						else if(dev_info->capability & SNDDEV_CAP_RX)
+							last_active_rx_opened_dev =  route_cfg.dev_id;
+
+						printk("Last active Open Txdev (%d) and Rxdev(%d)\n", last_active_tx_opened_dev,  last_active_rx_opened_dev);
+					}
+				} else {
+					pr_err("%s:Enabling %s failed\n",
+						__func__, dev_info->name);
+					return rc;
+				}
+		} else {
+			// Maintaining the last Opened device- reqd for closing if EBUSY is encountered.
+			if (dev_info->capability & SNDDEV_CAP_TX)
+				last_active_tx_opened_dev = route_cfg.dev_id;
+			else if(dev_info->capability & SNDDEV_CAP_RX)
+			 	last_active_rx_opened_dev =  route_cfg.dev_id;
+			printk("Last active Open Txdev (%d) and Rxdev(%d)\n", last_active_tx_opened_dev,  last_active_rx_opened_dev);
+		}
+//Safeguard code for device open issue -END]] //balaji.k
 			dev_info->opened = 1;
 			broadcast_event(AUDDEV_EVT_DEV_RDY, route_cfg.dev_id,
 							SESSION_IGNORE);
@@ -426,6 +533,13 @@ static int msm_device_put(struct snd_kcontrol *kcontrol,
 		}
 	} else {
 		if (dev_info->opened) {
+#if defined (CONFIG_TARGET_LOCALE_USA)
+			if((!strcmp(dev_info->name,"dualmic_handset_ef_tx"))&&(!strcmp(dev_info->name,"handset_call_rx")))
+			{
+				pr_debug("%s : dualmic_disabled\n",__func__);
+				dualmic_enabled = 0;
+			}
+#endif
 			broadcast_event(AUDDEV_EVT_REL_PENDING,
 						route_cfg.dev_id,
 						SESSION_IGNORE);
@@ -1046,8 +1160,69 @@ static int snd_dev_ctl_index(int idx)
 	snd_dev_controls[idx].put = msm_device_put;
 	snd_dev_controls[idx].private_value = 0;
 	return 0;
-
 }
+
+static int msm_loopback_mode_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 0;
+	return 0;
+}
+
+static int msm_loopback_mode_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = 0;
+	return 0;
+}
+
+static int msm_loopback_mode_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	int rc = 0;
+	int loopback_mode = ucontrol->value.integer.value[0];
+
+	pr_debug("%s:loopback_mode = %d\n", __func__, loopback_mode);
+	voice_set_loopback_mode(loopback_mode);
+
+	return rc;
+}
+
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+static int msm_extra_volume_mode_info(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_info *uinfo)
+{
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = 0;
+
+	return 0;
+}
+
+static int msm_extra_volume_mode_get(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = 0;
+
+	return 0;
+}
+
+static int msm_extra_volume_mode_put(struct snd_kcontrol *kcontrol,
+				struct snd_ctl_elem_value *ucontrol)
+{
+	int rc = 0;
+	int extra_volume_mode = ucontrol->value.integer.value[0];
+
+	pr_debug("%s:extra_volume_mode = %d\n", __func__, extra_volume_mode);
+	voice_set_extra_volume_mode(extra_volume_mode);
+
+	return rc;
+}
+#endif
 
 #define MSM_EXT(xname, fp_info, fp_get, fp_put, addr) \
 { .iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
@@ -1108,6 +1283,12 @@ static struct snd_kcontrol_new snd_msm_secondary_controls[] = {
 			msm_voc_session_info, msm_voice_session_get, NULL, 0),
 	MSM_EXT("VoIP session",
 			msm_voc_session_info, msm_voip_session_get, NULL, 0),
+	MSM_EXT("Loopback Mode",
+		msm_loopback_mode_info, msm_loopback_mode_get, msm_loopback_mode_put, 0),
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+	MSM_EXT("Extra Volume Mode",
+		msm_extra_volume_mode_info, msm_extra_volume_mode_get, msm_extra_volume_mode_put, 0),
+#endif
 };
 
 static int msm_new_mixer(struct snd_soc_codec *codec)

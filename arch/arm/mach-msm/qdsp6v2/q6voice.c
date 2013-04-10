@@ -49,8 +49,82 @@
 #define BUFFER_PAYLOAD_SIZE 4000
 
 #define VOC_REC_NONE 0xFF
+#if defined(CONFIG_KOR_MODEL_SHV_E120L) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160L)
+#define CONFIG_VPCM_INTERFACE_ON_SVLTE2
+#endif
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120K) ||\
+defined(CONFIG_USA_MODEL_SGH_T989) ||\
+defined(CONFIG_USA_MODEL_SGH_I727) ||\
+defined(CONFIG_USA_MODEL_SGH_I757) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160K) ||\
+defined(CONFIG_JPN_MODEL_SC_03D) ||\
+defined(CONFIG_USA_MODEL_SGH_T769) ||\
+defined(CONFIG_USA_MODEL_SGH_I717)
+#define CONFIG_VPCM_INTERFACE_ON_CSFB
+#endif
+
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120K) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120L) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160K) ||\
+defined(CONFIG_USA_MODEL_SGH_I757) ||\
+defined(CONFIG_USA_MODEL_SGH_I717) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160L) ||\
+defined(CONFIG_USA_MODEL_SGH_I727) ||\
+defined(CONFIG_USA_MODEL_SGH_T989)
+#define CONFIG_SUPPORT_ALL_SOUND_MUTE
+#endif
 
 struct common_data common;
+
+int test_loopback_mode = 0;
+int routing_cmd_mode = 0;
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+int extra_volume_mode = 0;
+#endif
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+int wb_handle = VPCM_PATH_NARROWBAND;
+int on_call = 0;
+struct voice_data *voice_wb;
+#endif
+int voice_set_loopback_mode(int mode)
+{
+	test_loopback_mode=mode;
+	printk("%s: %d\n", __func__, mode);
+
+	return 0;
+}
+
+int voice_get_loopback_mode(void)
+{
+	printk("%s: %d\n", __func__, test_loopback_mode);
+
+	return test_loopback_mode;
+}
+
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+int voice_set_extra_volume_mode(int mode)
+{
+	extra_volume_mode = mode;
+	printk("%s: %d\n", __func__, mode);
+
+	return 0;
+}
+
+int voice_get_extra_volume_mode(void)
+{
+	printk("%s: %d\n", __func__, extra_volume_mode);
+
+	return extra_volume_mode;
+}
+#endif
 
 static bool is_adsp_support_cvd(void)
 {
@@ -858,6 +932,10 @@ static int voice_send_cvs_cal_to_modem(struct voice_data *v)
 			pr_err("%s: wait_event timeout\n", __func__);
 			return -EINVAL;
 		}
+		/* modify timing to each function for VoIP */
+		if(common.voc_path == VOC_PATH_FULL && routing_cmd_mode == 1) {
+			msleep(1);
+		}
 	}
 	kfree(cmd_buf);
 done:
@@ -936,6 +1014,10 @@ static int voice_send_cvp_cal_to_modem(struct voice_data *v)
 			pr_err("%s: wait_event timeout\n", __func__);
 			return -EINVAL;
 		}
+		/* modify timing to each function for VoIP */
+		if(common.voc_path == VOC_PATH_FULL && routing_cmd_mode == 1) {
+			msleep(1);
+		}
 	}
 	kfree(cmd_buf);
 done:
@@ -1012,6 +1094,10 @@ static int voice_send_cvp_vol_tbl_to_modem(struct voice_data *v)
 		if (!ret) {
 			pr_err("%s: wait_event timeout\n", __func__);
 			return -EINVAL;
+		}
+		/* modify timing to each function for VoIP */
+		if(common.voc_path == VOC_PATH_FULL && routing_cmd_mode == 1) {
+			msleep(1);
 		}
 	}
 	kfree(cmd_buf);
@@ -1345,6 +1431,9 @@ static int voice_set_device(struct voice_data *v)
 {
 	struct cvp_set_device_cmd  cvp_setdev_cmd;
 	struct msm_snddev_info *dev_tx_info;
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	struct oem_idevice_cmd_change_cmd vpcm_device_change_cmd;
+#endif
 	int ret = 0;
 	void *apr_cvp = voice_get_apr_cvp();
 	u16 cvp_handle = voice_get_cvp_handle(v);
@@ -1353,8 +1442,18 @@ static int voice_set_device(struct voice_data *v)
 	/* set device and wait for response */
 	cvp_setdev_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	if ( /*v->voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
+#endif
 	cvp_setdev_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
 				sizeof(cvp_setdev_cmd) - APR_HDR_SIZE);
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	} else {
+		cvp_setdev_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(cvp_setdev_cmd) - APR_HDR_SIZE - 16);
+	}
+#endif
+
 	pr_debug(" send create cvp setdev, pkt size = %d\n",
 			cvp_setdev_cmd.hdr.pkt_size);
 	cvp_setdev_cmd.hdr.src_port = v->session_id;
@@ -1387,10 +1486,35 @@ static int voice_set_device(struct voice_data *v)
 			VSS_IVOCPROC_TOPOLOGY_ID_RX_DEFAULT;
 	cvp_setdev_cmd.cvp_set_device.tx_port_id = v->dev_tx.dev_port_id;
 	cvp_setdev_cmd.cvp_set_device.rx_port_id = v->dev_rx.dev_port_id;
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	if (/*v->voc_path */common.voc_path == VOC_PATH_PASSIVE) {
+	/* Device Info */
+	cvp_setdev_cmd.cvp_set_device.rx_device_id = v->dev_rx.dev_id;
+	cvp_setdev_cmd.cvp_set_device.tx_device_id = v->dev_tx.dev_id;
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+	if(extra_volume_mode)
+		cvp_setdev_cmd.cvp_set_device.rx_device_id += 100;
+#endif
+	/* Volume Info */
+	cvp_setdev_cmd.cvp_set_device.vol_index = v->dev_rx.volume;
+	/* Loopback Info */
+	cvp_setdev_cmd.cvp_set_device.loopback_mode_onoff = voice_get_loopback_mode();
+}
+
+#endif
 	pr_info("topology=%d , tx_port_id=%d, rx_port_id=%d\n",
 			cvp_setdev_cmd.cvp_set_device.tx_topology_id,
 			cvp_setdev_cmd.cvp_set_device.tx_port_id,
 			cvp_setdev_cmd.cvp_set_device.rx_port_id);
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	/* Device Info */ /* Volume Info */ /* Loopback Info */
+	pr_info("rx_device=%d , tx_device=%d , rx.volume=%d, loopback_mode_onoff=%d\n",
+			cvp_setdev_cmd.cvp_set_device.rx_device_id,
+			cvp_setdev_cmd.cvp_set_device.tx_device_id,
+			cvp_setdev_cmd.cvp_set_device.vol_index,
+			cvp_setdev_cmd.cvp_set_device.loopback_mode_onoff);
+#endif
 
 	v->cvp_state = CMD_STATUS_FAIL;
 	ret = apr_send_pkt(apr_cvp, (uint32_t *) &cvp_setdev_cmd);
@@ -1406,6 +1530,60 @@ static int voice_set_device(struct voice_data *v)
 		pr_err("%s: wait_event timeout\n", __func__);
 		goto fail;
 	}
+/* sec_lilkan */
+/* BEGIN: VPCM */
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	if (/*v->voc_path */common.voc_path == VOC_PATH_PASSIVE) {
+	/* Send start vpcm and wait for response. */
+	vpcm_device_change_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	vpcm_device_change_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(vpcm_device_change_cmd) - APR_HDR_SIZE);
+	pr_info("send vpcm_device_change_cmd, pkt size = %d\n",
+		vpcm_device_change_cmd.hdr.pkt_size);
+
+	vpcm_device_change_cmd.hdr.src_port = 0;
+	vpcm_device_change_cmd.hdr.dest_port = 0xD00D;
+	vpcm_device_change_cmd.hdr.token = 0;
+	vpcm_device_change_cmd.hdr.opcode = 0x0001128F;
+
+	vpcm_device_change_cmd.vpcm_change.rx_device_id=v->dev_rx.dev_id;
+	vpcm_device_change_cmd.vpcm_change.tx_device_id=v->dev_tx.dev_id;
+#ifdef CONFIG_SEC_EXTRA_VOLUME_SOL
+	if(extra_volume_mode) {
+		vpcm_device_change_cmd.vpcm_change.rx_device_id += 100;
+	}
+#endif
+	vpcm_device_change_cmd.vpcm_change.vol_index= v->dev_rx.volume;
+	pr_info("send vpcm_device_change_cmd, vol_index = %d\n",
+		vpcm_device_change_cmd.vpcm_change.vol_index);
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	/* Device Info */ /* Volume Info */ /* Loopback Info */
+	pr_info("rx_device=%d , tx_device=%d , rx.volume=%d\n",
+		vpcm_device_change_cmd.vpcm_change.rx_device_id,
+		vpcm_device_change_cmd.vpcm_change.tx_device_id,
+		vpcm_device_change_cmd.vpcm_change.vol_index);
+#endif
+
+	v->cvp_state = CMD_STATUS_FAIL;
+	ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_device_change_cmd);
+	if (ret < 0) {
+		pr_err("Fail in sending OEM_IDEVICE_CMD_START\n");
+	}
+	pr_debug("wait for vpcm device change\n");
+#if 1
+	ret = wait_event_timeout(v->cvp_wait,
+				 (v->cvp_state == CMD_STATUS_SUCCESS),
+				 msecs_to_jiffies(200));
+	if (!ret) {
+		pr_err("%s: wait_event timeout\n", __func__);
+		/* goto fail; */
+	}
+#endif
+}
+#endif
+/* END: VPCM */
 
 	/* send cvs cal */
 	voice_send_cvs_cal_to_modem(v);
@@ -1478,6 +1656,14 @@ static int voice_setup_modem_voice(struct voice_data *v)
 	struct msm_snddev_info *dev_tx_info;
 	void *apr_cvp = voice_get_apr_cvp();
 
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+/* BEGIN: VPCM */
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+	u16 cvp_handle;
+/* END: VPCM */
+	/* printk("%s \n", __func__); */
+#endif
+
 	/* create cvp session and wait for response */
 	cvp_session_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -1519,12 +1705,34 @@ static int voice_setup_modem_voice(struct voice_data *v)
 	cvp_session_cmd.cvp_session.network_id = VSS_NETWORK_ID_DEFAULT;
 	cvp_session_cmd.cvp_session.tx_port_id = v->dev_tx.dev_port_id;
 	cvp_session_cmd.cvp_session.rx_port_id = v->dev_rx.dev_port_id;
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	/* Device Info */
+	cvp_session_cmd.cvp_session.tx_device_id = v->dev_tx.dev_id;
+	cvp_session_cmd.cvp_session.rx_device_id = v->dev_rx.dev_id;
+	/* Volume Info */
+	cvp_session_cmd.cvp_session.vol_index = v->dev_rx.volume;
+	/* Loopback Info */
+	cvp_session_cmd.cvp_session.loopback_mode_onoff = voice_get_loopback_mode();
+#endif
+
 	pr_info("topology=%d net_id=%d, dir=%d tx_port_id=%d, rx_port_id=%d\n",
 			cvp_session_cmd.cvp_session.tx_topology_id,
 			cvp_session_cmd.cvp_session.network_id,
 			cvp_session_cmd.cvp_session.direction,
 			cvp_session_cmd.cvp_session.tx_port_id,
 			cvp_session_cmd.cvp_session.rx_port_id);
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+	/* Device Info */ /* Volume Info */ /* Loopback Info */
+	pr_info("rx_device=%d tx_device=%d, rx_volume_id=%d, loopback_mode_onoff=%d\n",
+			cvp_session_cmd.cvp_session.rx_device_id,
+			cvp_session_cmd.cvp_session.tx_device_id,
+			cvp_session_cmd.cvp_session.vol_index,
+			cvp_session_cmd.cvp_session.loopback_mode_onoff);
+#else
+	pr_info("rx_device=%d tx_device=%d\n", v->dev_rx.dev_id, v->dev_tx.dev_id);
+#endif
 
 	v->cvp_state = CMD_STATUS_FAIL;
 	ret = apr_send_pkt(apr_cvp, (uint32_t *) &cvp_session_cmd);
@@ -1540,6 +1748,82 @@ static int voice_setup_modem_voice(struct voice_data *v)
 		pr_err("%s: wait_event timeout\n", __func__);
 		goto fail;
 	}
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+if(wb_handle==VPCM_PATH_NARROWBAND)
+{
+#endif
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+
+#if defined(CONFIG_USA_MODEL_SGH_T989)
+	/*
+	 * (39 tty) (43 hac) (49 loopback)
+	 * Do not apply the diamond solution
+	 */
+ 	if((v->dev_rx.dev_id != 39) && (v->dev_rx.dev_id != 43) && (v->dev_rx.dev_id != 49))
+#elif defined(CONFIG_USA_MODEL_SGH_I727)
+	if((v->dev_rx.dev_id!=39))
+#elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	if((v->dev_rx.dev_acdb_id != 104) && (v->dev_rx.dev_acdb_id != 102))
+#endif
+	{
+/* BEGIN: VPCM */
+		/*
+		 * voice.voc_path == VOC_PATH_FULL is VoIP,
+		 * voice.voc_path == VOC_PATH_PASSIVE is voice call.
+		 */
+		/* if( voice.voc_path == VOC_PATH_PASSIVE) */
+		if( common.voc_path == VOC_PATH_PASSIVE) {
+		/* Send start vpcm and wait for response. */
+			vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+					APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+			vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+					sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+			pr_info(" send vpcm start cmd, pkt size = %d\n",
+				vpcm_start_cmd.hdr.pkt_size);
+
+			vpcm_start_cmd.hdr.src_port = 0;
+			vpcm_start_cmd.hdr.dest_port = 0xD00D;
+			vpcm_start_cmd.hdr.token = 0;
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+			vpcm_start_cmd.hdr.opcode = 0x0001128D;
+#else
+			vpcm_start_cmd.hdr.opcode = 0x10001001;
+#endif
+			cvp_handle = voice_get_cvp_handle(v);
+
+			vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+			vpcm_start_cmd.vpcm_start.client_token = 0;
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+			vpcm_start_cmd.vpcm_start.rx_device_id =v->dev_rx.dev_id ;
+#endif
+			pr_info("cvp_handle=%d\n",
+				vpcm_start_cmd.vpcm_start.cvp_handle);
+
+			v->cvp_state = CMD_STATUS_FAIL;
+			ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+			if (ret < 0) {
+				pr_err("Fail in sending OEM_IDEVICE_CMD_START\n");
+				goto fail;
+			}
+			pr_debug("wait for vpcm start\n");
+
+			ret = wait_event_timeout(v->cvp_wait,
+						 (v->cvp_state == CMD_STATUS_SUCCESS),
+						 msecs_to_jiffies(TIMEOUT_MS));
+			if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;
+			}
+		}
+/* END: VPCM */
+	}
+#endif
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+}
+#endif
+	/* add flag for routing */
+	routing_cmd_mode = 1;
 
 	/* send cvs cal */
 	voice_send_cvs_cal_to_modem(v);
@@ -1550,6 +1834,11 @@ static int voice_setup_modem_voice(struct voice_data *v)
 	/* send cvp vol table cal */
 	voice_send_cvp_vol_tbl_to_modem(v);
 
+	routing_cmd_mode = 0;
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	on_call = 1;
+	voice_wb = v;
+#endif
 	return 0;
 
 fail:
@@ -1740,6 +2029,15 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 	u16 mvm_handle = voice_get_mvm_handle(v);
 	u16 cvp_handle = voice_get_cvp_handle(v);
 
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	/* printk("%s \n", __func__); */
+/* BEGIN: VPCM */
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+/* END: VPCM */
+	/* SKLee_20110823 */
+	test_loopback_mode = 0;
+#endif
+
 	/* detach VOCPROC and wait for response from mvm */
 	mvm_d_vocproc_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
 					APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
@@ -1766,6 +2064,68 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 		pr_err("%s: wait_event timeout\n", __func__);
 		goto fail;
 	}
+
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+if(wb_handle==VPCM_PATH_NARROWBAND)
+{
+#endif
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+
+#if defined(CONFIG_USA_MODEL_SGH_T989)
+	if((v->dev_rx.dev_id!=39)&&(v->dev_rx.dev_id!=43)&&(v->dev_rx.dev_id!=48))
+#elif defined(CONFIG_USA_MODEL_SGH_I727)
+	if((v->dev_rx.dev_id!=39))
+#elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	if((v->dev_rx.dev_acdb_id != 104) && (v->dev_rx.dev_acdb_id != 102))
+#endif
+	{
+/* BEGIN: VPCM */
+		if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
+			/* Send stop vpcm and wait for response. */
+			vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+					APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+			vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+					sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+			pr_info(" send vpcm stop cmd, pkt size = %d\n",
+				vpcm_start_cmd.hdr.pkt_size);
+
+			vpcm_start_cmd.hdr.src_port = 0;
+			vpcm_start_cmd.hdr.dest_port = 0xD00D;
+			vpcm_start_cmd.hdr.token = 0;
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+			vpcm_start_cmd.hdr.opcode = 0x0001128E;
+#else
+			vpcm_start_cmd.hdr.opcode = 0x10001002;
+#endif
+			cvp_handle = voice_get_cvp_handle(v);
+
+			vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+			vpcm_start_cmd.vpcm_start.client_token = 0;
+			pr_info("cvp_handle=%d\n", vpcm_start_cmd.vpcm_start.cvp_handle);
+
+			v->cvp_state = CMD_STATUS_FAIL;
+			ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+			if (ret < 0) {
+				pr_err("Fail in sending OEM_IDEVICE_CMD_STOP\n");
+				goto fail;
+			}
+
+			pr_debug("wait for vpcm stop\n");
+
+			ret = wait_event_timeout(v->cvp_wait,
+					(v->cvp_state == CMD_STATUS_SUCCESS),
+					msecs_to_jiffies(TIMEOUT_MS));
+			if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;
+			}
+		}
+/* END: VPCM */
+	}
+#endif
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+}
+#endif
 
 	/* destrop cvp session */
 	cvp_destroy_session_cmd.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
@@ -1797,11 +2157,171 @@ static int voice_destroy_modem_voice(struct voice_data *v)
 	voice_set_cvp_handle(v, cvp_handle);
 
 	return 0;
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	on_call = 0;
+	voice_wb = NULL;
+#endif
 
 fail:
 	return -EINVAL;
 }
 
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+int vpcm_start_modem_voice()
+{
+	int ret = 0;
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+	u16 cvp_handle;
+	struct voice_data *v = voice_wb;
+	void *apr_cvp;
+
+	if(on_call ==1)
+	{
+		if((voice_wb->dev_rx.dev_id!=39)) {
+		/* BEGIN: VPCM */
+		// voice.voc_path == VOC_PATH_FULL is VoIP, voice.voc_path == VOC_PATH_PASSIVE is voice call
+			apr_cvp = voice_get_apr_cvp();
+			if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) 
+			{
+			/* Send start vpcm and wait for response. */
+			vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+			vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+	
+			vpcm_start_cmd.hdr.src_port = 0;
+			vpcm_start_cmd.hdr.dest_port = 0xD00D;
+			vpcm_start_cmd.hdr.token = 0;
+	
+			vpcm_start_cmd.hdr.opcode = 0x10001001;
+			cvp_handle = voice_get_cvp_handle(v);
+	
+			vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+			vpcm_start_cmd.vpcm_start.client_token = 0;
+	
+			v->cvp_state = CMD_STATUS_FAIL;
+			ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+			if (ret < 0) {
+				pr_err("Fail in sending OEM_IDEVICE_CMD_START\n");
+				goto fail;
+			}
+			pr_debug("wait for vpcm start\n");
+
+			ret = wait_event_timeout(v->cvp_wait, (v->cvp_state == CMD_STATUS_SUCCESS), msecs_to_jiffies(TIMEOUT_MS));
+			if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;	
+				}	
+			}
+		/* END: VPCM */
+		}
+	}
+
+	wb_handle = VPCM_PATH_NARROWBAND;
+
+	return 0;
+fail:
+	return -EINVAL;
+}
+
+
+int vpcm_stop_modem_voice()
+{
+	int ret = 0;
+	struct voice_data *v = voice_wb;
+	u16 cvp_handle;
+	void *apr_cvp;
+	
+	struct oem_idevice_cmd_start_cmd vpcm_start_cmd;
+
+	if(on_call == 1)
+	{
+		if((v->dev_rx.dev_id!=39)) {
+			/* BEGIN: VPCM */
+			cvp_handle = voice_get_cvp_handle(v);
+			apr_cvp = voice_get_apr_cvp();
+			if( /*voice.voc_path*/common.voc_path == VOC_PATH_PASSIVE) {
+				/* Send stop vpcm and wait for response. */
+				vpcm_start_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+				vpcm_start_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,sizeof(vpcm_start_cmd) - APR_HDR_SIZE);
+	
+				vpcm_start_cmd.hdr.src_port = 0;
+				vpcm_start_cmd.hdr.dest_port = 0xD00D;
+				vpcm_start_cmd.hdr.token = 0;
+				vpcm_start_cmd.hdr.opcode = 0x10001002;
+				cvp_handle = voice_get_cvp_handle(v);
+
+				vpcm_start_cmd.vpcm_start.cvp_handle = cvp_handle;
+				vpcm_start_cmd.vpcm_start.client_token = 0;
+
+				v->cvp_state = CMD_STATUS_FAIL;
+				ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_start_cmd);
+				if (ret < 0) {
+					pr_err("Fail in sending OEM_IDEVICE_CMD_STOP\n");
+					goto fail;
+				}
+
+				ret = wait_event_timeout(v->cvp_wait, (v->cvp_state == CMD_STATUS_SUCCESS), msecs_to_jiffies(TIMEOUT_MS));
+				if (!ret) {
+				pr_err("%s: wait_event timeout\n", __func__);
+				goto fail;
+	
+				}
+			}
+		/* END: VPCM */
+		}
+	}
+
+	wb_handle = VPCM_PATH_WIDEBAND;
+
+	return 0;
+
+fail:
+	return -EINVAL;
+}
+#endif
+
+#ifdef CONFIG_SUPPORT_ALL_SOUND_MUTE
+static int voice_send_mute_cmd_to_modem(struct voice_data *v, int dir)
+{
+	struct cvs_set_mute_cmd cvs_mute_cmd;
+	int ret = 0;
+	void *apr_cvs = voice_get_apr_cvs();
+	u16 cvs_handle = voice_get_cvs_handle(v);
+
+	/* send mute/unmute to cvs */
+	cvs_mute_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	cvs_mute_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(cvs_mute_cmd) - APR_HDR_SIZE);
+	cvs_mute_cmd.hdr.src_port = v->session_id;
+	cvs_mute_cmd.hdr.dest_port = cvs_handle;
+	cvs_mute_cmd.hdr.token = 0;
+	cvs_mute_cmd.hdr.opcode = VSS_ISTREAM_CMD_SET_MUTE;
+
+	if (dir == DIR_RX) {
+		cvs_mute_cmd.cvs_set_mute.direction = DIR_RX;
+		cvs_mute_cmd.cvs_set_mute.mute_flag = v->dev_rx.mute;
+	} else {
+		cvs_mute_cmd.cvs_set_mute.direction = 0; /*tx*/
+		cvs_mute_cmd.cvs_set_mute.mute_flag = v->dev_tx.mute;
+	}
+
+	pr_info(" mute value =%d, dir=%d\n", cvs_mute_cmd.cvs_set_mute.mute_flag, dir);
+	v->cvs_state = CMD_STATUS_FAIL;
+	ret = apr_send_pkt(apr_cvs, (uint32_t *) &cvs_mute_cmd);
+	if (ret < 0) {
+		pr_err("Fail: send STREAM SET MUTE\n");
+		goto fail;
+	}
+	ret = wait_event_timeout(v->cvs_wait,
+				 (v->cvs_state == CMD_STATUS_SUCCESS),
+				 msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret)
+		pr_err("%s: wait_event timeout\n", __func__);
+
+fail:
+	return 0;
+}
+#else
 static int voice_send_mute_cmd_to_modem(struct voice_data *v)
 {
 	struct cvs_set_mute_cmd cvs_mute_cmd;
@@ -1837,10 +2357,14 @@ static int voice_send_mute_cmd_to_modem(struct voice_data *v)
 fail:
 	return 0;
 }
+#endif
 
 static int voice_send_vol_index_to_modem(struct voice_data *v)
 {
 	struct cvp_set_rx_volume_index_cmd cvp_vol_cmd;
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	struct oem_ivolume_cmd_change_cmd vpcm_volume_change_cmd;
+#endif
 	int ret = 0;
 	void *apr_cvp = voice_get_apr_cvp();
 	u16 cvp_handle = voice_get_cvp_handle(v);
@@ -1869,6 +2393,42 @@ static int voice_send_vol_index_to_modem(struct voice_data *v)
 		pr_err("%s: wait_event timeout\n", __func__);
 		return -EINVAL;
 	}
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	/* if( voice.voc_path == VOC_PATH_PASSIVE) */
+	if( common.voc_path == VOC_PATH_PASSIVE) {
+/* BEGIN: VPCM */
+		/* Send start vpcm and wait for response. */
+		vpcm_volume_change_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+					APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+		vpcm_volume_change_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+					sizeof(vpcm_volume_change_cmd) - APR_HDR_SIZE);
+		vpcm_volume_change_cmd.hdr.src_port = 0;
+		vpcm_volume_change_cmd.hdr.dest_port = 0xD00D;
+		vpcm_volume_change_cmd.hdr.token = 0;
+		vpcm_volume_change_cmd.hdr.opcode = 0x0001128C;
+
+		vpcm_volume_change_cmd.vpcm_change.vol_index= v->dev_rx.volume;
+		pr_info("send vpcm_volume_change_cmd, vol_index = %d\n",
+			vpcm_volume_change_cmd.vpcm_change.vol_index);
+
+		v->cvp_state = CMD_STATUS_FAIL;
+		ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_volume_change_cmd);
+		if (ret < 0) {
+			pr_err("Fail in sending OEM_IDEVICE_CMD_START\n");
+		}
+		pr_debug("wait for vpcm start\n");
+#if 0
+		ret = wait_event_timeout(v->cvp_wait,
+			(v->cvp_state == CMD_STATUS_SUCCESS),
+			msecs_to_jiffies(TIMEOUT_MS));
+		if (!ret) {
+			pr_err("%s: wait_event timeout\n", __func__);
+		}
+#endif
+	}
+/* END: VPCM */
+#endif
 	return 0;
 }
 
@@ -2162,7 +2722,25 @@ static void voice_auddev_cb_function(u32 evt_id,
 		}
 
 		mutex_lock(&v->lock);
+		//printk("%s AUDDEV_EVT_START_VOICE \n", __func__);
 
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120S) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120K) ||\
+defined(CONFIG_KOR_MODEL_SHV_E120L) ||\
+defined (CONFIG_KOR_MODEL_SHV_E160S) ||\
+defined (CONFIG_KOR_MODEL_SHV_E160K) ||\
+defined(CONFIG_KOR_MODEL_SHV_E160L)
+		/* kks_111020 */
+		/*
+		 * Qualcomm Gon's workaround code to solve the sound mute problem
+		 * after subsystem reset(SSR) during voice call(QC case 645569)
+		 */
+		if( (v->voc_state == VOC_RUN) && (NULL == voice_get_apr_mvm())) {
+			v->voc_state = VOC_RELEASE;
+			printk("SSR reset was happend, VOC sate will be changed\n");
+		}
+#endif
 		if ((v->voc_state == VOC_INIT) ||
 				(v->voc_state == VOC_RELEASE)) {
 			v->v_call_status = VOICE_CALL_START;
@@ -2175,6 +2753,12 @@ static void voice_auddev_cb_function(u32 evt_id,
 					mutex_unlock(&v->lock);
 					return;
 				}
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) || defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+				v->dev_rx.volume = evt_payload->voc_vm_info.dev_vm_val.vol;
+				//printk("%s AUDDEV_EVT_START_VOICE - v->dev_rx.volume =%d\n", __func__ , v->dev_rx.volume);
+#endif
+
 				rc1 = voice_create_mvm_cvs_session(v);
 				if (rc1 < 0) {
 					pr_err("%s: create mvm-cvs failed\n",
@@ -2370,20 +2954,35 @@ static void voice_auddev_cb_function(u32 evt_id,
 
 			mutex_lock(&v->lock);
 
+#ifdef CONFIG_SUPPORT_ALL_SOUND_MUTE
+			if (v->voc_state == VOC_RUN)
+				voice_send_mute_cmd_to_modem(v, DIR_TX);
+#else
 			if (v->voc_state == VOC_RUN)
 				voice_send_mute_cmd_to_modem(v);
+#endif
 
 			mutex_unlock(&v->lock);
 		} else {
 			v->dev_rx.volume =
 					evt_payload->voc_vm_info.dev_vm_val.vol;
 
-			mutex_lock(&v->lock);
-
-			if (v->voc_state == VOC_RUN)
-				voice_send_vol_index_to_modem(v);
-
-			mutex_unlock(&v->lock);
+			if ((v->dev_rx.volume == 0x10) || (v->dev_rx.volume == 0x20)) {
+#ifdef CONFIG_SUPPORT_ALL_SOUND_MUTE
+				v->dev_rx.mute =((v->dev_rx.volume==0x20)?1:0);
+				mutex_lock(&v->lock);
+				if (v->voc_state == VOC_RUN)
+					voice_send_mute_cmd_to_modem(v, DIR_RX);
+				mutex_unlock(&v->lock);
+#else
+				pr_info("not use all sound mute system (rx mute).\n");
+#endif
+			} else {
+				mutex_lock(&v->lock);
+				if (v->voc_state == VOC_RUN)
+					voice_send_vol_index_to_modem(v);
+				mutex_unlock(&v->lock);
+			}
 		}
 		break;
 	case AUDDEV_EVT_REL_PENDING:
@@ -2462,6 +3061,60 @@ int voice_set_voc_path_full(uint32_t set)
 	return 0;
 }
 EXPORT_SYMBOL(voice_set_voc_path_full);
+
+#ifdef CONFIG_SEC_DHA_SOL_MAL
+int voice_sec_set_dha_data(int mode, int select, short* parameters)
+{
+	struct oem_dha_parm_send_cmd vpcm_dha_param_send_cmd;
+	int ret = 0;
+	struct voice_data *v = &voice;
+	void *apr_cvp = voice_get_apr_cvp(v);
+	u16 cvp_handle = voice_get_cvp_handle(v);
+	int i=0;
+
+	/* BEGIN: DHA */
+	/* Send start vpcm and wait for response. */
+	vpcm_dha_param_send_cmd.hdr.hdr_field = APR_HDR_FIELD(APR_MSG_TYPE_SEQ_CMD,
+				APR_HDR_LEN(APR_HDR_SIZE), APR_PKT_VER);
+	vpcm_dha_param_send_cmd.hdr.pkt_size = APR_PKT_SIZE(APR_HDR_SIZE,
+				sizeof(vpcm_dha_param_send_cmd) - APR_HDR_SIZE);
+	pr_info("send vpcm_dha_param_send_cmd, pkt size = %d\n",
+		vpcm_dha_param_send_cmd.hdr.pkt_size);
+
+	vpcm_dha_param_send_cmd.hdr.src_port = 0;
+	vpcm_dha_param_send_cmd.hdr.dest_port = 0xD00D;
+	vpcm_dha_param_send_cmd.hdr.token = 0;
+	vpcm_dha_param_send_cmd.hdr.opcode = 0x0001128A;
+
+	vpcm_dha_param_send_cmd.dha_send.onoff= (uint16_t)mode;
+	vpcm_dha_param_send_cmd.dha_send.select= (uint16_t)select;
+
+	memcpy(vpcm_dha_param_send_cmd.dha_send.param,parameters, 24);
+
+	pr_info("send vpcm_dha_param_send_cmd, mode = %d, select=%d\n",
+		vpcm_dha_param_send_cmd.dha_send.onoff,
+		vpcm_dha_param_send_cmd.dha_send.select);
+
+	v->cvp_state = CMD_STATUS_FAIL;
+	ret = apr_send_pkt(apr_cvp, (uint32_t *) &vpcm_dha_param_send_cmd);
+	if (ret < 0) {
+		pr_err("Fail in sending vpcm_dha_param_send_cmd\n");
+	}
+	pr_debug("wait for vpcm_dha_param_send_cmd\n");
+
+#if 0
+	ret = wait_event_timeout(v->cvp_wait,
+		(v->cvp_state == CMD_STATUS_SUCCESS),
+		msecs_to_jiffies(TIMEOUT_MS));
+	if (!ret) {
+		pr_err("%s: wait_event timeout\n", __func__);
+	}
+#endif
+
+	return ret;
+}
+EXPORT_SYMBOL(voice_sec_set_dha_data);
+#endif /* CONFIG_SEC_DHA_SOL_MAL */
 
 void voice_register_mvs_cb(ul_cb_fn ul_cb,
 			   dl_cb_fn dl_cb,
@@ -2871,7 +3524,52 @@ static int32_t modem_cvp_callback(struct apr_client_data *data, void *priv)
 			} else if (ptr[0] == APRV2_IBASIC_CMD_DESTROY_SESSION) {
 				v->cvp_state = CMD_STATUS_SUCCESS;
 				wake_up(&v->cvp_wait);
-			} else if (ptr[0] ==
+			}
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+
+/* BEGIN: VPCM */
+			else if (ptr[0] == 0x10001001) {
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			} else if (ptr[0] == 0x10001002) {
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			}
+#ifdef CONFIG_SEC_DHA_SOL_MAL
+			else if (ptr[0] == 0x0001128A) {
+				pr_err("got ACK from CVP dha set\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			}
+#endif /* CONFIG_SEC_DHA_SOL_MAL */
+#elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+#ifdef CONFIG_SEC_DHA_SOL_MAL
+			else if (ptr[0] == 0x0001128A) {
+				pr_err("got ACK from CVP dha set\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			}
+#endif /* CONFIG_SEC_DHA_SOL_MAL */
+			else if (ptr[0] == 0x0001128D) {
+				pr_err("got ACK from CVP start vpcm\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			} else if (ptr[0] == 0x0001128E) {
+				pr_err("got ACK from CVP stop vpcm\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			} else if (ptr[0] == 0x0001128F) {
+				pr_err("got ACK from CVP device change vpcm\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			} else if (ptr[0] == 0x0001128C) {
+				pr_err("got ACK from CVP volume change vpcm\n");
+				v->cvp_state = CMD_STATUS_SUCCESS;
+				wake_up(&v->cvp_wait);
+			}
+/* END: VPCM */
+#endif
+			else if (ptr[0] ==
 				VSS_IVOCPROC_CMD_CACHE_VOLUME_CALIBRATION_TABLE
 				) {
 

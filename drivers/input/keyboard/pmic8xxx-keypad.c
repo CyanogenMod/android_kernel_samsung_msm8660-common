@@ -23,6 +23,7 @@
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/mfd/pm8xxx/gpio.h>
 #include <linux/input/pmic8xxx-keypad.h>
+#include <mach/sec_debug.h>
 
 #define PM8XXX_MAX_ROWS		18
 #define PM8XXX_MAX_COLS		8
@@ -109,6 +110,10 @@ struct pmic8xxx_kp {
 
 	u8 ctrl_reg;
 };
+
+static int pmic8xxx_kp_enable(struct pmic8xxx_kp *kp);
+static int pmic8xxx_kp_disable(struct pmic8xxx_kp *kp);
+extern int pmic8xxx_pwrkey_status(void);
 
 static int pmic8xxx_kp_write_u8(struct pmic8xxx_kp *kp,
 				 u8 data, u16 reg)
@@ -287,6 +292,19 @@ static void __pmic8xxx_kp_scan_matrix(struct pmic8xxx_kp *kp, u16 *new_state,
 					!(new_state[row] & (1 << col)));
 
 			input_sync(kp->input);
+
+#if defined (DSEC_KEYBOARD_CODE_DEBUG)
+			pr_info("key [%d:%d] %s keycode [%d]\n", row, col,
+					!(new_state[row] & (1 << col)) ?
+					"pressed" : "released", kp->keycodes[code]);
+#else
+			pr_info("key %s\n", 
+					!(new_state[row] & (1 << col)) ? "pressed" : "released");
+#endif
+
+#if defined(CONFIG_SEC_DEBUG)
+			sec_debug_check_crash_key(kp->keycodes[code], !(new_state[row] & (1 << col)));
+#endif
 		}
 	}
 }
@@ -356,6 +374,69 @@ static int pmic8xxx_kp_scan_matrix(struct pmic8xxx_kp *kp, unsigned int events)
 	}
 	return rc;
 }
+
+static ssize_t pmic8xxx_kp_disable_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct pmic8xxx_kp *kp = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%u\n", (kp->ctrl_reg & KEYP_CTRL_KEYP_EN) ? 0 : 1);
+}
+
+static ssize_t pmic8xxx_kp_disable_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t count)
+{
+	struct pmic8xxx_kp *kp = dev_get_drvdata(dev);
+	struct input_dev *input_dev = kp->input;
+	long i = 0;
+	int rc;
+
+	rc = strict_strtoul(buf, 10, &i);
+	if (rc)
+		return -EINVAL;
+
+	i = !!i;
+
+	mutex_lock(&input_dev->mutex);
+	if (i)
+		pmic8xxx_kp_disable(kp);
+	else
+		pmic8xxx_kp_enable(kp);
+	mutex_unlock(&input_dev->mutex);
+
+	return count;
+}
+
+static ssize_t pmic8xxx_kp_pressed_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	int row, col;
+	int keystate = 0;
+	int pwrkeystate = 0;
+	struct pmic8xxx_kp *kp = dev_get_drvdata(dev);
+
+	for (row = 0; row < kp->pdata->num_rows; row++) {
+		for (col = 0; col < kp->pdata->num_cols; col++) {
+			if(!(kp->keystate[row] & (1 << col))) {
+				keystate = 1;
+			}
+		}
+	}
+	pwrkeystate = pmic8xxx_pwrkey_status();
+
+	if (keystate || pwrkeystate)
+		sprintf(buf, "PRESS");
+	else
+		sprintf(buf, "RELEASE");
+
+	return strlen(buf);
+}
+
+static DEVICE_ATTR(disable_kp, 0664, pmic8xxx_kp_disable_show,
+			pmic8xxx_kp_disable_store);
+static DEVICE_ATTR(key_pressed, 0664, pmic8xxx_kp_pressed_show, NULL);
 
 /*
  * NOTE: We are reading recent and old data registers blindly
@@ -650,7 +731,9 @@ static int __devinit pmic8xxx_kp_probe(struct platform_device *pdev)
 	matrix_keypad_build_keymap(keymap_data, PM8XXX_ROW_SHIFT,
 					kp->input->keycode, kp->input->keybit);
 
-	input_set_capability(kp->input, EV_MSC, MSC_SCAN);
+ 	input_set_capability(kp->input, EV_KEY, KEY_VOLUMEDOWN);
+ 	input_set_capability(kp->input, EV_KEY, KEY_VOLUMEUP);
+ 	input_set_capability(kp->input, EV_KEY, KEY_HOME);
 	input_set_drvdata(kp->input, kp);
 
 	/* initialize keypad state */
@@ -705,10 +788,20 @@ static int __devinit pmic8xxx_kp_probe(struct platform_device *pdev)
 		goto err_pmic_reg_read;
 	}
 
+	rc = device_create_file(&pdev->dev, &dev_attr_key_pressed);
+	if (rc < 0)
+		goto err_create_file;
+
+	rc = device_create_file(&pdev->dev, &dev_attr_disable_kp);
+	if (rc < 0)
+		goto err_create_file;
+
 	device_init_wakeup(&pdev->dev, pdata->wakeup);
 
 	return 0;
 
+err_create_file:
+	free_irq(kp->key_stuck_irq, kp);
 err_pmic_reg_read:
 	free_irq(kp->key_stuck_irq, kp);
 err_req_stuck_irq:

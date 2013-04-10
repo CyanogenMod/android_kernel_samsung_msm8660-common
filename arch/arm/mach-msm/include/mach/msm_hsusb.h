@@ -118,7 +118,9 @@ enum usb_switch_control {
 struct msm_hsusb_gadget_platform_data {
 	int *phy_init_seq;
 	void (*phy_reset)(void);
-
+#ifdef CONFIG_USB_SWITCH_FSA9480
+		void (*check_microusb)(void); // Add for fsa9485 device check (Samsung)
+#endif
 	int self_powered;
 	int is_phy_status_timer_on;
 };
@@ -183,6 +185,9 @@ struct msm_usb_host_platform_data {
 	void (*vbus_power) (unsigned phy_info, int on);
 	int  (*vbus_init)(int init);
 	struct clk *ebi1_clk;
+#ifdef CONFIG_USB_HOST_NOTIFY
+	int host_notify;
+#endif
 };
 
 #endif

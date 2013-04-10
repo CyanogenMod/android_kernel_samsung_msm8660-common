@@ -377,10 +377,18 @@ static noinline void __init_refok rest_init(void)
 	cpu_idle();
 }
 
+#if defined(CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+int no_console = 0;
+#endif
 /* Check for early params. */
 static int __init do_early_param(char *param, char *val)
 {
 	const struct obs_kernel_param *p;
+#if defined(CONFIG_KOR_MODEL_SHV_E120L) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+	if ((strcmp(param, "console") == 0) && ((strcmp(val, "null") == 0) || (strcmp(val, "NULL") == 0))){
+		no_console = 1;
+	}
+#endif
 
 	for (p = __setup_start; p < __setup_end; p++) {
 		if ((p->early && strcmp(param, p->str) == 0) ||

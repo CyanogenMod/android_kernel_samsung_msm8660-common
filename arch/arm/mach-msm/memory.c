@@ -162,6 +162,9 @@ int platform_physical_low_power_pages(u64 start, u64 size)
 char *memtype_name[] = {
 	"SMI_KERNEL",
 	"SMI",
+#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
+	"ADSP",
+#endif
 	"EBI0",
 	"EBI1"
 };

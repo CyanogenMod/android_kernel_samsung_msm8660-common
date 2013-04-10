@@ -55,3 +55,24 @@ obj-$(CONFIG_MT9D112) += mt9d112.o mt9d112_reg.o
 obj-$(CONFIG_MT9D113) += mt9d113.o mt9d113_reg.o
 obj-$(CONFIG_FB_MSM_WRITEBACK_MSM_PANEL) += wfd/
 obj-$(CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE) += msm_v4l2_video.o
+
+ifeq ($(CONFIG_SENSOR_ISX012),y)
+obj-$(CONFIG_SENSOR_ISX012) += sec_isx012.o  sec_apex_pmic.o
+CFLAGS_REMOVE_sec_isx012.o = -Wframe-larger-than=1024
+else
+obj-$(CONFIG_SENSOR_M5MO) += sec_m5mo.o
+endif
+ifeq ($(CONFIG_CAMERA_VE),y)
+  obj-$(CONFIG_SENSOR_S5K5BAFX) += sec_s5k5bafx.o
+  obj-$(CONFIG_SENSOR_SR200PC20M) += sec_sr200pc20m.o
+else
+ifeq ($(CONFIG_SENSOR_SR200PC20M),y)
+  obj-$(CONFIG_SENSOR_SR200PC20M) += sec_sr200pc20m.o
+else ifeq ($(CONFIG_SENSOR_S5K6AAFX),y)
+CFLAGS_REMOVE_sec_s5k6aafx.o = -Wframe-larger-than=1024
+  obj-$(CONFIG_SENSOR_S5K6AAFX) += sec_s5k6aafx.o
+else
+  obj-$(CONFIG_SENSOR_S5K5BAFX) += sec_s5k5bafx.o
+endif
+endif
+obj-$(CONFIG_FLASH_TORCH_MODE) += ledflash_torch.o

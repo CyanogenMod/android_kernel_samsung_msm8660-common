@@ -334,6 +334,52 @@ static inline unsigned int cpufreq_quick_get(unsigned int cpu)
 #endif
 
 
+#ifdef CONFIG_SEC_DVFS
+enum {
+	BOOT_CPU = 0,
+	NON_BOOT_CPU = 1
+};
+
+#define MAX_FREQ_LIMIT		1512000
+#define MIN_FREQ_LIMIT		384000
+
+#define MAX_TOUCH_LIMIT		486000
+#ifdef CONFIG_TARGET_SERIES_DALI
+#define MAX_UNICPU_LIMIT	1188000	
+#else
+#define MAX_UNICPU_LIMIT	1242000	
+#endif
+
+#define UPDATE_NOW_BITS		0xFF
+
+enum {
+	DVFS_NO_ID 				= 0,
+
+	/* need to update now */
+	DVFS_TOUCH_ID		= 0x00000001,	
+	DVFS_APPS_MIN_ID 		= 0x00000002,
+	DVFS_APPS_MAX_ID		= 0x00000004,	
+	DVFS_UNICPU_ID		= 0x00000008,
+	DVFS_MHL_ID		= 0x00000010,
+
+	/* DO NOT UPDATE NOW */
+	DVFS_THERMALD_ID		= 0x00000100,
+
+	DVFS_MAX_ID
+};
+
+#ifdef CONFIG_SEC_DVFS_DUAL
+void dual_boost(unsigned int boost_on);
+#endif
+
+int set_freq_limit(unsigned long id, unsigned int freq);
+
+unsigned int get_min_lock(void);
+unsigned int get_max_lock(void);
+void set_min_lock(int freq);
+void set_max_lock(int freq);
+#endif
+
 /*********************************************************************
  *                       CPUFREQ DEFAULT GOVERNOR                    *
  *********************************************************************/

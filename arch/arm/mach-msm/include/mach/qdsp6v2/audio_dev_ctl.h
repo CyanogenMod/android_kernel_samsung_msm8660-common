@@ -15,7 +15,12 @@
 #include <mach/qdsp5v2/audio_def.h>
 #include <sound/q6afe.h>
 
+#ifdef CONFIG_SEC_AUDIO_DEVICE
+#define AUDIO_DEV_CTL_MAX_DEV 140
+#else
 #define AUDIO_DEV_CTL_MAX_DEV 64
+#endif
+
 #define DIR_TX	2
 #define DIR_RX	1
 

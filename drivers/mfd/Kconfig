@@ -169,6 +169,13 @@ config PMIC8901
 	help
 	  Say yes here for Qualcomm PM8901 chip.
 
+config PMIC8901_PRELOAD_DVDD
+	tristate "prevent PMIC8901's abnormal spike with preloaded dvdd"
+	depends on PMIC8901
+	default n
+	help
+	  Say yes here for Qualcomm PM8901 chip.
+
 config MARIMBA_TSADC
 	tristate "Support for Marimba Touchscreen ADC"
 	depends on MARIMBA_CORE && ARCH_MSM7X30

@@ -78,6 +78,12 @@ enum msm_tlmm_register {
 	SDC1_HDRV_PULL_CTL = 0x20a0,
 };
 
+#ifdef CONFIG_SEC_AUDIO_I2S_DRIVING_CURRENT
+enum msm_tlmm_Spkr_Hdrv_register {
+	CODEC_SPKR_HDRV_PULL_CTL = 0x20a8,
+};
+#endif
+
 struct tlmm_field_cfg {
 	enum msm_tlmm_register reg;
 	u8                     off;
@@ -119,6 +125,19 @@ struct irq_chip msm_gpio_irq_extn = {
 	.irq_set_wake	= NULL,
 	.irq_disable	= NULL,
 };
+
+#ifdef CONFIG_SEC_AUDIO_I2S_DRIVING_CURRENT
+static const struct tlmm_field_cfg tlmm_codec_spkr_hdrv_cfgs[] = {
+	{CODEC_SPKR_HDRV_PULL_CTL,6}, /*CODEC_SPKR_SCK_HDRV */
+	{CODEC_SPKR_HDRV_PULL_CTL,3}, /*CODEC_SPKR_WS_HDRV */
+	{CODEC_SPKR_HDRV_PULL_CTL,0}, /*CODEC_SPKR_DOUT_HDRV */
+};
+
+static const struct tlmm_field_cfg tlmm_codec_spkr_pull_cfgs[] = {
+	{CODEC_SPKR_HDRV_PULL_CTL,11}, /*CODEC_SPKR_SCK_PULL */
+	{CODEC_SPKR_HDRV_PULL_CTL,9}, /*CODEC_SPKR_WS_PULL */
+};
+#endif
 
 /*
  * When a GPIO triggers, two separate decisions are made, controlled
@@ -622,6 +641,20 @@ void msm_tlmm_set_pull(enum msm_tlmm_pull_tgt tgt, int pull)
 	msm_tlmm_set_field(tlmm_pull_cfgs, tgt, 2, pull);
 }
 EXPORT_SYMBOL(msm_tlmm_set_pull);
+
+#ifdef CONFIG_SEC_AUDIO_I2S_DRIVING_CURRENT
+void msm_tlmm_set_spkr_hdrive(enum msm_tlmm_spkr_hdrive_tgt tgt, int drv_str)
+{
+	msm_tlmm_set_field(tlmm_codec_spkr_hdrv_cfgs, tgt, 3, drv_str);
+}
+EXPORT_SYMBOL(msm_tlmm_set_spkr_hdrive);
+
+void msm_tlmm_set_spkr_pull(enum msm_tlmm_spkr_pull_tgt tgt, int drv_str)
+{
+	msm_tlmm_set_field(tlmm_codec_spkr_pull_cfgs, tgt, 2, drv_str);
+}
+EXPORT_SYMBOL(msm_tlmm_set_spkr_pull);
+#endif
 
 int gpio_tlmm_config(unsigned config, unsigned disable)
 {

@@ -335,6 +335,7 @@ struct msm_sensor_ctrl {
 	int (*s_init)(const struct msm_camera_sensor_info *);
 	int (*s_release)(void);
 	int (*s_config)(void __user *);
+	int (*s_ext_config)(void __user *); //samsung
 	enum msm_camera_type s_camera_type;
 	uint32_t s_mount_angle;
 	enum msm_st_frame_packing s_video_packing;
@@ -454,8 +455,6 @@ struct msm_sync {
 	spinlock_t abort_pict_lock;
 	int snap_count;
 	int thumb_count;
-
-	uint32_t focus_state;
 };
 
 #define MSM_APPS_ID_V4L2 "msm_v4l2"
@@ -673,6 +672,8 @@ int msm_camio_probe_on(struct platform_device *);
 int msm_camio_probe_off(struct platform_device *);
 int msm_camio_sensor_clk_off(struct platform_device *);
 int msm_camio_sensor_clk_on(struct platform_device *);
+void msm_camio_sensor_reset(struct msm_camera_sensor_info *sinfo);
+
 int msm_camio_csi_config(struct msm_camera_csi_params *csi_params);
 int msm_camio_csiphy_config(struct msm_camera_csiphy_params *csiphy_params);
 int msm_camio_csid_config(struct msm_camera_csid_params *csid_params);

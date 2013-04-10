@@ -101,6 +101,54 @@ static inline bool aca_enabled(void)
 #endif
 }
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+static void msm_otg_set_id_state_pbatest(int id, struct host_notify_dev *ndev)
+{
+	struct msm_otg *motg = container_of(ndev, struct msm_otg, ndev);
+	struct otg_transceiver *otg = &motg->otg;
+	pr_info("[OTG] %s %d, !id=%d\n", __func__, __LINE__, !id);
+	motg->pdata->otg_control = OTG_USER_CONTROL;
+	if (atomic_read(&motg->in_lpm))
+		pm_runtime_resume(otg->dev);
+	if (!id)
+		set_bit(ID, &motg->inputs);
+	else
+		clear_bit(ID, &motg->inputs);
+	schedule_work(&motg->sm_work);
+}
+
+enum usb_notify_state {
+	ACC_POWER_ON = 0,
+	ACC_POWER_OFF,
+	ACC_POWER_OVER_CURRENT,
+};
+
+static void msm_otg_notify_work(struct work_struct *w)
+{
+	struct msm_otg *motg = container_of(w, struct msm_otg, notify_work);
+
+	switch (motg->notify_state) {
+	case ACC_POWER_ON:
+		dev_info(motg->otg.dev, "Acc power on detect\n");
+		break;
+	case ACC_POWER_OFF:
+		dev_info(motg->otg.dev, "Acc power off detect\n");
+		if (motg->pdata->otg_control == OTG_USER_CONTROL) {
+			motg->pdata->otg_control = OTG_PMIC_CONTROL;
+			if (motg->pdata->set_autosw_pba)
+				motg->pdata->set_autosw_pba();
+		}
+		break;
+	case ACC_POWER_OVER_CURRENT:
+		host_state_notify(&motg->ndev, NOTIFY_HOST_OVERCURRENT);
+		dev_err(motg->otg.dev, "OTG overcurrent!!!!!!\n");
+		break;
+	default:
+		break;
+	}
+}
+#endif
+
 static int msm_hsusb_init_vddcx(struct msm_otg *motg, int init)
 {
 	int ret = 0;
@@ -921,6 +969,15 @@ static void msm_otg_start_host(struct otg_transceiver *otg, int on)
 	if (!otg->host)
 		return;
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+	if (on == 1) {
+		motg->ndev.mode = NOTIFY_HOST_MODE;
+		host_state_notify(&motg->ndev, NOTIFY_HOST_ADD);
+	} else if (on == 0) {
+		motg->ndev.mode = NOTIFY_NONE_MODE;
+		host_state_notify(&motg->ndev, NOTIFY_HOST_REMOVE);
+	}
+#endif
 	hcd = bus_to_hcd(otg->host);
 
 	if (on) {
@@ -1104,6 +1161,12 @@ static void msm_otg_start_peripheral(struct otg_transceiver *otg, int on)
 	if (!otg->gadget)
 		return;
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+	if (on == 1)
+		motg->ndev.mode = NOTIFY_PERIPHERAL_MODE;
+	else if (on == 0)
+		motg->ndev.mode = NOTIFY_NONE_MODE;
+#endif
 	if (on) {
 		dev_dbg(otg->dev, "gadget on\n");
 		/*
@@ -1969,6 +2032,19 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 			msm_chg_enable_aca_det(motg);
 		}
 		schedule_work(&motg->sm_work);
+#ifdef CONFIG_USB_HOST_NOTIFY
+	} else if (!test_bit(ID, &motg->inputs) && (otgsc & OTGSC_BSVIS) &&
+			(otgsc & OTGSC_BSVIE)) {
+		if (otgsc & OTGSC_BSV) {
+			motg->ndev.booster = NOTIFY_POWER_ON;
+			motg->notify_state = ACC_POWER_ON;
+			schedule_work(&motg->notify_work);
+		} else {
+			motg->ndev.booster = NOTIFY_POWER_OFF;
+			motg->notify_state = ACC_POWER_OVER_CURRENT;
+			schedule_work(&motg->notify_work);
+		}
+#endif
 	} else if ((otgsc & OTGSC_BSVIS) && (otgsc & OTGSC_BSVIE)) {
 		if (otgsc & OTGSC_BSV) {
 			dev_dbg(otg->dev, "BSV set\n");
@@ -1978,7 +2054,20 @@ static irqreturn_t msm_otg_irq(int irq, void *data)
 			clear_bit(B_SESS_VLD, &motg->inputs);
 			msm_chg_check_aca_intr(motg);
 		}
-		schedule_work(&motg->sm_work);
+#ifdef CONFIG_USB_HOST_NOTIFY
+		if (motg->ndev.mode == NOTIFY_HOST_MODE ||
+			motg->notify_state == ACC_POWER_ON) {
+			if (!(otgsc & OTGSC_BSV)) {
+				motg->ndev.booster = NOTIFY_POWER_OFF;
+				motg->notify_state = ACC_POWER_OFF;
+				schedule_work(&motg->notify_work);
+			}
+		} else {
+#endif
+			schedule_work(&motg->sm_work);
+#ifdef CONFIG_USB_HOST_NOTIFY
+		}
+#endif
 	}
 
 	writel(otgsc, USB_OTGSC);
@@ -2666,6 +2755,20 @@ static int __init msm_otg_probe(struct platform_device *pdev)
 		else
 			debug_bus_voting_enabled = true;
 	}
+#ifdef CONFIG_USB_HOST_NOTIFY
+#define NOTIFY_DRIVER_NAME "usb_otg"
+	motg->ndev.name = NOTIFY_DRIVER_NAME;
+	motg->ndev.set_booster = &msm_otg_set_id_state_pbatest;
+	ret = host_notify_dev_register(&motg->ndev);
+	if (ret) {
+		dev_err(&pdev->dev, "Failed to host_notify_dev_register\n");
+		goto remove_otg;
+	} else {
+		dev_info(&pdev->dev, "success to host_notify_dev_register\n");
+	}
+	INIT_WORK(&motg->notify_work, msm_otg_notify_work);
+	motg->notify_state = ACC_POWER_OFF;
+#endif
 
 	return 0;
 
@@ -2717,6 +2820,12 @@ static int __devexit msm_otg_remove(struct platform_device *pdev)
 		msm_otg_setup_devices(pdev, motg->pdata->mode, false);
 	if (motg->pdata->otg_control == OTG_PMIC_CONTROL)
 		pm8921_charger_unregister_vbus_sn(0);
+
+#ifdef CONFIG_USB_HOST_NOTIFY
+	host_notify_dev_unregister(&motg->ndev);
+	cancel_work_sync(&motg->notify_work);
+#endif
+
 	msm_otg_debugfs_cleanup();
 	cancel_delayed_work_sync(&motg->chg_work);
 	cancel_work_sync(&motg->sm_work);

@@ -2775,28 +2775,6 @@ static int mdp_probe(struct platform_device *pdev)
 	pdev_list[pdev_list_cnt++] = pdev;
 	mdp4_extn_disp = 0;
 
-	if (mfd->vsync_init != NULL) {
-		mfd->vsync_init(0);
-
-		if (!mfd->vsync_sysfs_created) {
-			mfd->dev_attr.attr.name = "vsync_event";
-			mfd->dev_attr.attr.mode = S_IRUGO;
-			mfd->dev_attr.show = mfd->vsync_show;
-			sysfs_attr_init(&mfd->dev_attr.attr);
-
-			rc = sysfs_create_file(&mfd->fbi->dev->kobj,
-							&mfd->dev_attr.attr);
-			if (rc) {
-				pr_err("%s: sysfs creation failed, ret=%d\n",
-					__func__, rc);
-				return rc;
-			}
-
-			kobject_uevent(&mfd->fbi->dev->kobj, KOBJ_ADD);
-			pr_debug("%s: kobject_uevent(KOBJ_ADD)\n", __func__);
-			mfd->vsync_sysfs_created = 1;
-		}
-	}
 	return 0;
 
       mdp_probe_err:

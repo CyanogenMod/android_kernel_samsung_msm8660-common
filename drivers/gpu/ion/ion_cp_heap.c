@@ -245,13 +245,20 @@ ion_phys_addr_t ion_cp_allocate(struct ion_heap *heap,
 		mutex_lock(&cp_heap->lock);
 		cp_heap->allocated_bytes -= size;
 		if ((cp_heap->total_size -
-		     cp_heap->allocated_bytes) >= size)
-			pr_debug("%s: heap %s has enough memory (%lx) but"
+		     cp_heap->allocated_bytes) >= size) {
+			pr_info("%s: heap %s has enough memory (%lx) but"
 				" the allocation of size %lx still failed."
 				" Memory is probably fragmented.\n",
 				__func__, heap->name,
 				cp_heap->total_size -
 				cp_heap->allocated_bytes, size);
+		} else {
+			pr_info("%s: heap %s doesn't have enough memory (%lx) "
+				" the allocation of size %lx failed.",
+				__func__, heap->name,
+				cp_heap->total_size -
+				cp_heap->allocated_bytes, size);
+		}
 
 		if (cp_heap->reusable && !cp_heap->allocated_bytes &&
 		    cp_heap->heap_protected == HEAP_NOT_PROTECTED) {

@@ -22,7 +22,7 @@
 #include "msm_bus_core.h"
 
 #define NMASTERS 39
-#define NSLAVES 68
+#define NSLAVES 69 //  SEC_DEBUG fixed array overrun 68->69
 #define NFAB_8660 5
 
 enum msm_bus_fabric_tiered_slave_type {

@@ -40,6 +40,9 @@
 #include "msm_watchdog.h"
 #include "devices.h"
 #include "clock.h"
+#include <linux/wakelock.h>
+
+#define CHARM_MDM2AP_WAKEUP
 
 #define CHARM_MODEM_TIMEOUT	6000
 #define CHARM_HOLD_TIME		4000
@@ -48,7 +51,7 @@
 static void (*power_on_charm)(void);
 static void (*power_down_charm)(void);
 
-static int charm_debug_on;
+static int charm_debug_on = 1;
 static int charm_status_irq;
 static int charm_errfatal_irq;
 static int charm_ready;
@@ -56,6 +59,10 @@ static enum charm_boot_type boot_type = CHARM_NORMAL_BOOT;
 static int charm_boot_status;
 static int charm_ram_dump_status;
 static struct workqueue_struct *charm_queue;
+#ifdef CHARM_MDM2AP_WAKEUP
+static int charm_wakeup_irq;
+static struct wake_lock charm_wakelock;
+#endif
 
 #define CHARM_DBG(...)	do { if (charm_debug_on) \
 					pr_info(__VA_ARGS__); \
@@ -119,8 +126,11 @@ static int charm_panic_prep(struct notifier_block *this,
 
 	CHARM_DBG("%s: setting AP2MDM_ERRFATAL high for a non graceful reset\n",
 			 __func__);
+
+#if 0	/* onlyjazz.el20 : remove pm8058_stay_on also in ICS upgrade version in order to avoid por confusion */
 	if (get_restart_level() == RESET_SOC)
 		pm8xxx_stay_on();
+#endif
 
 	charm_disable_irqs();
 	gpio_set_value(AP2MDM_ERRFATAL, 1);
@@ -135,6 +145,16 @@ static int charm_panic_prep(struct notifier_block *this,
 		pr_err("%s: MDM2AP_STATUS never went low\n", __func__);
 	return NOTIFY_DONE;
 }
+
+#ifdef CONFIG_SEC_DEBUG
+void charm_assert_panic(void)
+{
+	CHARM_DBG("%s: setting AP2MDM_ERRFATAL high\n", __func__);
+	gpio_set_value(AP2MDM_ERRFATAL, 1);
+	gpio_set_value(AP2MDM_WAKEUP, 1); // Wake up the MDM if sleeping to avoid MDM dump corruption
+	mdelay(20);
+}
+#endif
 
 static struct notifier_block charm_panic_blk = {
 	.notifier_call  = charm_panic_prep,
@@ -197,6 +217,21 @@ static long charm_modem_ioctl(struct file *filp, unsigned int cmd,
 			put_user(boot_type, (unsigned long __user *) arg);
 		INIT_COMPLETION(charm_needs_reload);
 		break;
+	case RESET_CHARM:
+		CHARM_DBG("%s: reset charm start\n", __func__);
+		gpio_direction_output(AP2MDM_KPDPWR_N, 0);
+		gpio_direction_output(AP2MDM_PMIC_RESET_N, 1);
+		/*
+		* Currently, there is a debounce timer on the charm PMIC. It is
+		* necessary to hold the AP2MDM_PMIC_RESET low for ~3.5 seconds
+		* for the reset to fully take place. Sleep here to ensure the
+		* reset has occured before the function exits.
+		*/
+		msleep(5000);
+		gpio_direction_output(AP2MDM_PMIC_RESET_N, 0);
+		gpio_direction_output(AP2MDM_KPDPWR_N, 1);
+		CHARM_DBG("%s: reset charm ok\n", __func__);
+		break;	
 	default:
 		pr_err("%s: invalid ioctl cmd = %d\n", __func__, _IOC_NR(cmd));
 		ret = -EINVAL;
@@ -237,18 +272,36 @@ static DECLARE_WORK(charm_status_work, charm_status_fn);
 static void charm_fatal_fn(struct work_struct *work)
 {
 	pr_info("Reseting the charm due to an errfatal\n");
+
+#if 0	/* onlyjazz.el20 : remove pm8058_stay_on also in ICS upgrade version in order to avoid por confusion */
 	if (get_restart_level() == RESET_SOC)
 		pm8xxx_stay_on();
+#endif
+
 	subsystem_restart("external_modem");
 }
 
 static DECLARE_WORK(charm_fatal_work, charm_fatal_fn);
+
+#ifdef CHARM_MDM2AP_WAKEUP
+static irqreturn_t charm_wakeup(int irq, void *dev_id)
+{
+	CHARM_DBG("%s: charm got wakeup interrupt\n", __func__);
+
+	wake_lock_timeout(&charm_wakelock, 30*HZ);
+
+	return IRQ_HANDLED;
+}
+#endif
 
 static irqreturn_t charm_errfatal(int irq, void *dev_id)
 {
 	CHARM_DBG("%s: charm got errfatal interrupt\n", __func__);
 	if (charm_ready && (gpio_get_value(MDM2AP_STATUS) == 1)) {
 		CHARM_DBG("%s: scheduling work now\n", __func__);
+#ifdef CHARM_MDM2AP_WAKEUP
+		wake_lock_timeout(&charm_wakelock, 30*HZ);
+#endif
 		queue_work(charm_queue, &charm_fatal_work);
 	}
 	return IRQ_HANDLED;
@@ -259,6 +312,9 @@ static irqreturn_t charm_status_change(int irq, void *dev_id)
 	CHARM_DBG("%s: charm sent status change interrupt\n", __func__);
 	if ((gpio_get_value(MDM2AP_STATUS) == 0) && charm_ready) {
 		CHARM_DBG("%s: scheduling work now\n", __func__);
+#ifdef CHARM_MDM2AP_WAKEUP
+		wake_lock_timeout(&charm_wakelock, 30*HZ);
+#endif
 		queue_work(charm_queue, &charm_status_work);
 	} else if (gpio_get_value(MDM2AP_STATUS) == 1) {
 		CHARM_DBG("%s: charm is now ready\n", __func__);
@@ -351,6 +407,29 @@ static int __init charm_modem_probe(struct platform_device *pdev)
 
 	ssr_register_subsystem(&charm_subsystem);
 
+#ifdef CHARM_MDM2AP_WAKEUP
+	gpio_request(MDM2AP_WAKEUP, "MDM2AP_WAKEUP");
+	gpio_direction_input(MDM2AP_WAKEUP);
+
+	wake_lock_init(&charm_wakelock, WAKE_LOCK_SUSPEND, "charm_wakelock");
+
+	charm_wakeup_irq = MSM_GPIO_TO_INT(MDM2AP_WAKEUP);
+
+	ret = request_irq(charm_wakeup_irq, charm_wakeup,
+		IRQF_TRIGGER_RISING , "charm wakeup", NULL);
+
+	if (ret < 0) {
+		pr_err("%s: MDM2AP_WAKEUP IRQ#%d request failed with error=%d\
+			. No IRQ will be generated on errfatal.",
+			__func__, charm_wakeup_irq, ret);
+		goto wakeup_err;
+	}
+
+	enable_irq_wake(charm_wakeup_irq);
+
+wakeup_err:
+#endif
+
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		pr_err("%s: could not get MDM2AP_ERRFATAL IRQ resource. \
@@ -406,6 +485,9 @@ fatal_err:
 	gpio_free(AP2MDM_PMIC_RESET_N);
 	gpio_free(MDM2AP_STATUS);
 	gpio_free(MDM2AP_ERRFATAL);
+#ifdef CHARM_MDM2AP_WAKEUP
+	gpio_free(MDM2AP_WAKEUP);
+#endif
 	return ret;
 
 }
@@ -413,6 +495,10 @@ fatal_err:
 
 static int __devexit charm_modem_remove(struct platform_device *pdev)
 {
+#ifdef CHARM_MDM2AP_WAKEUP
+	wake_lock_destroy(&charm_wakelock);
+	gpio_free(MDM2AP_WAKEUP);
+#endif
 	gpio_free(AP2MDM_STATUS);
 	gpio_free(AP2MDM_ERRFATAL);
 	gpio_free(AP2MDM_KPDPWR_N);

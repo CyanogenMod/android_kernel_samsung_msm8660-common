@@ -49,3 +49,9 @@ obj-$(CONFIG_PM8XXX_CCADC)	+= pm8xxx-ccadc.o
 obj-$(CONFIG_PM8921_BMS)	+= pm8921-bms.o
 obj-$(CONFIG_PM8921_CHARGER)	+= pm8921-charger.o
 obj-$(CONFIG_LTC4088_CHARGER)	+= ltc4088-charger.o
+obj-$(CONFIG_CHARGER_SMB328A)	+= smb328a_charger.o
+ifeq ($(CONFIG_SAMSUNG_8X60_TABLET),y)
+obj-$(CONFIG_BATTERY_P5LTE)	+= p5-lte_battery.o
+else
+obj-$(CONFIG_BATTERY_SEC)	+= sec_battery.o
+endif

@@ -49,7 +49,7 @@ static inline void fat_dir_readahead(struct inode *dir, sector_t iblock,
 	struct super_block *sb = dir->i_sb;
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 	struct buffer_head *bh;
-	int sec;
+//	int sec; /* Declared below to resolve cpp check violation */
 
 	/* This is not a first sector of cluster, or sec_per_clus == 1 */
 	if ((iblock & (sbi->sec_per_clus - 1)) || sbi->sec_per_clus == 1)
@@ -60,6 +60,7 @@ static inline void fat_dir_readahead(struct inode *dir, sector_t iblock,
 
 	bh = sb_find_get_block(sb, phys);
 	if (bh == NULL || !buffer_uptodate(bh)) {
+		int sec; /*Declared here to resolve cpp check violation*/
 		for (sec = 0; sec < sbi->sec_per_clus; sec++)
 			sb_breadahead(sb, phys + sec);
 	}
@@ -660,7 +661,7 @@ start_filldir:
 		goto fill_failed;
 
 record_end:
-	furrfu = &lpos;
+	//furrfu = &lpos;  /*Removed as this was giving cppcheck violation*/
 	filp->f_pos = cpos;
 	goto get_new;
 end_of_dir:
@@ -1240,7 +1241,7 @@ int fat_add_entries(struct inode *dir, void *slots, int nr_slots,
 	struct super_block *sb = dir->i_sb;
 	struct msdos_sb_info *sbi = MSDOS_SB(sb);
 	struct buffer_head *bh, *prev, *bhs[3]; /* 32*slots (672bytes) */
-	struct msdos_dir_entry *de;
+	struct msdos_dir_entry *de=NULL;
 	int err, free_slots, i, nr_bhs;
 	loff_t pos, i_pos;
 

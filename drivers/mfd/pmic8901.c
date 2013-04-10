@@ -38,6 +38,10 @@
 	.flags	= IORESOURCE_IRQ, \
 }
 
+#ifdef CONFIG_PMIC8901_PRELOAD_DVDD
+extern unsigned int get_hw_rev(void);
+#endif
+
 struct pm8901_chip {
 	struct pm8901_platform_data	pdata;
 	struct device			*dev;
@@ -171,6 +175,104 @@ static struct mfd_cell mpp_cell = {
 	.num_resources	= ARRAY_SIZE(mpp_cell_resources),
 };
 
+
+#ifdef CONFIG_PMIC8901_PRELOAD_DVDD
+int pm8901_preload_dVdd(void)
+{
+	int rc;
+	u8 reg;
+	struct pm8901_chip *pmic_chip;
+
+	if (pm8901_drvdata.pm_chip_data == NULL) {
+		pr_err("%s: Error: PMIC 8901 driver has not probed\n",
+			__func__);
+		return -ENODEV;
+	}
+
+	pmic_chip = (struct pm8901_chip *)pm8901_drvdata.pm_chip_data;
+
+	reg = 0x0F;
+	rc = msm_ssbi_write(pmic_chip->dev->parent, 0x0BD, &reg, 1);
+	if (rc)
+		pr_err("%s: ssbi_write failed for 0x0BD, rc=%d\n", __func__,
+			rc);
+
+	reg = 0xB4;
+	rc = msm_ssbi_write(pmic_chip->dev->parent, 0x001, &reg, 1);
+	if (rc)
+		pr_err("%s: ssbi_write failed for 0x001, rc=%d\n", __func__,
+			rc);
+
+	pr_info("%s: dVdd preloaded\n", __func__);
+
+	return rc;
+}
+EXPORT_SYMBOL(pm8901_preload_dVdd);
+
+
+int pm8901_is_old_PCB_with_PM8901(void)
+{
+        int rev;
+        unsigned char retval=0;
+
+        rev = get_hw_rev();
+        
+#if defined(CONFIG_KOR_MODEL_SHV_E110S)
+        if( rev <= 8 )
+                retval = 1;
+        else if( rev >=9 )
+                retval = 0;
+#elif defined(CONFIG_KOR_MODEL_SHV_E120S)
+        if( rev <= 10 )
+                retval = 1;
+        else if( rev >=11 )
+                retval = 0;
+
+#elif defined(CONFIG_KOR_MODEL_SHV_E120K)
+        if( rev <= 10 )
+                retval = 1;
+        else if( rev >=12 )
+                retval = 0;
+#elif defined(CONFIG_KOR_MODEL_SHV_E120L)
+        if( rev <= 6 )
+                retval = 1;
+        else if( rev >=7 )
+                retval = 0;                
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S)
+        if( rev <= 10 )
+                retval = 1;
+        else if( rev >=11 )
+                retval = 0;
+
+#elif defined(CONFIG_KOR_MODEL_SHV_E160K)
+        if( rev <= 10 )
+                retval = 1;
+        else if( rev >=11 )
+                retval = 0;
+#elif defined(CONFIG_KOR_MODEL_SHV_E160L)
+        // TODO: change condition for 160L
+        if( rev <= 9 )
+                retval = 1;
+        else if( rev >=10 )
+                retval = 0;
+#elif defined(CONFIG_TARGET_LOCALE_KOR_LGU) && defined(CONFIG_MACH_P5_LTE)
+        if( rev <= 7 || rev==15 )
+                retval = 1;
+        else if( rev >=8 && rev <=14)
+                retval = 0;
+#elif defined(CONFIG_TARGET_LOCALE_KOR_SKT) && defined(CONFIG_MACH_P5_LTE)
+        if( rev <= 7 )
+                retval = 1;
+        else if( rev >=8 )
+                retval = 0;
+#endif
+        return retval;
+        
+
+}
+#endif
+
+
 static int __devinit
 pm8901_add_subdevices(const struct pm8901_platform_data *pdata,
 				struct pm8901_chip *pmic)
@@ -300,6 +402,18 @@ static int pm8901_probe(struct platform_device *pdev)
 
 	pr_info("%s: PMIC REVISION = %X\n", __func__, pmic->revision);
 
+#ifdef CONFIG_PMIC8901_PRELOAD_DVDD
+        // This api is s/w workaround for PM8901's abnormal spike which could
+        // cause DDR problem on PCB. Because of the spike SS made new PCB for
+        // h/w workaround. This s/w workaround is for old PCBs. And If a target
+        // is new PCB,  you should call a api to drop bypass voltage
+        // to 1.725 originally. But you don't need that here, bacause you've done
+        // that already at SBL3. So instead of calling api to drop bypass voltage 
+        // here you just need to check if SBL3 bootloader includes the api.
+        // In other words this api has dependency with SBL3 change
+        if( pm8901_is_old_PCB_with_PM8901()==1 )
+                pm8901_preload_dVdd();
+#endif                
 	(void) memcpy((void *)&pmic->pdata, (const void *)pdata,
 		      sizeof(pmic->pdata));
 

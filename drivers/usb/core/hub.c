@@ -25,6 +25,11 @@
 #include <linux/mutex.h>
 #include <linux/freezer.h>
 #include <linux/usb/otg.h>
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include <linux/host_notify.h>
+#include <linux/usb/otg.h>
+//#include <linux/usb/msm_hsusb.h>
+#endif
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
@@ -3432,6 +3437,12 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
 				spin_lock_irq(&device_state_lock);
 				hdev->children[port1-1] = NULL;
 				spin_unlock_irq(&device_state_lock);
+#ifdef CONFIG_USB_HOST_NOTIFY
+				if(hcd->host_notify) {
+					host_state_notify(&hcd->ndev, NOTIFY_HOST_UNKNOWN);
+					hcd->ndev.state = NOTIFY_HOST_NONE;
+				}
+#endif
 			}
 		}
 

@@ -39,7 +39,7 @@ static int dsi_state;
 static int vsync_start_y_adjust = 4;
 
 #define MAX_CONTROLLER	1
-#define VSYNC_EXPIRE_TICK 4
+#define VSYNC_EXPIRE_TICK 8
 
 static struct vsycn_ctrl {
 	struct device *dev;
@@ -250,7 +250,7 @@ void mdp4_dsi_cmd_pipe_queue(int cndx, struct mdp4_overlay_pipe *pipe)
 
 static void mdp4_dsi_cmd_blt_ov_update(struct mdp4_overlay_pipe *pipe);
 
-int mdp4_dsi_cmd_pipe_commit(void)
+int mdp4_dsi_cmd_pipe_commit(int cndx, int wait)
 {
 	int  i, undx;
 	int mixer = 0;
@@ -377,6 +377,12 @@ int mdp4_dsi_cmd_pipe_commit(void)
 
 	mdp4_stat.overlay_commit[pipe->mixer_num]++;
 
+	if (wait) {
+		long long tick;
+
+		mdp4_dsi_cmd_wait4vsync(0, &tick);
+	}
+
 	return cnt;
 }
 
@@ -384,6 +390,7 @@ static void mdp4_overlay_update_dsi_cmd(struct msm_fb_data_type *mfd);
 
 void mdp4_dsi_cmd_vsync_ctrl(struct fb_info *info, int enable)
 {
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct vsycn_ctrl *vctrl;
 	unsigned long flags;
 	int clk_set_on = 0;
@@ -420,6 +427,8 @@ void mdp4_dsi_cmd_vsync_ctrl(struct fb_info *info, int enable)
 						MDP_PRIM_RDPTR_TERM);
 		}
 		spin_unlock_irqrestore(&vctrl->spin_lock, flags);
+
+		mdp4_overlay_update_dsi_cmd(mfd);
 	} else {
 		spin_lock_irqsave(&vctrl->spin_lock, flags);
 		vctrl->clk_control = 1;
@@ -1086,6 +1095,7 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
 	unsigned long flags;
+	long long xx;
 
 	vctrl = &vsync_ctrl_db[cndx];
 
@@ -1126,8 +1136,12 @@ void mdp4_dsi_cmd_overlay(struct msm_fb_data_type *mfd)
 	mdp4_overlay_mdp_perf_upd(mfd, 1);
 
 	mutex_lock(&mfd->dma->ov_mutex);
-	mdp4_dsi_cmd_pipe_commit();
+	mdp4_dsi_cmd_pipe_commit(0, 0);
 	mutex_unlock(&mfd->dma->ov_mutex);
+
+	mdp4_mixer_late_commit();
+
+	mdp4_dsi_cmd_wait4vsync(0, &xx);
 
 	mdp4_overlay_mdp_perf_upd(mfd, 0);
 }

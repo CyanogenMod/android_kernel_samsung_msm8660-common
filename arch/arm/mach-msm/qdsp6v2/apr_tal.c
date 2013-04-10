@@ -28,6 +28,12 @@
 #include <mach/msm_smd.h>
 #include <mach/qdsp6v2/apr_tal.h>
 
+#define WORKAROUND_FOR_Q6_FAILURE /* restart machine when q6 is failed in user binary*/
+#if defined(WORKAROUND_FOR_Q6_FAILURE) && defined(CONFIG_SEC_DEBUG)
+#include <linux/reboot.h>
+#include <mach/sec_debug.h>
+#endif
+
 static char *svc_names[APR_DEST_MAX][APR_CLIENT_MAX] = {
 	{
 		"apr_audio_svc",
@@ -167,6 +173,19 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 		if (rc == 0) {
 			pr_err("apr_tal:open timeout\n");
 			mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
+			apr_tal_close(&apr_svc_ch[dl][dest][svc]);
+#if defined(WORKAROUND_FOR_Q6_FAILURE) && defined(CONFIG_SEC_DEBUG)
+			if (!sec_debug_is_enabled()) {
+				kernel_restart(NULL);
+			}else
+			{
+				/* Adding Panic to know the state of ap and lpass when Q6 failed */
+				//panic("apr_tal:open timeout, q6 failed");
+				/* Kernel panic was added to take logs in case of Q6 failure.
+				Removing panic and applying patch to recover from Q6 failure*/
+				kernel_restart(NULL);
+			}
+#endif
 			return NULL;
 		}
 		pr_debug("apr_tal:Wakeup done\n");
@@ -188,6 +207,11 @@ struct apr_svc_ch_dev *apr_tal_open(uint32_t svc, uint32_t dest,
 		pr_err("apr_tal:TIMEOUT for OPEN event\n");
 		mutex_unlock(&apr_svc_ch[dl][dest][svc].m_lock);
 		apr_tal_close(&apr_svc_ch[dl][dest][svc]);
+#if defined(WORKAROUND_FOR_Q6_FAILURE) && defined(CONFIG_SEC_DEBUG)
+		if (!sec_debug_is_enabled()) {
+			kernel_restart(NULL);
+		}
+#endif
 		return NULL;
 	}
 	if (!apr_svc_ch[dl][dest][svc].dest_state) {

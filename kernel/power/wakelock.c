@@ -31,7 +31,7 @@ enum {
 	DEBUG_EXPIRE = 1U << 3,
 	DEBUG_WAKE_LOCK = 1U << 4,
 };
-static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP;
+static int debug_mask = DEBUG_EXIT_SUSPEND | DEBUG_WAKEUP | DEBUG_SUSPEND;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define WAKE_LOCK_TYPE_MASK              (0x0f)
@@ -268,7 +268,9 @@ long has_wake_lock(int type)
 static void suspend_sys_sync(struct work_struct *work)
 {
 	if (debug_mask & DEBUG_SUSPEND)
+	        #ifndef CONFIG_USA_MODEL_SGH_T989
 		pr_info("PM: Syncing filesystems...\n");
+		#endif
 
 	sys_sync();
 
@@ -363,6 +365,9 @@ static void suspend(struct work_struct *work)
 			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n", ret,
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 			tm.tm_hour, tm.tm_min, tm.tm_sec, ts_exit.tv_nsec);
+#if 1 // debug code
+		(void)has_wake_lock(WAKE_LOCK_SUSPEND);
+#endif
 	}
 
 	if (ts_exit.tv_sec - ts_entry.tv_sec <= 1) {
@@ -434,7 +439,8 @@ void wake_lock_init(struct wake_lock *lock, int type, const char *name)
 	BUG_ON(!lock->name);
 
 	if (debug_mask & DEBUG_WAKE_LOCK)
-		pr_info("wake_lock_init name=%s\n", lock->name);
+		pr_info("wake_lock_init, 0x%x, name=%s\n", (unsigned)lock, lock->name);
+
 #ifdef CONFIG_WAKELOCK_STAT
 	lock->stat.count = 0;
 	lock->stat.expire_count = 0;
@@ -457,7 +463,8 @@ void wake_lock_destroy(struct wake_lock *lock)
 {
 	unsigned long irqflags;
 	if (debug_mask & DEBUG_WAKE_LOCK)
-		pr_info("wake_lock_destroy name=%s\n", lock->name);
+		pr_info("wake_lock_destroy, 0x%x, %s\n", (unsigned)lock, lock->name);
+
 	spin_lock_irqsave(&list_lock, irqflags);
 	lock->flags &= ~WAKE_LOCK_INITIALIZED;
 #ifdef CONFIG_WAKELOCK_STAT

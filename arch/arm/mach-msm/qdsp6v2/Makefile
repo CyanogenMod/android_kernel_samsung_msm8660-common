@@ -2,7 +2,13 @@ obj-y += rtac.o
 
 ifdef CONFIG_ARCH_MSM8X60
 obj-y += audio_dev_ctl.o
+ifdef CONFIG_USA_MODEL_SGH_I717
+obj-y += board-msm8x60-audio-Q1.o
+else ifdef CONFIG_USA_MODEL_SGH_I577
+obj-y += board-msm8x60-audio_a2.o 
+else
 obj-y += board-msm8x60-audio.o
+endif
 obj-$(CONFIG_TIMPANI_CODEC) += snddev_icodec.o
 obj-y += snddev_ecodec.o snddev_mi2s.o snddev_virtual.o
 obj-y += pcm_out.o pcm_in.o fm.o

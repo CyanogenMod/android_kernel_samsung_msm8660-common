@@ -197,11 +197,9 @@ int marimba_write_bit_mask(struct marimba *marimba, u8 reg, u8 *value,
 							= mask_value[i];
 	} else {
 		dev_err(&marimba->client->dev, "i2c write failed\n");
-		ret = -ENODEV;
 	}
 
 	mutex_unlock(&marimba->xfer_lock);
-
 	return ret;
 }
 EXPORT_SYMBOL(marimba_write_bit_mask);
@@ -410,6 +408,26 @@ static int marimba_add_child(struct marimba_platform_data *pdata,
 #endif
 	return 0;
 }
+/* qualcomm patch begins */
+
+
+int timpani_reset(void)
+{
+	struct marimba *marimba = &marimba_modules[MARIMBA_SLAVE_ID_MARIMBA];
+	struct marimba_platform_data *pdata = marimba_pdata;
+	int rc = 0;
+	u8 buf[1];
+
+	buf[0] = 0x10;
+
+	mutex_lock(&marimba->xfer_lock);
+		rc = pdata->timpani_reset_config();
+	mutex_unlock(&marimba->xfer_lock);
+	marimba_write(marimba, MARIMBA_MODE, buf, 1);
+	return rc;
+}
+EXPORT_SYMBOL(timpani_reset);
+/* Qualcomm patch ends */
 
 int marimba_gpio_config(int gpio_value)
 {
@@ -857,7 +875,9 @@ static int marimba_probe(struct i2c_client *client,
 
 	status = marimba_add_child(pdata, id->driver_data);
 
-	marimba_pdata = pdata;
+//	marimba_pdata = pdata;
+	if (client->addr == 0xD) /* need to keep reset pointer only for timpani */
+		marimba_pdata = pdata;
 
 	return 0;
 
@@ -891,7 +911,6 @@ static int __devexit marimba_remove(struct i2c_client *client)
 }
 
 static struct i2c_device_id marimba_id_table[] = {
-	{"marimba", MARIMBA_ID},
 	{"timpani", TIMPANI_ID},
 	{}
 };

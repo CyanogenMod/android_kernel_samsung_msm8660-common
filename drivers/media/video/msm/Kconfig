@@ -13,13 +13,13 @@ comment "Camera Sensor Selection"
 config MT9T013
 	bool "Sensor mt9t013 (BAYER 3M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !ARCH_MSM8960 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  MICRON 3M Bayer Sensor with AutoFocus
 config MT9D113
 	bool "Sensor mt9d113 (YUV 2M)"
 	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  MICRON 2M YUV Sensor
 	  This sensor is the front camera on QT8660.
@@ -28,7 +28,7 @@ config MT9D113
 config MT9D112
 	bool "Sensor mt9d112 (YUV 2M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !ARCH_MSM8960 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  MICRON 2M YUV Sensor
 config IMX074
@@ -56,7 +56,7 @@ config MT9M114
 config WEBCAM_OV7692
 	bool "Sensor OV7692 (VGA YUV)"
 	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  Omni Vision VGA YUV Sensor.
 config WEBCAM_OV9726
@@ -70,21 +70,60 @@ config WEBCAM_OV9726
 config VX6953
 	bool "Sensor VX6953 (BAYER 5M)"
 	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60) && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	STM 5M Bayer Sensor with EDOF
 config SN12M0PZ
 	bool "Sensor sn12m0pz (Bayer 12 MP)"
 	depends on MSM_CAMERA && ARCH_MSM7X30 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  Sony 12 MP Bayer Sensor
 config MT9P012
 	bool "Sensor mt9p012 (BAYER 5M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  MICRON 5M Bayer Sensor with Autofocus
+
+config SENSOR_M5MO
+	bool "Sensor M5MO (YUV 8M)"
+	depends on MSM_CAMERA
+	---help---
+	SONY 8 MP YUV Sensor
+
+config SENSOR_ISX012
+	bool "Sensor ISX012 (YUV 5M)"
+	depends on MSM_CAMERA
+	---help---
+	SONY 5 MP YUV Sensor
+	
+config SENSOR_S5K6AAFX
+	bool "Sensor S5K6AAFX (YUV 1.3M)"
+	depends on MSM_CAMERA
+	---help---
+	SONY 1.3 MP YUV Sensor
+	
+config SENSOR_S5K5BAFX
+	bool "Sensor S5K5BAFX (YUV 2M)"
+	depends on MSM_CAMERA
+	---help---
+	LSI 2 MP YUV Sensor
+
+config SENSOR_SR200PC20M
+	bool "Sensor SR200PC20M (YUV 2M)"
+	depends on MSM_CAMERA
+	---help---
+	Siliconfile 2 MP YUV Sensor
+
+config CAMERA_VE
+	bool "Front camera VE"
+	depends on SENSOR_S5K5BAFX && SENSOR_SR200PC20M
+	default n
+	---help---
+	  Enable support for Front Camera VE for E160S/K/L
+
+
 
 choice
 	prompt "AF module"
@@ -126,14 +165,14 @@ config IMX074_ACT
 config S5K3E2FX
 	bool "Sensor s5k3e2fx (Samsung 5M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  Samsung 5M with Autofocus
 
 config QS_S5K4E1
 	bool "Sensor qs_s5k4e1 (Samsung 5M)"
 	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  Samsung 5M with Autofocus
 
@@ -198,6 +237,12 @@ config MSM_ACTUATOR
 	bool "Qualcomm MSM actuator support"
 	depends on MSM_CAMERA
 
+config FLASH_TORCH_MODE
+	bool "Qualcomm MSM Torch flash support"
+	depends on MSM_CAMERA
+	---help---
+	  Enable support for Torch LED flash
+
 config MSM_GEMINI
 	tristate "Qualcomm MSM Gemini Jpeg Engine support"
 	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60 || ARCH_MSM8960)
@@ -243,5 +288,6 @@ config MSM_V4L2_VIDEO_OVERLAY_DEVICE
 config OV7692
 	bool "Sensor OV7692 (VGA YUV)"
 	depends on MSM_CAMERA
+	default n
 	---help---
 		Omni Vision VGA YUV Sensor.

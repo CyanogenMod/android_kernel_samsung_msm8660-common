@@ -1,9 +1,9 @@
 /*
  * Debug/trace/assert driver definitions for Dongle Host Driver.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -21,16 +21,22 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_dbg.h 285933 2011-09-23 21:45:31Z $
+ * $Id: dhd_dbg.h 353490 2012-08-27 21:10:02Z $
  */
 
 #ifndef _dhd_dbg_
 #define _dhd_dbg_
 
+#if !defined(CUSTOMER_HW4)
+#define USE_NET_RATELIMIT		net_ratelimit()
+#else
+#define USE_NET_RATELIMIT		1
+#endif
+
 #if defined(DHD_DEBUG)
 
-#define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && (net_ratelimit())) \
-							printf args;} while (0)
+#define DHD_ERROR(args)		do {if ((dhd_msg_level & DHD_ERROR_VAL) && USE_NET_RATELIMIT) \
+								printf args;} while (0)
 #define DHD_TRACE(args)		do {if (dhd_msg_level & DHD_TRACE_VAL) printf args;} while (0)
 #define DHD_INFO(args)		do {if (dhd_msg_level & DHD_INFO_VAL) printf args;} while (0)
 #define DHD_DATA(args)		do {if (dhd_msg_level & DHD_DATA_VAL) printf args;} while (0)
@@ -44,6 +50,13 @@
 #define DHD_BTA(args)		do {if (dhd_msg_level & DHD_BTA_VAL) printf args;} while (0)
 #define DHD_ISCAN(args)		do {if (dhd_msg_level & DHD_ISCAN_VAL) printf args;} while (0)
 #define DHD_ARPOE(args)		do {if (dhd_msg_level & DHD_ARPOE_VAL) printf args;} while (0)
+#define DHD_REORDER(args)	do {if (dhd_msg_level & DHD_REORDER_VAL) printf args;} while (0)
+
+#ifdef CUSTOMER_HW4
+#define DHD_TRACE_HW4	DHD_ERROR
+#else
+#define DHD_TRACE_HW4	DHD_TRACE
+#endif
 
 #define DHD_ERROR_ON()		(dhd_msg_level & DHD_ERROR_VAL)
 #define DHD_TRACE_ON()		(dhd_msg_level & DHD_TRACE_VAL)
@@ -59,10 +72,11 @@
 #define DHD_BTA_ON()		(dhd_msg_level & DHD_BTA_VAL)
 #define DHD_ISCAN_ON()		(dhd_msg_level & DHD_ISCAN_VAL)
 #define DHD_ARPOE_ON()		(dhd_msg_level & DHD_ARPOE_VAL)
+#define DHD_REORDER_ON()	(dhd_msg_level & DHD_REORDER_VAL)
 
 #else /* defined(BCMDBG) || defined(DHD_DEBUG) */
 
-#define DHD_ERROR(args)    	do {if (net_ratelimit()) printf args;} while (0)
+#define DHD_ERROR(args)		do {if (USE_NET_RATELIMIT) printf args;} while (0)
 #define DHD_TRACE(args)
 #define DHD_INFO(args)
 #define DHD_DATA(args)
@@ -76,6 +90,13 @@
 #define DHD_BTA(args)
 #define DHD_ISCAN(args)
 #define DHD_ARPOE(args)
+#define DHD_REORDER(args)
+
+#ifdef CUSTOMER_HW4
+#define DHD_TRACE_HW4	DHD_ERROR
+#else
+#define DHD_TRACE_HW4	DHD_TRACE
+#endif
 
 #define DHD_ERROR_ON()		0
 #define DHD_TRACE_ON()		0
@@ -91,11 +112,13 @@
 #define DHD_BTA_ON()		0
 #define DHD_ISCAN_ON()		0
 #define DHD_ARPOE_ON()		0
+#define DHD_REORDER_ON()	0
 #endif 
 
 #define DHD_LOG(args)
 
 #define DHD_BLOG(cp, size)
+
 #define DHD_NONE(args)
 extern int dhd_msg_level;
 

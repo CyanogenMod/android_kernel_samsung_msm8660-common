@@ -403,6 +403,13 @@ config SENSORS_AK8975
 	  If you say yes here you get support for Asahi Kasei's
 	  orientation sensor AK8975.
 
+
+config USE_A2220_B
+	tristate "A2220_B Voice Processor Driver"
+	depends on I2C
+	help
+	  This option support audience A2220_B chip
+
 config EP93XX_PWM
 	tristate "EP93xx PWM support"
 	depends on ARCH_EP93XX
@@ -570,6 +577,20 @@ config TSPP
 	processing of MPEG transport streams from the main processor.
 	This can also be compiled as a loadable module.
 
+config SAMSUNG_JACK
+	bool "3.5 PI EAR_JACK driver for Samsung devices"
+	depends on INPUT
+	default n
+	---help---
+	  This is 3.5 PI EAR_JACK driver for Samsung devices.
+
+config SAMSUNG_EARJACK
+	bool "Modified 3.5 PI EAR_JACK driver for Samsung devices"
+	depends on INPUT
+	default n
+	---help---
+	  This is 3.5 PI EAR_JACK driver for Samsung devices.
+	  
 config HAPTIC_ISA1200
 	tristate "ISA1200 haptic support"
 	depends on I2C
@@ -643,6 +664,19 @@ config QFP_FUSE
 	  to the fuse block. Currently this is supported only
 	  on FSM targets.
 
+config SENSORS_K3DH
+	tristate "K3DH acceleration sensor support"
+	depends on I2C
+        default n
+	help
+	  Driver for STMicroelectronic K3DH accelerometer.
+
+config SEC_MISC
+	bool "Samsung CELOX series miscellaneous driver"
+	default n
+	---help---
+	  Samsung CELOX series miscellaneous driver
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
@@ -651,4 +685,15 @@ source "drivers/misc/ti-st/Kconfig"
 source "drivers/misc/lis3lv02d/Kconfig"
 source "drivers/misc/carma/Kconfig"
 
+menuconfig VIBETONZ
+        tristate "Vibetonz"
+        default m
+        help
+          Say Y to enable Vibetonz support.
+config STMPE811_ADC
+	bool "stmpe811 adc driver"
+	default n
+	help
+	  stmpe811 adc driver
+          
 endif # MISC_DEVICES

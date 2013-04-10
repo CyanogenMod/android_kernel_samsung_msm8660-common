@@ -403,12 +403,99 @@ static int32_t pm8058_xoadc_dequeue_slot_request(uint32_t adc_instance,
 	struct pmic8058_adc *adc_pmic = pmic_adc[adc_instance];
 	struct xoadc_conv_state *slot_state = adc_pmic->conv_queue_list;
 	int rc = 0;
+	// **  workaroud code for missing ADC interrupt
+	u8 slot_amux_chan = 0, cur_amux_chan = 0;
+	// **
 
 	mutex_lock(&slot_state->list_lock);
 	if (adc_pmic->xoadc_queue_count > 0 &&
 			!list_empty(&slot_state->slots)) {
 		*slot = list_first_entry(&slot_state->slots,
 			struct adc_conv_slot, list);
+		//  workaroud code for missing ADC interrupt
+		// ***********************************************************************************
+		switch ((*slot)->chan_path) {
+		case CHAN_PATH_TYPE1:
+			slot_amux_chan = CHANNEL_VCOIN << 4;
+			break;
+
+		case CHAN_PATH_TYPE2:
+			slot_amux_chan = CHANNEL_VBAT << 4;
+			break;
+
+		case CHAN_PATH_TYPE3:
+			slot_amux_chan = CHANNEL_VCHG << 4;
+			break;
+
+		case CHAN_PATH_TYPE4:
+			slot_amux_chan = CHANNEL_CHG_MONITOR << 4;
+			break;
+
+		case CHAN_PATH_TYPE5:
+			slot_amux_chan = CHANNEL_VPH_PWR << 4;
+			break;
+
+		case CHAN_PATH_TYPE6:
+			slot_amux_chan = CHANNEL_MPP5 << 4;
+			break;
+
+		case CHAN_PATH_TYPE7:
+			slot_amux_chan = CHANNEL_MPP6 << 4;
+			break;
+
+		case CHAN_PATH_TYPE8:
+			slot_amux_chan = CHANNEL_MPP7 << 4;
+			break;
+
+		case CHAN_PATH_TYPE9:
+			slot_amux_chan = CHANNEL_MPP8 << 4;
+			break;
+
+		case CHAN_PATH_TYPE10:
+			slot_amux_chan = CHANNEL_MPP9 << 4;
+			break;
+
+		case CHAN_PATH_TYPE11:
+			slot_amux_chan = CHANNEL_USB_VBUS << 4;
+			break;
+
+		case CHAN_PATH_TYPE12:
+			slot_amux_chan = CHANNEL_DIE_TEMP << 4;
+			break;
+
+		case CHAN_PATH_TYPE13:
+			slot_amux_chan = CHANNEL_125V << 4;
+			break;
+
+		case CHAN_PATH_TYPE14:
+			slot_amux_chan = CHANNEL_INTERNAL_2 << 4;
+			break;
+
+		case CHAN_PATH_TYPE_NONE:
+			slot_amux_chan = CHANNEL_MUXOFF << 4;
+			break;
+
+		case CHAN_PATH_TYPE15:
+			slot_amux_chan = CHANNEL_INTERNAL << 4;
+			break;
+		}
+
+		rc = pm8xxx_readb(adc_pmic->dev->parent, ADC_ARB_USRP_AMUX_CNTRL, &cur_amux_chan);
+		if (rc < 0) {
+			pr_debug("%s: PM8058 read failed\n", __func__);
+			mutex_unlock(&slot_state->list_lock);
+			return rc;
+		}
+
+		if (slot_amux_chan != cur_amux_chan )
+		{
+			rc = -EINVAL;
+			if (pm8058_xoadc_can_print())
+				pr_err("Pmic 8058 xoadc : slot->chan_path isn't match with request amux_chan\n");
+			mutex_unlock(&slot_state->list_lock);
+			return rc;
+		}
+		// ***********************************************************************************
 		list_del(&(*slot)->list);
 	} else
 		rc = -EINVAL;
@@ -487,6 +574,67 @@ int32_t pm8058_xoadc_read_adc_code(uint32_t adc_instance, int32_t *data)
 	return 0;
 }
 EXPORT_SYMBOL(pm8058_xoadc_read_adc_code);
+
+int32_t pm8058_xoadc_clear_recentQ(void *h) {
+	struct msm_client_data *client = (struct msm_client_data *)h;
+	struct pmic8058_adc *adc_pmic = pmic_adc[XOADC_PMIC_0];
+	struct xoadc_conv_state *slot_state = adc_pmic->conv_queue_list;
+	struct adc_conv_slot *slot = NULL;
+	int rc = IRQ_NONE;
+
+	disable_irq_nosync(adc_pmic->adc_irq);
+	//disable_irq(adc_pmic->adc_irq);
+
+	// **** forcely dequeue if client match : test workaround
+	//rc = pm8058_xoadc_dequeue_slot_request(adc_pmic->xoadc_num, &slot);
+	mutex_lock(&slot_state->list_lock);
+	if (adc_pmic->xoadc_queue_count > 0 &&
+			!list_empty(&slot_state->slots)) {
+		slot = list_first_entry(&slot_state->slots,
+			struct adc_conv_slot, list);
+		
+		if(slot->client == client)
+			list_del(&(slot->list));
+		else
+			rc = -EINVAL;
+	} else
+		rc = -EINVAL;
+	mutex_unlock(&slot_state->list_lock);
+
+	if (rc < 0) {
+		if (pm8058_xoadc_can_print())
+			pr_err("pm8058_xoadc_clear_recentQ() : dequque failed - empty or already dequeue with missing interrupt\n");
+		return rc;
+	}
+	// ******************************************
+
+	mutex_lock(&slot_state->list_lock);
+	adc_pmic->xoadc_queue_count--;
+	if (adc_pmic->xoadc_queue_count > 0) {
+		slot = list_first_entry(&slot_state->slots,
+				struct adc_conv_slot, list);
+		pm8058_xoadc_configure(XOADC_PMIC_0, slot);
+	}
+	mutex_unlock(&slot_state->list_lock);
+
+	mutex_lock(&slot_state->list_lock);
+	/* Default value for switching off the arbiter after reading
+	   the ADC value. Bit 0 set to 0. */
+	if (adc_pmic->xoadc_queue_count == 0) {
+		rc = pm8058_xoadc_arb_cntrl(0, XOADC_PMIC_0, CHANNEL_MUXOFF);
+		if (rc < 0) {
+			pr_debug("%s: Configuring ADC Arbiter disable"
+						"failed\n", __func__);
+			return rc;
+		}
+		if (adc_pmic->pdata->xoadc_vreg_set != NULL)
+			adc_pmic->pdata->xoadc_vreg_set(0);
+	}
+	mutex_unlock(&slot_state->list_lock);
+
+	return rc;
+}
+EXPORT_SYMBOL(pm8058_xoadc_clear_recentQ);
 
 static irqreturn_t pm8058_xoadc(int irq, void *dev_id)
 {

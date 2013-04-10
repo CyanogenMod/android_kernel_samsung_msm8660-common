@@ -12,6 +12,7 @@ obj-$(CONFIG_DEBUG_FS) += mdp_debugfs.o
 
 ifeq ($(CONFIG_FB_MSM_MDP40),y)
 obj-y += mdp4_util.o
+obj-y += mdp4_video_enhance.o
 obj-y += mdp4_hsic.o
 else
 obj-y += mdp_hw_init.o
@@ -77,6 +78,13 @@ obj-$(CONFIG_FB_MSM_MIPI_DSI_ORISE) += mipi_orise.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_RENESAS) += mipi_renesas.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TRULY) += mipi_truly.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI_SIMULATOR) += mipi_simulator.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6D6AA0_WXGA) += mipi_s6d6aa0_wxga.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1) += mipi_s6e8aa0_wxga_q1.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6E8AA0_WXGA_Q1) += smart_dimming.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6E8AA0_HD720) += mipi_s6e8aa0_hd720.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6E8AA0_HD720) += smart_dimming.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_S6E8AA0_WXGA) += mipi_s6e8aa0_wxga.o
+obj-$(CONFIG_FB_MSM_MIPI_DSI_ESD_REFRESH) += sec_mipi_lcd_esd_refresh.o
 
 # MIPI Bridge
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TC358764_DSI2LVDS) += mipi_tc358764_dsi2lvds.o
@@ -134,9 +142,19 @@ obj-$(CONFIG_FB_MSM_MIPI_TRULY_VIDEO_WVGA_PT) += mipi_truly_video_wvga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_SIMULATOR_VIDEO) += mipi_simulator_video.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WXGA) += mipi_chimei_wxga_pt.o
 obj-$(CONFIG_FB_MSM_MIPI_CHIMEI_WUXGA) += mipi_chimei_wuxga.o
+obj-$(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PT) += mipi_s6d6aa0_wxga_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PT) += mipi_s6e8aa0_hd720_pt.o
+obj-$(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PT) += mipi_s6e8aa0_wxga_q1_pt.o
 endif
 
 obj-$(CONFIG_FB_MSM_LCDC_PANEL) += lcdc_panel.o
+ifndef CONFIG_TARGET_SERIES_DALI # kmj_imsi
+obj-$(CONFIG_FB_MSM_LCDC_LD9040_WVGA) += lcdc_ld9040.o
+endif
+obj-$(CONFIG_FB_MSM_LCDC_LD9040_WVGA) += smart_dimming_ea8868.o
+obj-$(CONFIG_FB_MSM_LCDC_S6E63M0_WVGA) += lcdc_S6E63M0.o
+obj-$(CONFIG_USA_MODEL_SGH_T769) += smart_mtp_s6e63m0.o
+obj-$(CONFIG_USA_MODEL_SGH_I577) += smart_mtp_s6e63m0.o
 obj-$(CONFIG_FB_MSM_LCDC_PRISM_WVGA) += lcdc_prism.o
 obj-$(CONFIG_FB_MSM_LCDC_SAMSUNG_WSVGA) += lcdc_samsung_wsvga.o
 obj-$(CONFIG_FB_MSM_LCDC_CHIMEI_WXGA) += lcdc_chimei_wxga.o
@@ -165,6 +183,8 @@ obj-$(CONFIG_FB_MSM_WRITEBACK_MSM_PANEL) += mdp4_overlay_writeback.o
 
 obj-$(CONFIG_MSM_VIDC_1080P) += vidc/
 obj-$(CONFIG_MSM_VIDC_720P) += vidc/
+#MHL
+obj-$(CONFIG_VIDEO_MHL_V2) += mhl_v2/
 else
 obj-$(CONFIG_FB_MSM_EBI2) += ebi2_host.o
 obj-$(CONFIG_FB_MSM_EBI2) += ebi2_lcd.o

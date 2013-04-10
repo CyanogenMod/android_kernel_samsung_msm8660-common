@@ -82,8 +82,13 @@ static struct usb_interface_descriptor rmnet_interface_desc = {
 	.bDescriptorType =	USB_DT_INTERFACE,
 	.bNumEndpoints =	3,
 	.bInterfaceClass =	USB_CLASS_VENDOR_SPEC,
+#ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
+	.bInterfaceSubClass = 0xE0,
+	.bInterfaceProtocol = 0x00,
+#else
 	.bInterfaceSubClass =	USB_CLASS_VENDOR_SPEC,
 	.bInterfaceProtocol =	USB_CLASS_VENDOR_SPEC,
+#endif
 	/* .iInterface = DYNAMIC */
 };
 

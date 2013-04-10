@@ -385,7 +385,7 @@ static int msm_pcm_playback_copy(struct snd_pcm_substream *substream, int a,
 	pr_debug("%s: prtd->out_count = %d\n",
 				__func__, atomic_read(&prtd->out_count));
 	ret = wait_event_timeout(the_locks.write_wait,
-			(atomic_read(&prtd->out_count)), 5 * HZ);
+			(atomic_read(&prtd->out_count)), 1 * HZ);
 	if (ret < 0) {
 		pr_err("%s: wait_event_timeout failed\n", __func__);
 		goto fail;
@@ -438,7 +438,7 @@ static int msm_pcm_playback_close(struct snd_pcm_substream *substream)
 
 	dir = IN;
 	ret = wait_event_timeout(the_locks.eos_wait,
-				prtd->cmd_ack, 5 * HZ);
+				prtd->cmd_ack, 1 * HZ);
 	if (ret < 0)
 		pr_err("%s: CMD_EOS failed\n", __func__);
 	q6asm_cmd(prtd->audio_client, CMD_CLOSE);
@@ -476,7 +476,7 @@ static int msm_pcm_capture_copy(struct snd_pcm_substream *substream,
 	pr_debug("avail_min %d\n", (int)runtime->control->avail_min);
 
 	ret = wait_event_timeout(the_locks.read_wait,
-			(atomic_read(&prtd->in_count)), 5 * HZ);
+			(atomic_read(&prtd->in_count)), 1 * HZ);
 	if (ret < 0) {
 		pr_debug("%s: wait_event_timeout failed\n", __func__);
 		goto fail;

@@ -624,8 +624,9 @@ int hibernate(void)
 	error = create_basic_memory_bitmaps();
 	if (error)
 		goto Enable_umh;
-
+        #ifndef CONFIG_USA_MODEL_SGH_T989
 	printk(KERN_INFO "PM: Syncing filesystems ... ");
+	#endif
 	sys_sync();
 	printk("done.\n");
 

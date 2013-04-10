@@ -2192,6 +2192,10 @@ static int fbcon_switch(struct vc_data *vc)
 	 */
 	info->var.activate = var.activate;
 	var.vmode |= info->var.vmode & ~FB_VMODE_MASK;
+
+	/* Retain the reserved[] array  */
+	memcpy(var.reserved, info->var.reserved, sizeof(var.reserved));	
+
 	fb_set_var(info, &var);
 	ops->var = info->var;
 

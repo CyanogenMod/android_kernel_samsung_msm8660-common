@@ -3654,6 +3654,11 @@ static inline int __cfq_may_queue(struct cfq_queue *cfqq)
 		return ELV_MQUEUE_MUST;
 	}
 
+	// Add I/O improvement code from U1
+	if (cfq_class_rt(cfqq)) {
+		return ELV_MQUEUE_MUST;
+	}
+
 	return ELV_MQUEUE_MAY;
 }
 

@@ -2325,6 +2325,18 @@ config FB_PRE_INIT_FB
 	  Select this option if display contents should be inherited as set by
 	  the bootloader.
 
+config FB_MSM_LCDC_S6E63M0_WVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_MSM_LCDC_S6E63M0_WVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC S6B63M0 WVGA Panel"
+	select FB_MSM_LCDC_S6E63M0_WVGA
+	---help---
+	  Support for LCDC S6E63M0 WVGA (480x800) panel	  
+
 config FB_MX3
 	tristate "MX3 Framebuffer support"
 	depends on FB && MX3_IPU

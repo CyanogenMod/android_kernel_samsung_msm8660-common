@@ -13,7 +13,7 @@
 #ifndef MSM_GEMINI_COMMON_H
 #define MSM_GEMINI_COMMON_H
 
-#define MSM_GEMINI_DEBUG
+//#define MSM_GEMINI_DEBUG
 #ifdef MSM_GEMINI_DEBUG
 #define GMN_DBG(fmt, args...) pr_debug(fmt, ##args)
 #else

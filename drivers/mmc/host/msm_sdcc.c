@@ -1369,19 +1369,22 @@ static void msmsdcc_sg_consumed(struct msmsdcc_host *host,
 				unsigned int length)
 {
 	struct msmsdcc_pio_data *pio = &host->pio;
-
-	if (host->curr.data->flags & MMC_DATA_READ) {
-		if (length > pio->sg_miter.consumed)
-			/*
-			 * consumed 4 bytes, but sgl
-			 * describes < 4 bytes
-			 */
-			_msmsdcc_sg_consume_word(host);
-		else
-			pio->sg_miter.consumed = length;
-	} else
-		if (length < pio->sg_miter.consumed)
-			pio->sg_miter.consumed = length;
+	if(host->curr.data != NULL )
+	{
+		if (host->curr.data->flags & MMC_DATA_READ) {
+			if (length > pio->sg_miter.consumed)
+				/*
+				 * consumed 4 bytes, but sgl
+				 * describes < 4 bytes
+				 */
+				_msmsdcc_sg_consume_word(host);
+			else
+				pio->sg_miter.consumed = length;
+		} else
+			if (length < pio->sg_miter.consumed)
+				pio->sg_miter.consumed = length;
+	}else
+		printk(KERN_ERR "%s:host->curr.data is NULL\n",__func__);
 }
 
 static void msmsdcc_sg_start(struct msmsdcc_host *host)
@@ -2563,6 +2566,9 @@ static void msmsdcc_msm_bus_cancel_work_and_set_vote(
 	unsigned int bw;
 	int vote;
 
+	if(host->plat->is_sdio_al_client)
+		return;
+		
 	if (!host->msm_bus_vote.client_handle)
 		return;
 
@@ -5163,7 +5169,14 @@ msmsdcc_runtime_suspend(struct device *dev)
 		rc = 0;
 		goto out;
 	}
+
+	if (host->pdev_id == 4) {
+		host->mmc->pm_flags |= MMC_PM_KEEP_POWER;
+		printk(KERN_INFO "%s: Enter WIFI suspend\n", __func__);
+	}
+
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
+
 	if (mmc) {
 		host->sdcc_suspending = 1;
 		mmc->suspend_task = current;
@@ -5234,6 +5247,7 @@ msmsdcc_runtime_resume(struct device *dev)
 		return 0;
 
 	pr_debug("%s: %s: start\n", mmc_hostname(mmc), __func__);
+
 	if (mmc) {
 		if (mmc->card && mmc_card_sdio(mmc->card) &&
 				mmc_card_keep_power(mmc)) {

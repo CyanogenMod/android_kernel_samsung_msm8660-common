@@ -57,6 +57,17 @@ struct mask_info {
 	int index;
 };
 
+#if defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_KOR_MODEL_SHV_E120L)
+static int diagfwd_delay_done = 0;
+static void diagfwd_delay_work_fn(struct work_struct *work);
+DECLARE_DELAYED_WORK(diagfwd_delay_work, diagfwd_delay_work_fn);
+static void diagfwd_delay_work_fn(struct work_struct *work)
+{
+	diagfwd_delay_done = 1;
+	diagfwd_connect();
+}
+#endif
+
 #define CREATE_MSG_MASK_TBL_ROW(XX)					\
 do {									\
 	*(int *)(msg_mask_tbl_ptr) = MSG_SSID_ ## XX;			\
@@ -1624,7 +1635,14 @@ void diag_usb_legacy_notifier(void *priv, unsigned event,
 {
 	switch (event) {
 	case USB_DIAG_CONNECT:
+#if defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_KOR_MODEL_SHV_E120L)
+		if (diagfwd_delay_done)
+			diagfwd_connect();
+		else
+			schedule_delayed_work(&diagfwd_delay_work, msecs_to_jiffies(15000));
+#else
 		diagfwd_connect();
+#endif
 		break;
 	case USB_DIAG_DISCONNECT:
 		diagfwd_disconnect();

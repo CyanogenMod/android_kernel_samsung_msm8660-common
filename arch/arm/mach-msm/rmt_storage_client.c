@@ -357,6 +357,7 @@ static int rmt_storage_event_open_cb(struct rmt_storage_event *event_args,
 	if (cid > MAX_NUM_CLIENTS) {
 		pr_err("%s: Max clients are reached\n", __func__);
 		cid = 0;
+		kfree(rs_client);
 		return cid;
 	}
 	__set_bit(cid, &rmc->cids);

@@ -2,9 +2,9 @@
  * Broadcom SiliconBackplane SDIO/PCMCIA hardware-specific
  * device core support
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: sbsdpcmdev.h 282638 2011-09-08 21:18:10Z $
+ * $Id: sbsdpcmdev.h 347614 2012-07-27 10:24:51Z $
  */
 
 #ifndef	_sbsdpcmdev_h_
@@ -289,5 +289,7 @@ typedef volatile struct {
 
 /* HW frame tag */
 #define SDPCM_FRAMETAG_LEN	4	/* HW frametag: 2 bytes len, 2 bytes check val */
+
+#define SDPCM_HWEXT_LEN	8
 
 #endif	/* _sbsdpcmdev_h_ */

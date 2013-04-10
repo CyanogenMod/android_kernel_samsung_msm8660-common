@@ -41,7 +41,9 @@
 #include <linux/debug_locks.h>
 #include <linux/lockdep.h>
 #include <linux/idr.h>
-
+#ifdef CONFIG_SEC_DEBUG_WORKQ_LOG
+#include <mach/sec_debug.h>
+#endif
 #include "workqueue_sched.h"
 
 enum {
@@ -1867,6 +1869,9 @@ __acquires(&gcwq->lock)
 	lock_map_acquire_read(&cwq->wq->lockdep_map);
 	lock_map_acquire(&lockdep_map);
 	trace_workqueue_execute_start(work);
+#ifdef CONFIG_SEC_DEBUG_WORKQ_LOG
+	debug_workq_log(smp_processor_id(), f, current);
+#endif
 	f(work);
 	/*
 	 * While we must be careful to not use "work" after this, the trace

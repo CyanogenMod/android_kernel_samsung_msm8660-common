@@ -1222,6 +1222,10 @@ static long audio_dev_ctrl_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
 	int rc = 0;
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	void __user *argp = (void __user *)arg;
+	int amr_state = 0;
+#endif
 	struct audio_dev_ctrl_state *dev_ctrl = file->private_data;
 
 	mutex_lock(&session_lock);
@@ -1252,7 +1256,21 @@ static long audio_dev_ctrl_ioctl(struct file *file,
 		break;
 
 	}
-
+#if defined(CONFIG_EUR_MODEL_GT_I9210)
+	case AUDIO_SET_AMR_WB:
+			if(copy_from_user(&amr_state, argp, sizeof(amr_state)))
+				return -EFAULT;
+			if(amr_state<0 || amr_state>1)
+				return -EFAULT;	
+			printk("[IJ] %s amr_state = %d\n", __func__, amr_state);
+			if(amr_state == VPCM_PATH_NARROWBAND)
+				rc = vpcm_start_modem_voice();
+			else if(amr_state ==VPCM_PATH_WIDEBAND)
+				rc = vpcm_stop_modem_voice();
+			if(rc<0)
+				printk("%s: AUDIO_SET_AMR_WB %d error %d\n", __func__, amr_state, rc);
+		break;
+#endif
 	case AUDIO_DISABLE_SND_DEVICE: {
 		struct msm_snddev_info *dev_info;
 		u32 dev_id;

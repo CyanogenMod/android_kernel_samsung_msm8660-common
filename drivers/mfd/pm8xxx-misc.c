@@ -479,7 +479,9 @@ int pm8xxx_reset_pwr_off(int reset)
 	unsigned long flags;
 	int rc = 0;
 
+	printk(KERN_ERR "pm8xxx_reset_pwr_off, [1]\n");
 	spin_lock_irqsave(&pm8xxx_misc_chips_lock, flags);
+	printk(KERN_ERR "pm8xxx_reset_pwr_off, [2]\n");
 
 	/* Loop over all attached PMICs and call specific functions for them. */
 	list_for_each_entry(chip, &pm8xxx_misc_chips, link) {
@@ -488,10 +490,14 @@ int pm8xxx_reset_pwr_off(int reset)
 			rc = __pm8018_reset_pwr_off(chip, reset);
 			break;
 		case PM8XXX_VERSION_8058:
+			printk(KERN_ERR "pm8xxx_reset_pwr_off, [3]\n");
 			rc = __pm8058_reset_pwr_off(chip, reset);
+			printk(KERN_ERR "pm8xxx_reset_pwr_off, [4]\n");
 			break;
 		case PM8XXX_VERSION_8901:
+			printk(KERN_ERR "pm8xxx_reset_pwr_off, [5]\n");
 			rc = __pm8901_reset_pwr_off(chip, reset);
+			printk(KERN_ERR "pm8xxx_reset_pwr_off, [6]\n");
 			break;
 		case PM8XXX_VERSION_8921:
 			rc = __pm8921_reset_pwr_off(chip, reset);
@@ -505,9 +511,9 @@ int pm8xxx_reset_pwr_off(int reset)
 			break;
 		}
 	}
-
+	printk(KERN_ERR "pm8xxx_reset_pwr_off, [7]\n");
 	spin_unlock_irqrestore(&pm8xxx_misc_chips_lock, flags);
-
+	printk(KERN_ERR "pm8xxx_reset_pwr_off, [8]\n");
 	return rc;
 }
 EXPORT_SYMBOL_GPL(pm8xxx_reset_pwr_off);

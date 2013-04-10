@@ -2,9 +2,9 @@
  * Linux-specific abstractions to gain some independence from linux kernel versions.
  * Pave over some 2.2 versus 2.4 versus 2.6 kernel differences.
  *
- * Copyright (C) 1999-2011, Broadcom Corporation
+ * Copyright (C) 1999-2012, Broadcom Corporation
  * 
- *         Unless you and Broadcom execute a separate written software license
+ *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
@@ -22,9 +22,8 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linuxver.h 312264 2012-02-02 00:49:43Z $
+ * $Id: linuxver.h 353905 2012-08-29 07:33:08Z $
  */
-
 
 #ifndef _linuxver_h_
 #define _linuxver_h_
@@ -72,6 +71,8 @@
 #include <linux/netdevice.h>
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 #include <linux/semaphore.h>
+#else
+#include <asm/semaphore.h>
 #endif 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28))
 #undef IP_TOS
@@ -96,11 +97,28 @@
 #endif
 #endif	
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define DAEMONIZE(a) daemonize(a); \
+	allow_signal(SIGKILL); \
+	allow_signal(SIGTERM);
+#else 
+#define RAISE_RX_SOFTIRQ() \
+	cpu_raise_softirq(smp_processor_id(), NET_RX_SOFTIRQ)
+#define DAEMONIZE(a) daemonize(); \
+	do { if (a) \
+		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a)))); \
+	} while (0);
+#endif 
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 19)
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func)
 #else
 #define	MY_INIT_WORK(_work, _func)	INIT_WORK(_work, _func, _work)
+#if !(LINUX_VERSION_CODE == KERNEL_VERSION(2, 6, 18) && defined(RHEL_MAJOR) && \
+	(RHEL_MAJOR == 5))
+
 typedef void (*work_func_t)(void *work);
+#endif
 #endif	
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 0))
@@ -145,6 +163,10 @@ typedef irqreturn_t(*FN_ISR) (int irq, void *dev_id, struct pt_regs *ptregs);
 #endif
 #endif 
 
+
+#ifdef CUSTOMER_HW4
+#include <linux/kthread.h>
+#endif
 
 #ifndef __exit
 #define __exit
@@ -217,10 +239,10 @@ extern void pci_unregister_driver(struct pci_driver *drv);
 #undef WL_USE_NETDEV_OPS
 #endif
 
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL_INPUT)
-#define WL_CONFIG_RFKILL_INPUT
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31)) && defined(CONFIG_RFKILL)
+#define WL_CONFIG_RFKILL
 #else
-#undef WL_CONFIG_RFKILL_INPUT
+#undef WL_CONFIG_RFKILL
 #endif
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 3, 48))
@@ -469,7 +491,7 @@ typedef struct {
 	long 	thr_pid;
 	int 	prio; 
 	struct	semaphore sema;
-	bool	terminated;
+	int	terminated;
 	struct	completion completed;
 } tsk_ctl_t;
 
@@ -496,10 +518,24 @@ typedef struct {
 	(tsk_ctl)->parent = owner; \
 	(tsk_ctl)->terminated = FALSE; \
 	(tsk_ctl)->thr_pid = kernel_thread(thread_func, tsk_ctl, flags); \
+	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 	if ((tsk_ctl)->thr_pid > 0) \
 		wait_for_completion(&((tsk_ctl)->completed)); \
 	DBG_THR(("%s thr:%lx started\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
 }
+
+#ifdef USE_KTHREAD_API
+#define PROC_START2(thread_func, owner, tsk_ctl, flags, name) \
+{ \
+	sema_init(&((tsk_ctl)->sema), 0); \
+	init_completion(&((tsk_ctl)->completed)); \
+	(tsk_ctl)->parent = owner; \
+	(tsk_ctl)->terminated = FALSE; \
+	(tsk_ctl)->p_task  = kthread_run(thread_func, tsk_ctl, (char*)name); \
+	(tsk_ctl)->thr_pid = (tsk_ctl)->p_task->pid; \
+	DBG_THR(("%s thr:%lx created\n", __FUNCTION__, (tsk_ctl)->thr_pid)); \
+}
+#endif
 
 #define PROC_STOP(tsk_ctl) \
 { \
@@ -511,24 +547,7 @@ typedef struct {
 	(tsk_ctl)->thr_pid = -1; \
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-#define DAEMONIZE(a) daemonize(a); \
-	allow_signal(SIGKILL); \
-	allow_signal(SIGTERM);
-#else /* Linux 2.4 (w/o preemption patch) */
-#define RAISE_RX_SOFTIRQ() \
-	cpu_raise_softirq(smp_processor_id(), NET_RX_SOFTIRQ)
-#define DAEMONIZE(a) daemonize(); \
-	do { if (a) \
-		strncpy(current->comm, a, MIN(sizeof(current->comm), (strlen(a) + 1))); \
-	} while (0);
-#endif /* LINUX_VERSION_CODE  */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
-#define BLOCKABLE()	(!in_atomic())
-#else
-#define BLOCKABLE()	(!in_interrupt())
-#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31))
 #define KILL_PROC(nr, sig) \
@@ -595,10 +614,11 @@ do {									\
 
 #endif 
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)
-#define WL_DEV_IF(dev)          ((wl_if_t*)netdev_priv(dev))
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 24))
+#define DEV_PRIV(dev)	(dev->priv)
 #else
-#define WL_DEV_IF(dev)          ((wl_if_t*)(dev)->priv)
+#define DEV_PRIV(dev)	netdev_priv(dev)
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20)

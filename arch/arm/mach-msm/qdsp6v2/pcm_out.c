@@ -309,6 +309,8 @@ static int pcm_out_open(struct inode *inode, struct file *file)
 	pcm->buffer_count = MAX_BUF;
 	pcm->stream_event = AUDDEV_EVT_STREAM_VOL_CHG;
 	pcm->volume = 0x2000;
+	/* CONFIG_SEC_DEBUG */
+	spin_lock_init(&pcm->dsp_lock);
 
 	pcm->ac = q6asm_audio_client_alloc((app_cb)pcm_out_cb, (void *)pcm);
 	if (!pcm->ac) {
@@ -328,7 +330,8 @@ static int pcm_out_open(struct inode *inode, struct file *file)
 	mutex_init(&pcm->lock);
 	mutex_init(&pcm->write_lock);
 	init_waitqueue_head(&pcm->write_wait);
-	spin_lock_init(&pcm->dsp_lock);
+	/* CONFIG_SEC_DEBUG moved up */
+	//spin_lock_init(&pcm->dsp_lock);
 	atomic_set(&pcm->out_enabled, 0);
 	atomic_set(&pcm->out_stopped, 0);
 	atomic_set(&pcm->out_count, pcm->buffer_count);
@@ -387,6 +390,8 @@ static ssize_t pcm_out_write(struct file *file, const char __user *buf,
 		if (!rc) {
 			pr_err("%s: wait_event_timeout failed for session %d\n",
 				__func__, pcm->ac->session);
+			/* fix return value */
+			rc = -EFAULT;
 			goto fail;
 		}
 
@@ -429,14 +434,28 @@ fail:
 static int pcm_out_release(struct inode *inode, struct file *file)
 {
 	struct pcm *pcm = file->private_data;
-
+#if 1
+	/* to fix null pointer exception */
+	if (pcm) {
+		pcm_out_disable(pcm);
+	}
+	if (pcm->ac) {
+		pr_info("[%s:%s] release session id[%d]\n", __MM_FILE__,
+			__func__, pcm->ac->session);
+		msm_clear_session_id(pcm->ac->session);
+		auddev_unregister_evt_listner(AUDDEV_CLNT_DEC, pcm->ac->session);
+		q6asm_audio_client_free(pcm->ac);
+	}
+#else
 	pr_info("[%s:%s] release session id[%d]\n", __MM_FILE__,
 				__func__, pcm->ac->session);
 	if (pcm->ac)
 		pcm_out_disable(pcm);
+
 	msm_clear_session_id(pcm->ac->session);
 	auddev_unregister_evt_listner(AUDDEV_CLNT_DEC, pcm->ac->session);
 	q6asm_audio_client_free(pcm->ac);
+#endif
 	audio_allow_sleep(pcm);
 	wake_lock_destroy(&pcm->wakelock);
 	mutex_destroy(&pcm->lock);

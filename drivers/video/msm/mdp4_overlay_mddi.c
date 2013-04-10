@@ -614,6 +614,7 @@ void mdp4_overlay0_done_mddi(int cndx)
 	spin_unlock(&vctrl->spin_lock);
 }
 
+#ifdef CONFIG_FB_MSM_MDDI
 static void clk_ctrl_work(struct work_struct *work)
 {
 	struct vsycn_ctrl *vctrl =
@@ -671,6 +672,7 @@ void mdp4_mddi_rdptr_init(int cndx)
 	INIT_WORK(&vctrl->vsync_work, send_vsync_work);
 	INIT_WORK(&vctrl->clk_work, clk_ctrl_work);
 }
+#endif
 
 void mdp4_primary_rdptr(void)
 {

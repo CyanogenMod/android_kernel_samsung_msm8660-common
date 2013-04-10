@@ -29,8 +29,8 @@
 
 #include "mdp.h"
 #include "msm_fb.h"
-#include "hdmi_msm.h"
 #include "mdp4.h"
+#include "hdmi_msm.h"
 
 #define DTV_BASE	0xD0000
 
@@ -164,7 +164,7 @@ void mdp4_dtv_pipe_queue(int cndx, struct mdp4_overlay_pipe *pipe)
 static void mdp4_dtv_blt_ov_update(struct mdp4_overlay_pipe *pipe);
 static void mdp4_dtv_wait4dmae(int cndx);
 
-int mdp4_dtv_pipe_commit(void)
+int mdp4_dtv_pipe_commit(int cndx, int wait)
 {
 
 	int  i, undx;
@@ -176,7 +176,7 @@ int mdp4_dtv_pipe_commit(void)
 	unsigned long flags;
 	int cnt = 0;
 
-	vctrl = &vsync_ctrl_db[0];
+	vctrl = &vsync_ctrl_db[cndx];
 	mutex_lock(&vctrl->update_lock);
 	undx =  vctrl->update_ndx;
 	vp = &vctrl->vlist[undx];
@@ -234,6 +234,9 @@ int mdp4_dtv_pipe_commit(void)
 	}
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 	mdp4_stat.overlay_commit[pipe->mixer_num]++;
+
+	if (wait)
+		mdp4_dtv_wait4dmae(cndx);
 
 	return cnt;
 }
@@ -550,6 +553,14 @@ int mdp4_dtv_on(struct platform_device *pdev)
 
 	vctrl->dev = mfd->fbi->dev;
 
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2) || \
+		defined(CONFIG_VIDEO_MHL_TAB_V2)
+	if (!hdmi_msm_state->hpd_on_offline) {
+		pr_info("hdmi_online is not\n");
+		return -ENODEV;
+	}
+#endif
+
 	mdp_footswitch_ctrl(TRUE);
 	/* Mdp clock enable */
 	mdp_clk_ctrl(1);
@@ -582,6 +593,13 @@ int mdp4_dtv_off(struct platform_device *pdev)
 	int cndx = 0;
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
+#if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2) || \
+		defined(CONFIG_VIDEO_MHL_TAB_V2)
+	if (hdmi_msm_state->hpd_on_offline) {
+		pr_info("hpd_offline is not\n");
+		return -ENODEV;
+	}
+#endif
 
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
@@ -907,6 +925,8 @@ void mdp4_dtv_set_black_screen(void)
 	int cndx = 0;
 	struct vsycn_ctrl *vctrl;
 
+	mdp4_mixer_late_commit(); 
+
 	vctrl = &vsync_ctrl_db[cndx];
 	if (vctrl->base_pipe == NULL || !hdmi_prim_display) {
 		pr_err("dtv_pipe is not configured yet\n");
@@ -1036,6 +1056,6 @@ void mdp4_dtv_overlay(struct msm_fb_data_type *mfd)
 	}
 
 	mutex_lock(&mfd->dma->ov_mutex);
-	mdp4_dtv_pipe_commit();
+	mdp4_dtv_pipe_commit(cndx, 0);
 	mutex_unlock(&mfd->dma->ov_mutex);
 }

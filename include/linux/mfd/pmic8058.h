@@ -102,6 +102,7 @@
 #define PM8058_CBLPWR_IRQ		PM8058_IRQ_BLOCK_BIT(4, 3)
 #define PM8058_RESOUT_IRQ		PM8058_IRQ_BLOCK_BIT(6, 4)
 
+#define PM8058_GPIO(n)	((n) - 1)
 struct pmic8058_charger_data {
 	unsigned int max_source_current;
 	int charger_type;

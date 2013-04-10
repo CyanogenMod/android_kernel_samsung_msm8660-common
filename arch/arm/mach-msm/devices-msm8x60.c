@@ -116,10 +116,23 @@ static void charm_ap2mdm_kpdpwr_off(void)
 		msleep(100);
 	}
 	gpio_direction_output(AP2MDM_ERRFATAL, 0);
-
+#if defined(CONFIG_TARGET_LOCALE_USA)
+	/* When PM8058 has already shut down, PM8028 is still pulsing.
+	 * After shut down the MDM9K by AP2MDM_STATUS , 
+	 * then always turn off the PM8028 by AP2MDM_PMIC_RESET 
+	 */
+	if (true) {
+		if (i == 0)
+			pr_err("%s: MDM2AP_STATUS never went low. Doing a hard reset of the charm modem.\n", 
+				__func__);		
+		else		
+			pr_err("%s: MDM2AP_STATUS went low. but we still need doing a hard reset again.\n", 
+				__func__);	
+#else
 	if (i == 0) {
 		pr_err("%s: MDM2AP_STATUS never went low. Doing a hard reset \
 			of the charm modem.\n", __func__);
+#endif
 		gpio_direction_output(AP2MDM_PMIC_RESET_N, 1);
 		/*
 		* Currently, there is a debounce timer on the charm PMIC. It is
@@ -354,6 +367,28 @@ struct platform_device *msm_add_gsbi9_uart(void)
 }
 #endif
 
+#if defined (CONFIG_TARGET_LOCALE_USA)
+static struct resource gsbi1_qup_i2c_resources[] = {
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI1_QUP_PHYS,
+		.end	= MSM_GSBI1_QUP_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI1_PHYS,
+		.end	= MSM_GSBI1_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= GSBI1_QUP_IRQ,
+		.end	= GSBI1_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#endif
 static struct resource gsbi3_qup_i2c_resources[] = {
 	{
 		.name	= "qup_phys_addr",
@@ -483,6 +518,29 @@ static struct resource gsbi9_qup_i2c_resources[] = {
 	},
 };
 
+#if defined (CONFIG_EPEN_WACOM_G5SP)
+static struct resource gsbi11_qup_i2c_resources[] = {
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI11_QUP_PHYS,
+		.end	= MSM_GSBI11_QUP_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI11_PHYS,
+		.end	= MSM_GSBI11_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= GSBI11_QUP_IRQ,
+		.end	= GSBI11_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#endif
+
 static struct resource gsbi12_qup_i2c_resources[] = {
 	{
 		.name	= "qup_phys_addr",
@@ -503,6 +561,30 @@ static struct resource gsbi12_qup_i2c_resources[] = {
 		.flags	= IORESOURCE_IRQ,
 	},
 };
+
+#if defined(CONFIG_PN544_NFC)
+static struct resource gsbi10_qup_i2c_resources[] = {
+	{
+		.name	= "qup_phys_addr",
+		.start	= MSM_GSBI10_QUP_PHYS,
+		.end	= MSM_GSBI10_QUP_PHYS + SZ_4K - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "gsbi_qup_i2c_addr",
+		.start	= MSM_GSBI10_PHYS,
+		.end	= MSM_GSBI10_PHYS + 4 - 1,
+		.flags	= IORESOURCE_MEM,
+	},
+	{
+		.name	= "qup_err_intr",
+		.start	= GSBI10_QUP_IRQ,
+		.end	= GSBI10_QUP_IRQ,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#endif
+
 
 #ifdef CONFIG_MSM_BUS_SCALING
 static struct msm_bus_vectors grp3d_init_vectors[] = {
@@ -710,7 +792,7 @@ static struct kgsl_device_platform_data kgsl_3d0_pdata = {
 	.init_level = 0,
 	.num_levels = 5,
 	.set_grp_async = NULL,
-	.idle_timeout = HZ/5,
+	.idle_timeout = HZ/12, // HZ/5 -> HZ/15, changed for low power consumption
 	.nap_allowed = true,
 	.clk_map = KGSL_CLK_CORE | KGSL_CLK_IFACE | KGSL_CLK_MEM_IFACE,
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -836,6 +918,16 @@ void __init msm8x60_check_2d_hardware(void)
 		kgsl_2d0_pdata.clk_map = 0;
 	}
 }
+#if defined (CONFIG_TARGET_LOCALE_USA)
+#define MSM_A2220_I2C_BUS_ID		16	
+/* Use GSBI1 QUP for /dev/i2c-0 */
+struct platform_device msm_gsbi1_qup_i2c_device = {
+	.name		= "qup_i2c",
+	.id		= MSM_A2220_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(gsbi1_qup_i2c_resources),
+	.resource	= gsbi1_qup_i2c_resources,
+};
+#endif
 
 /* Use GSBI3 QUP for /dev/i2c-0 */
 struct platform_device msm_gsbi3_qup_i2c_device = {
@@ -877,6 +969,16 @@ struct platform_device msm_gsbi7_qup_i2c_device = {
 	.resource	= gsbi7_qup_i2c_resources,
 };
 
+#if defined (CONFIG_EPEN_WACOM_G5SP)
+/* Use GSBI11 QUP for /dev/i2c-18 (E-Pen) */
+struct platform_device msm_gsbi11_qup_i2c_device = {
+	.name		= "qup_i2c",
+	.id		= MSM_GSBI11_QUP_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(gsbi11_qup_i2c_resources),
+	.resource	= gsbi11_qup_i2c_resources,
+};
+#endif /* defined (CONFIG_EPEN_WACOM_G5SP) */
+
 /* Use GSBI12 QUP for /dev/i2c-5 (Sensors) */
 struct platform_device msm_gsbi12_qup_i2c_device = {
 	.name		= "qup_i2c",
@@ -884,6 +986,16 @@ struct platform_device msm_gsbi12_qup_i2c_device = {
 	.num_resources	= ARRAY_SIZE(gsbi12_qup_i2c_resources),
 	.resource	= gsbi12_qup_i2c_resources,
 };
+
+#if defined(CONFIG_PN544_NFC)
+/* Use GSBI10 QUP for /dev/i2c-5 (Sensors) */
+struct platform_device msm_gsbi10_qup_i2c_device = {
+	.name		= "qup_i2c",
+	.id		= MSM_GSBI10_QUP_I2C_BUS_ID,
+	.num_resources	= ARRAY_SIZE(gsbi10_qup_i2c_resources),
+	.resource	= gsbi10_qup_i2c_resources,
+};
+#endif
 
 #ifdef CONFIG_MSM_SSBI
 #define MSM_SSBI_PMIC1_PHYS	0x00500000
@@ -1937,8 +2049,13 @@ struct platform_device msm_device_smd = {
 };
 
 static struct msm_watchdog_pdata msm_watchdog_pdata = {
+#ifdef CONFIG_SEC_DEBUG // msm_watchdog.c doesn't use boot command line.
+	.pet_time = 10000,
+	.bark_time = 20000,
+#else
 	.pet_time = 10000,
 	.bark_time = 11000,
+#endif
 	.has_secure = true,
 };
 

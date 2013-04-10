@@ -1797,6 +1797,31 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 		case CPU_ONLINE:
 		case CPU_ONLINE_FROZEN:
 			cpufreq_add_dev(sys_dev);
+#ifdef CONFIG_SEC_DVFS
+			if (cpu == NON_BOOT_CPU)
+			{
+#ifndef CONFIG_SEC_DVFS_UNI			
+				unsigned int cur, min, max;
+				
+				/* get current freq & update now */
+				min = get_min_lock();
+				max = get_max_lock();
+				cur = cpufreq_quick_get(cpu);
+				if (cur)
+				{
+					struct cpufreq_policy policy;
+					policy.cpu = cpu;
+
+					if (min && cur < min)
+						cpufreq_driver_target(&policy, min, CPUFREQ_RELATION_H);
+					else if (max && cur > max)
+						cpufreq_driver_target(&policy, max, CPUFREQ_RELATION_L);
+				}
+#else
+				set_freq_limit(DVFS_UNICPU_ID, -1);
+#endif
+			}
+#endif
 			break;
 		case CPU_DOWN_PREPARE:
 		case CPU_DOWN_PREPARE_FROZEN:
@@ -1804,6 +1829,10 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 				BUG();
 
 			__cpufreq_remove_dev(sys_dev);
+#ifdef CONFIG_SEC_DVFS_UNI
+			if (cpu == NON_BOOT_CPU)
+				set_freq_limit(DVFS_UNICPU_ID, 0);
+#endif			
 			break;
 		case CPU_DOWN_FAILED:
 		case CPU_DOWN_FAILED_FROZEN:

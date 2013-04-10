@@ -43,6 +43,8 @@ obj-$(CONFIG_TOUCHSCREEN_HTCPEN)	+= htcpen.o
 obj-$(CONFIG_TOUCHSCREEN_USB_COMPOSITE)	+= usbtouchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_PCAP)		+= pcap_ts.o
 obj-$(CONFIG_TOUCHSCREEN_PENMOUNT)	+= penmount.o
+obj-$(CONFIG_TOUCHSCREEN_QT602240)	+= qt602240_ts.o
+obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXT540E)	+= mxt540e_q1.o
 obj-$(CONFIG_TOUCHSCREEN_S3C2410)	+= s3c2410_ts.o
 obj-$(CONFIG_TOUCHSCREEN_ST1232)	+= st1232.o
 obj-$(CONFIG_TOUCHSCREEN_STMPE)		+= stmpe-ts.o
@@ -57,6 +59,7 @@ obj-$(CONFIG_TOUCHSCREEN_TSC2007)	+= tsc2007.o
 obj-$(CONFIG_TOUCHSCREEN_UCB1400)	+= ucb1400_ts.o
 obj-$(CONFIG_TOUCHSCREEN_WACOM_W8001)	+= wacom_w8001.o
 obj-$(CONFIG_TOUCHSCREEN_WM831X)	+= wm831x-ts.o
+obj-$(CONFIG_EPEN_WACOM_G5SP)	+= wacom_i2c.o wacom_i2c_firm.o wacom_i2c_flash.o wacom_i2c_func.o
 obj-$(CONFIG_TOUCHSCREEN_WM97XX)	+= wm97xx-ts.o
 wm97xx-ts-$(CONFIG_TOUCHSCREEN_WM9705)	+= wm9705.o
 wm97xx-ts-$(CONFIG_TOUCHSCREEN_WM9712)	+= wm9712.o
@@ -69,3 +72,12 @@ obj-$(CONFIG_TOUCHSCREEN_TPS6507X)	+= tps6507x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_MSM_LEGACY)		+= msm_touch.o
 obj-$(CONFIG_TOUCHSCREEN_CY8C_TS)	+= cy8c_ts.o
 obj-$(CONFIG_TOUCHSCREEN_CYTTSP_I2C)       += cyttsp-i2c.o
+ifdef CONFIG_SAMSUNG_8X60_TABLET
+obj-$(CONFIG_TOUCHSCREEN_MELFAS) += melfas_ts_tablet.o mcs8000_download_tablet.o mms100_ICS_download_tablet.o
+else
+obj-$(CONFIG_TOUCHSCREEN_MELFAS) += melfas_ts.o mcs8000_download.o
+endif
+
+ifeq ($(TARGET_BUILD_VARIANT), eng)
+KBUILD_CFLAGS		+= -DSEC_TSP_POSITION_DEBUG
+endif

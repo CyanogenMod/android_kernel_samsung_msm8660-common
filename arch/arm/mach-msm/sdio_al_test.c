@@ -2428,221 +2428,221 @@ static int sdio_al_test_debugfs_init(void)
 
 	test_ctx->debug.debug_test_result = debugfs_create_u32(
 					"test_result",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->test_result);
 
 	test_ctx->debug.debug_dun_throughput = debugfs_create_u32(
 					"dun_throughput",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->debug.dun_throughput);
 
 	test_ctx->debug.debug_rmnt_throughput = debugfs_create_u32(
 					"rmnt_throughput",
-					S_IRUGO | S_IWUGO,
+					S_IRUGO | S_IWUSR |S_IWGRP,
 					test_ctx->debug.debug_root,
 					&test_ctx->debug.rmnt_throughput);
 
 	test_ctx->debug.rpc_sender_test =
 		debugfs_create_file("10_rpc_sender_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_sender_test_ops);
 
 	test_ctx->debug.rpc_qmi_diag_sender_test =
 		debugfs_create_file("20_rpc_qmi_diag_sender_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_qmi_diag_sender_test_ops);
 
 	test_ctx->debug.rmnet_a2_validation_test =
 		debugfs_create_file("30_rmnet_a2_validation_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_a2_validation_test_ops);
 
 	test_ctx->debug.dun_a2_validation_test =
 		debugfs_create_file("40_dun_a2_validation_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &dun_a2_validation_test_ops);
 
 	test_ctx->debug.rmnet_a2_perf_test =
 		debugfs_create_file("50_rmnet_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_a2_perf_test_ops);
 
 	test_ctx->debug.dun_a2_perf_test =
 		debugfs_create_file("60_dun_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &dun_a2_perf_test_ops);
 
 	test_ctx->debug.csvt_a2_perf_test =
 		debugfs_create_file("71_csvt_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &csvt_a2_perf_test_ops);
 
 	test_ctx->debug.rmnet_dun_a2_perf_test =
 		debugfs_create_file("70_rmnet_dun_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rmnet_dun_a2_perf_test_ops);
 
 	test_ctx->debug.rpc_sender_rmnet_a2_perf_test =
 		debugfs_create_file("80_rpc_sender_rmnet_a2_perf_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &rpc_sender_rmnet_a2_perf_test_ops);
 
 	test_ctx->debug.smem_test =
 		debugfs_create_file("90_smem_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &smem_test_ops);
 
 	test_ctx->debug.smem_rpc_test =
 		debugfs_create_file("100_smem_rpc_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &smem_rpc_test_ops);
 
 	test_ctx->debug.all_channels_test =
 		debugfs_create_file("150_all_channels_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &all_channels_test_ops);
 
 	test_ctx->debug.host_sender_no_lp_diag_test =
 		debugfs_create_file("160_host_sender_no_lp_diag_test",
-				    S_IRUGO | S_IWUGO,
+				    S_IRUGO | S_IWUSR |S_IWGRP,
 				    test_ctx->debug.debug_root,
 				    NULL,
 				    &host_sender_no_lp_diag_test_ops);
 
 	test_ctx->debug.host_sender_no_lp_diag_rpc_test =
 		debugfs_create_file("170_host_sender_no_lp_diag_rpc_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &host_sender_no_lp_diag_rpc_test_ops);
 
 	test_ctx->debug.rmnet_small_packets_test =
 		debugfs_create_file("180_rmnet_small_packets_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &rmnet_small_packets_test_ops);
 
 	test_ctx->debug.rmnet_rtt_test =
 		debugfs_create_file("190_rmnet_rtt_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &rmnet_rtt_test_ops);
 
 	test_ctx->debug.csvt_rtt_test =
 		debugfs_create_file("191_csvt_rtt_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &csvt_rtt_test_ops);
 
 	test_ctx->debug.modem_reset_rpc_test =
 		debugfs_create_file("220_modem_reset_rpc_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_rpc_test_ops);
 
 	test_ctx->debug.modem_reset_rmnet_test =
 		debugfs_create_file("230_modem_reset_rmnet_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_rmnet_test_ops);
 
 	test_ctx->debug.modem_reset_channels_4bit_dev_test =
 		debugfs_create_file("240_modem_reset_channels_4bit_dev_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_channels_4bit_dev_test_ops);
 
 	test_ctx->debug.modem_reset_channels_8bit_dev_test =
 		debugfs_create_file("250_modem_reset_channels_8bit_dev_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_channels_8bit_dev_test_ops);
 
 	test_ctx->debug.modem_reset_all_channels_test =
 		debugfs_create_file("260_modem_reset_all_channels_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &modem_reset_all_channels_test_ops);
 
 	test_ctx->debug.open_close_test =
 		debugfs_create_file("270_open_close_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &open_close_test_ops);
 
 	test_ctx->debug.open_close_dun_rmnet_test =
 		debugfs_create_file("271_open_close_dun_rmnet_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &open_close_dun_rmnet_test_ops);
 
 	test_ctx->debug.close_chan_lpm_test =
 		debugfs_create_file("280_close_chan_lpm_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &close_chan_lpm_test_ops);
 
 	test_ctx->debug.lpm_test_client_wakes_host_test =
 		debugfs_create_file("600_lpm_test_client_wakes_host_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_client_wakes_host_test_ops);
 
 	test_ctx->debug.lpm_test_host_wakes_client_test =
 		debugfs_create_file("610_lpm_test_host_wakes_client_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_host_wakes_client_test_ops);
 
 	test_ctx->debug.lpm_test_random_single_channel_test =
 		debugfs_create_file("620_lpm_test_random_single_channel_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_random_single_channel_test_ops);
 
 	test_ctx->debug.lpm_test_random_multi_channel_test =
 		debugfs_create_file("630_lpm_test_random_multi_channel_test",
-				     S_IRUGO | S_IWUGO,
+				     S_IRUGO | S_IWUSR |S_IWGRP,
 				     test_ctx->debug.debug_root,
 				     NULL,
 				     &lpm_test_random_multi_channel_test_ops);

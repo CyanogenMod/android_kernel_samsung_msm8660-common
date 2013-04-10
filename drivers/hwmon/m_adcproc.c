@@ -52,6 +52,26 @@ static const struct adc_map_pt adcmap_msmtherm[] = {
 	{107,	120}
 };
 
+static const struct adc_map_pt adcmap_sec_settherm[] = {
+	{386,	 650},
+	{381,	 600},
+	{376,	 550},
+	{370,	 500},
+	{362,	 450},
+	{354,	 400},
+	{344,	 350},
+	{332,	 300},
+	{318,	 250},
+	{303,	 200},
+	{286,	 150},
+	{269,	 100},
+	{250,	  50},
+	{232,	   0},
+	{213,	 -50},
+	{196,	-100},
+	{180,	-150},
+	{165,	-200}
+};
 static const struct adc_map_pt adcmap_ntcg104ef104fb[] = {
 	{696483,	-40960},
 	{649148,	-39936},
@@ -466,4 +486,21 @@ int32_t scale_xtern_chgr_cur(int32_t adc_code,
 	adc_chan_result->physical = (int32_t) adc_chan_result->measurement;
 
 	return 0;
+}
+int32_t scale_sec_settherm(int32_t adc_code,
+		const struct adc_properties *adc_properties,
+		const struct chan_properties *chan_properties,
+		struct adc_chan_result *adc_chan_result)
+{
+	adc_chan_result->adc_code = adc_code;
+	//printk("%s: adc_value: %d\n", __func__, adc_chan_result->adc_code);
+	adc_chan_result->measurement = (11768-adc_chan_result->adc_code)/30;
+	adc_chan_result->physical = (int32_t) adc_chan_result->measurement;
+
+	/* convert mV ---> degC using the table */
+	return adc_map_linear(
+			adcmap_sec_settherm,
+			sizeof(adcmap_sec_settherm)/sizeof(adcmap_sec_settherm[0]),
+			adc_chan_result->physical,
+			&adc_chan_result->physical);
 }

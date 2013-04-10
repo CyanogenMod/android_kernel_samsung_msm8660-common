@@ -39,6 +39,10 @@
 
 #include <mach/msm72k_otg.h>
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+#include <linux/host_notify.h>
+#endif
+
 #define MSM_USB_BASE (hcd->regs)
 
 struct msmusb_hcd {
@@ -731,6 +735,17 @@ static int __devinit ehci_msm_probe(struct platform_device *pdev)
 	else
 		clk_set_rate(pdata->ebi1_clk, INT_MAX);
 
+#ifdef CONFIG_USB_HOST_NOTIFY
+		if (pdata->host_notify) {
+			hcd->host_notify = pdata->host_notify;
+			hcd->ndev.name = dev_name(&pdev->dev);
+			retval = host_notify_dev_register(&hcd->ndev);
+			if (retval) {
+				dev_err(&pdev->dev, "Failed to host_notify_dev_register\n");
+				return -ENODEV;
+			}
+		}
+#endif
 	retval = msm_xusb_init_host(pdev, mhcd);
 
 	if (retval < 0) {
@@ -777,7 +792,10 @@ static int __exit ehci_msm_remove(struct platform_device *pdev)
 
 	pdata = pdev->dev.platform_data;
 	device_init_wakeup(&pdev->dev, 0);
-
+	
+#ifdef CONFIG_USB_HOST_NOTIFY
+	host_notify_dev_unregister(&hcd->ndev);
+#endif
 	msm_hsusb_request_host((void *)mhcd, REQUEST_STOP);
 	msm_xusb_uninit_host(mhcd);
 	retval = msm_xusb_rpc_close(mhcd);

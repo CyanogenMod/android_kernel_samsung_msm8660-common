@@ -14,17 +14,26 @@
 #define __EXTERNAL_COMMON_H__
 #include <linux/switch.h>
 
+#define DEV_INFO_ENA
+
+#define DEBUG
 #ifdef DEBUG
 #ifndef DEV_DBG_PREFIX
 #define DEV_DBG_PREFIX "EXT_INTERFACE: "
 #endif
-#define DEV_DBG(args...)	pr_debug(DEV_DBG_PREFIX args)
+#define DEV_DBG(args...)	dev_info(external_common_state->dev, args)
 #else
 #define DEV_DBG(args...)	(void)0
 #endif /* DEBUG */
+#ifdef DEV_INFO_ENA
 #define DEV_INFO(args...)	dev_info(external_common_state->dev, args)
-#define DEV_WARN(args...)	dev_warn(external_common_state->dev, args)
-#define DEV_ERR(args...)	dev_err(external_common_state->dev, args)
+#define DEV_WARN(args...)	dev_info(external_common_state->dev, args)
+#define DEV_ERR(args...)	dev_info(external_common_state->dev, args)
+#else
+#define DEV_INFO(args...)	 do {} while (0)
+#define DEV_WARN(args...)	 do {} while (0)
+#define DEV_ERR(args...)	 do {} while (0)
+#endif
 
 #ifdef CONFIG_FB_MSM_TVOUT
 #define TVOUT_VFRMT_NTSC_M_720x480i		0
@@ -153,9 +162,16 @@ struct hdmi_disp_mode_timing_type {
 #define HDMI_SETTINGS_1440x480i60_16_9					\
 	{HDMI_VFRMT_1440x480i60_16_9,    1440, 38,  124, 114, TRUE,	\
 	 240, 4, 3, 15, TRUE, 27000, 60000, TRUE, TRUE}
+#if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2) &&\
+		!defined(CONFIG_VIDEO_MHL_TABLET_V1)
 #define HDMI_SETTINGS_1920x1080p60_16_9					\
 	{HDMI_VFRMT_1920x1080p60_16_9,   1920, 88,  44,  148,  FALSE,	\
 	 1080, 4, 5, 36, FALSE, 148500, 60000, FALSE, TRUE}
+#else /* due to MHL limitation, 1080p60 is not supported - jgk.20111214*/
+#define HDMI_SETTINGS_1920x1080p60_16_9					\
+	{HDMI_VFRMT_1920x1080p60_16_9,   1920, 88,  44,  148,  FALSE,	\
+	 1080, 4, 5, 36, FALSE, 148500, 60000, FALSE, FALSE}
+#endif
 #define HDMI_SETTINGS_720x576p50_4_3					\
 	{HDMI_VFRMT_720x576p50_4_3,      720,  12,  64,  68,   TRUE,	\
 	 576,  5, 5, 39, TRUE, 27000, 50000, FALSE, TRUE}
@@ -171,15 +187,31 @@ struct hdmi_disp_mode_timing_type {
 #define HDMI_SETTINGS_1440x576i50_16_9					\
 	{HDMI_VFRMT_1440x576i50_16_9,    1440, 24,  126, 138,  TRUE,	\
 	 288,  2, 3, 19, TRUE, 27000, 50000, TRUE, TRUE}
+#if !defined(CONFIG_VIDEO_MHL_V1) && !defined(CONFIG_VIDEO_MHL_V2) && \
+		!defined(CONFIG_VIDEO_MHL_TABLET_V1)
 #define HDMI_SETTINGS_1920x1080p50_16_9					\
 	{HDMI_VFRMT_1920x1080p50_16_9,   1920,  528,  44,  148,  FALSE,	\
 	 1080, 4, 5, 36, FALSE, 148500, 50000, FALSE, TRUE}
+#else /* due to MHL limitation, 1080p60 is not supported - jgk.20111214*/
+#define HDMI_SETTINGS_1920x1080p50_16_9					\
+	{HDMI_VFRMT_1920x1080p50_16_9,   1920,  528,  44,  148,  FALSE,	\
+	 1080, 4, 5, 36, FALSE, 148500, 50000, FALSE, FALSE}
+#endif
+#ifdef CONFIG_VIDEO_MHL_TABLET_V1
+#define HDMI_SETTINGS_1920x1080p24_16_9					\
+	{HDMI_VFRMT_1920x1080p24_16_9,   1920,  638,  44,  148,  FALSE,	\
+	 1080, 4, 5, 36, FALSE, 74250, 24000, FALSE, FALSE}
+#define HDMI_SETTINGS_1920x1080p25_16_9					\
+	{HDMI_VFRMT_1920x1080p25_16_9,   1920,  528,  44,  148,  FALSE,	\
+	 1080, 4, 5, 36, FALSE, 74250, 25000, FALSE, FALSE}
+#else
 #define HDMI_SETTINGS_1920x1080p24_16_9					\
 	{HDMI_VFRMT_1920x1080p24_16_9,   1920,  638,  44,  148,  FALSE,	\
 	 1080, 4, 5, 36, FALSE, 74250, 24000, FALSE, TRUE}
 #define HDMI_SETTINGS_1920x1080p25_16_9					\
 	{HDMI_VFRMT_1920x1080p25_16_9,   1920,  528,  44,  148,  FALSE,	\
 	 1080, 4, 5, 36, FALSE, 74250, 25000, FALSE, TRUE}
+#endif
 #define HDMI_SETTINGS_1920x1080p30_16_9					\
 	{HDMI_VFRMT_1920x1080p30_16_9,   1920,  88,   44,  148,  FALSE,	\
 	 1080, 4, 5, 36, FALSE, 74250, 30000, FALSE, TRUE}
@@ -235,6 +267,7 @@ struct external_common_state_type {
 	int (*read_edid_block)(int block, uint8 *edid_buf);
 	int (*hpd_feature)(int on);
 #endif
+	uint16 audio_speaker_data;
 };
 
 /* The external interface driver needs to initialize the common state. */

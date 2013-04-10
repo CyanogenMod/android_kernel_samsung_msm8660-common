@@ -40,6 +40,10 @@
 #include "sd_ops.h"
 #include "sdio_ops.h"
 
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+#include "../host/msm_sdcc.h"
+#endif
+
 static struct workqueue_struct *workqueue;
 
 /*
@@ -94,11 +98,21 @@ static void mmc_flush_scheduled_work(void)
  */
 void mmc_request_done(struct mmc_host *host, struct mmc_request *mrq)
 {
-	struct mmc_command *cmd = mrq->cmd;
-	int err = cmd->error;
+	struct mmc_command *cmd;
+	int err;
 #ifdef CONFIG_MMC_PERF_PROFILING
 	ktime_t diff;
 #endif
+
+	if(mrq == NULL)
+		return;
+
+	cmd = mrq->cmd;
+
+	if(cmd == NULL)
+		return;
+
+	err = cmd->error;
 
 	if (err && cmd->retries && mmc_host_is_spi(host)) {
 		if (cmd->resp[0] & R1_SPI_ILLEGAL_COMMAND)
@@ -1912,7 +1926,12 @@ int mmc_suspend_host(struct mmc_host *host)
 		cancel_delayed_work(&host->disable);
 	if (cancel_delayed_work(&host->detect))
 		wake_unlock(&host->detect_wake_lock);
-	mmc_flush_scheduled_work();
+
+	/* If there is pending detect work abort runtime suspend*/
+	if (unlikely(work_busy(&host->detect.work)))
+		return -EAGAIN;
+	else
+		mmc_flush_scheduled_work();
 
 	mmc_bus_get(host);
 	if (host->bus_ops && !host->bus_dead) {
@@ -1960,6 +1979,14 @@ int mmc_suspend_host(struct mmc_host *host)
 	if (!err && !mmc_card_keep_power(host))
 		mmc_power_off(host);
 
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || \
+	defined (CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined (CONFIG_KOR_MODEL_SHV_E120L) || \
+	defined (CONFIG_KOR_MODEL_SHV_E110S)
+	
+#else
+	if (host->card && host->index == 2 )
+		mdelay(50);
+#endif
 	return err;
 }
 
@@ -2022,6 +2049,9 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 {
 	struct mmc_host *host = container_of(
 		notify_block, struct mmc_host, pm_notify);
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+	struct msmsdcc_host *msmhost = mmc_priv(host);
+#endif
 	unsigned long flags;
 
 
@@ -2064,6 +2094,13 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		}
 		host->rescan_disable = 0;
 		spin_unlock_irqrestore(&host->lock, flags);
+
+#if defined(CONFIG_BCM4334) || defined(CONFIG_BCM4330)
+		if (host->card && msmhost && msmhost->pdev_id == 4)
+			printk(KERN_INFO"%s(): WLAN SKIP DETECT CHANGE\n",
+					__func__);
+		else
+#endif
 		mmc_detect_change(host, 0);
 
 	}

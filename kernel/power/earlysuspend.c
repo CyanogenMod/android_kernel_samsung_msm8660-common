@@ -27,7 +27,7 @@ enum {
 	DEBUG_SUSPEND = 1U << 2,
 	DEBUG_VERBOSE = 1U << 3,
 };
-static int debug_mask = DEBUG_USER_STATE;
+static int debug_mask = DEBUG_USER_STATE | DEBUG_SUSPEND | DEBUG_VERBOSE;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 static DEFINE_MUTEX(early_suspend_lock);
@@ -76,6 +76,11 @@ static void early_suspend(struct work_struct *work)
 	unsigned long irqflags;
 	int abort = 0;
 
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("early_suspend: begin\n");
+
+	pr_info("early_suspend: %s\n",current->comm);
+
 	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED)
@@ -103,6 +108,8 @@ static void early_suspend(struct work_struct *work)
 	mutex_unlock(&early_suspend_lock);
 
 	suspend_sys_sync_queue();
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("early_suspend: done\n");
 abort:
 	spin_lock_irqsave(&state_lock, irqflags);
 	if (state == SUSPEND_REQUESTED_AND_SUSPENDED)
@@ -115,6 +122,9 @@ static void late_resume(struct work_struct *work)
 	struct early_suspend *pos;
 	unsigned long irqflags;
 	int abort = 0;
+
+	if (debug_mask & DEBUG_SUSPEND)
+		pr_info("late_resume: begin\n");
 
 	mutex_lock(&early_suspend_lock);
 	spin_lock_irqsave(&state_lock, irqflags);
@@ -157,6 +167,7 @@ void request_suspend_state(suspend_state_t new_state)
 		struct rtc_time tm;
 		getnstimeofday(&ts);
 		rtc_time_to_tm(ts.tv_sec, &tm);
+		#ifndef CONFIG_USA_MODEL_SGH_T989
 		pr_info("request_suspend_state: %s (%d->%d) at %lld "
 			"(%d-%02d-%02d %02d:%02d:%02d.%09lu UTC)\n",
 			new_state != PM_SUSPEND_ON ? "sleep" : "wakeup",
@@ -164,6 +175,7 @@ void request_suspend_state(suspend_state_t new_state)
 			ktime_to_ns(ktime_get()),
 			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
 			tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
+		#endif	
 	}
 	if (!old_sleep && new_state != PM_SUSPEND_ON) {
 		state |= SUSPEND_REQUESTED;

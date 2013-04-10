@@ -2397,8 +2397,10 @@ int uart_add_one_port(struct uart_driver *drv, struct uart_port *uport)
 	 */
 	tty_dev = tty_register_device(drv->tty_driver, uport->line, uport->dev);
 	if (likely(!IS_ERR(tty_dev))) {
-		device_init_wakeup(tty_dev, 1);
-		device_set_wakeup_enable(tty_dev, 0);
+		// NO need to call both init and enable(0).
+		device_set_wakeup_capable(tty_dev, 1);
+		// device_init_wakeup(tty_dev, 1);
+		// device_set_wakeup_enable(tty_dev, 0);
 	} else
 		printk(KERN_ERR "Cannot register tty device on line %d\n",
 		       uport->line);

@@ -28,30 +28,6 @@
 #ifdef __KERNEL__
 #include <linux/ion.h>
 #endif
-
-#define VFE_FRAME_NUM_MAX	0x00FFFFFF
-#define ZERO_OUT_FRAME		0xFF000000
-#define CLEAR_FOCUS_BIT		0x7FFFFFFF
-#define get_focus_bit(x) ({ \
-	(x & 0x80000000) >> 31; \
-})
-#define get_frame_num(x) ({ \
-	x & VFE_FRAME_NUM_MAX; \
-})
-#define get_focus_in_position(x) ({ \
-	(x & 00000001) << 31; \
-})
-#define increment_frame_num(x) ({ \
-	uint32_t num = get_frame_num(x); \
-	num = num + 1; \
-	(x & ZERO_OUT_FRAME) | num; \
-})
-#define decrement_frame_num(x) ({ \
-	uint32_t num = get_frame_num(x); \
-	num = num - 1; \
-	(x & ZERO_OUT_FRAME) | num; \
-})
-
 #define MSM_CAM_IOCTL_MAGIC 'm'
 
 #define MSM_CAM_IOCTL_GET_SENSOR_INFO \
@@ -202,7 +178,7 @@
 	_IOR(MSM_CAM_IOCTL_MAGIC, 49, struct v4l2_queryctrl)
 
 #define MSM_CAM_IOCTL_GET_KERNEL_SYSTEM_TIME \
-	_IOW(MSM_CAM_IOCTL_MAGIC, 50, struct timeval *)
+	_IOW(MSM_CAM_IOCTL_MAGIC, 53, struct timeval *)
 
 #define MSM_CAM_IOCTL_SET_VFE_OUTPUT_TYPE \
 	_IOW(MSM_CAM_IOCTL_MAGIC, 51, uint32_t *)
@@ -213,8 +189,7 @@
 #define MSM_CAM_IOCTL_MCTL_DIVERT_DONE \
 	_IOR(MSM_CAM_IOCTL_MAGIC, 52, struct msm_cam_evt_divert_frame *)
 
-#define MCTL_CAM_IOCTL_SET_FOCUS \
-	_IOW(MSM_CAM_IOCTL_MAGIC, 53, uint32_t)
+#define MSM_CAM_IOCTL_EXT_CONFIG  _IOWR(MSM_CAM_IOCTL_MAGIC, 50, sensor_ext_cfg_data)
 
 struct msm_mctl_pp_cmd {
 	int32_t  id;
@@ -275,6 +250,16 @@ struct msm_ctrl_cmd {
 	int vnode_id;  /* video dev id. Can we overload resp_fd? */
 	uint32_t stream_type; /* used to pass value to qcamera server */
 	int config_ident; /*used as identifier for config node*/
+};
+struct msm_isp_ctrl_cmd {
+	uint16_t type;
+	uint16_t length;
+	uint16_t status;
+	uint32_t timeout_ms;
+	int resp_fd; /* FIXME: to be used by the kernel, pass-through for now */
+	/* maximum possible data size that can be sent to user space is only
+		64 bytes */
+	char value[40];
 };
 
 struct msm_cam_evt_msg {
@@ -793,11 +778,14 @@ struct msm_snapshot_pp_status {
 #define CFG_SENSOR_INIT    29
 #define CFG_GET_3D_CALI_DATA 30
 #define CFG_GET_CALIB_DATA		31
-#define CFG_GET_OUTPUT_INFO		32
+#define CFG_SET_ISO			32
+//Qualcomm Orginal Code CFG_GET_OUTPUT_INFO 32
 #define CFG_GET_EEPROM_DATA		33
 #define CFG_SET_ACTUATOR_INFO		34
 #define CFG_GET_ACTUATOR_INFO		35
-#define CFG_MAX			36
+#define CFG_SET_SATURATION	36
+#define CFG_GET_OUTPUT_INFO		37
+#define CFG_MAX			38
 
 
 #define MOVE_NEAR	0
@@ -809,6 +797,7 @@ struct msm_snapshot_pp_status {
 #define SENSOR_HFR_60FPS_MODE 3
 #define SENSOR_HFR_90FPS_MODE 4
 #define SENSOR_HFR_120FPS_MODE 5
+#define SENSOR_SNAPSHOT_TRANSFER	6
 
 #define SENSOR_QTR_SIZE			0
 #define SENSOR_FULL_SIZE		1
@@ -828,6 +817,131 @@ struct msm_snapshot_pp_status {
 #define CAMERA_EFFECT_SKETCH		10
 #define CAMERA_EFFECT_NEON		11
 #define CAMERA_EFFECT_MAX		12
+
+///////////////////////////
+//  samsung
+
+typedef enum {
+    CAM_VT_MODE_NONE,
+    CAM_VT_MODE_3G,
+    CAM_VT_MODE_VOIP,
+} cam_vt_mode;
+
+enum msm_sensor_mode {
+	SENSOR_CAMERA,
+	SENSOR_MOVIE,
+};
+enum camera_scene_mode
+{
+	SCENE_MODE_BASE,
+	SCENE_MODE_NONE,// 1
+	SCENE_MODE_PORTRAIT,
+	SCENE_MODE_NIGHTSHOT,
+	SCENE_MODE_BACK_LIGHT,
+	SCENE_MODE_LANDSCAPE, // 5
+	SCENE_MODE_SPORTS,
+	SCENE_MODE_PARTY_INDOOR,
+	SCENE_MODE_BEACH_SNOW,
+	SCENE_MODE_SUNSET,
+	SCENE_MODE_DUSK_DAWN, // 10
+	SCENE_MODE_FALL_COLOR,
+	SCENE_MODE_FIREWORKS,
+	SCENE_MODE_TEXT,
+	SCENE_MODE_CANDLE_LIGHT,
+	SCENE_MODE_MAX,
+};
+
+enum camera_focusmode {
+	FOCUS_MODE_AUTO = 0,
+	FOCUS_MODE_MACRO,
+	FOCUS_MODE_INFINITY,
+	FOCUS_MODE_FIXED,
+	FOCUS_MODE_FACEDETECT,
+	FOCUS_MODE_CONTINOUS,
+	FOCUS_MODE_TOUCH,
+	FOCUS_MODE_TOUCH_MACRO,
+	FOCUS_MODE_MAX,
+	FOCUS_MODE_DEFAULT = (1 << 8),
+};
+
+
+//////////////////////////////////////////////////////
+// temp code from behold2
+typedef struct{
+    char     category;
+    char     byte;
+    char     value;
+}ioctl_m5mo_info_8bit;
+ 
+ 
+typedef struct{
+    int		category;
+    int		byte;
+	int		value;
+}ioctl_m5mo_info;
+
+typedef struct{
+    int		address;
+    int 	size;
+    char	*value;
+    int 	pgh_magic;
+}ioctl_m5mo_i2c_memory_info; //for M4MO's memory write
+
+
+typedef struct{
+    int address;
+    int value;
+    int codeA;
+    int codeB;
+    int codeC;
+} ioctl_msg_info;
+//////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////
+// for Direct config from HAL
+#if 1
+typedef struct{
+	uint32_t cmd;
+	uint32_t  value_1;
+	uint32_t  value_2;
+	void *value_string;	
+} sensor_ext_cfg_data;
+
+typedef struct {
+	char company;
+	char module_vesion;
+	char year;
+	char month;
+	char update_times[2];
+} sensor_version_info;
+
+typedef struct {
+	uint32_t dev_num;
+	char module_name[10];
+} sensor_name_info;
+
+
+
+#define	READ_FW_VERSION		1
+#define	UPDATE_M5MO_FW		2
+#define	READ_UPDATE_STATE	3
+
+
+#define EXIF_EXPOSURE_TIME		        0
+#define EXIF_TV					1
+#define EXIF_AV					2
+#define EXIF_BV					3
+#define EXIF_EBV				4
+#define EXIF_ISO				5
+#define EXIF_FLASH				6
+
+#define SIZE_MAIN	0
+#define SIZE_THUMB	1
+
+#endif
+//////////////////////////////////////////////////////
+
 
 /* QRD */
 #define CAMERA_EFFECT_BW		10
@@ -888,7 +1002,7 @@ struct msm_snapshot_pp_status {
 #define CAMERA_SETAE_AVERAGE		0
 #define CAMERA_SETAE_CENWEIGHT	1
 
-#define CFG_SET_SATURATION		30
+// for_camera_bring_up  EL09, temp_out, #define CFG_SET_SATURATION		30
 #define CFG_SET_SHARPNESS			31
 #define CFG_SET_TOUCHAEC            32
 #define CFG_SET_AUTO_FOCUS          33
@@ -1107,6 +1221,15 @@ struct sensor_cfg_data {
 
 	union {
 		int8_t effect;
+		//samsung[[
+		int8_t brightness;
+		int8_t whitebalance;
+		int8_t iso;
+		int8_t contrast;
+		int8_t sharpness;
+		int8_t saturation;
+		int8_t metering;
+		//]]
 		uint8_t lens_shading;
 		uint16_t prevl_pf;
 		uint16_t prevp_pl;
@@ -1126,10 +1249,10 @@ struct sensor_cfg_data {
 		struct sensor_eeprom_data_t eeprom_data;
 		/* QRD */
 		uint16_t antibanding;
-		uint8_t contrast;
-		uint8_t saturation;
-		uint8_t sharpness;
-		int8_t brightness;
+	//	uint8_t contrast;
+	//	uint8_t saturation;
+	//	uint8_t sharpness;
+	//	int8_t brightness;
 		int ae_mode;
 		uint8_t wb_val;
 		int8_t exp_compensation;
@@ -1232,6 +1355,54 @@ struct flash_ctrl_data {
 		struct strobe_flash_ctrl_data strobe_ctrl;
 	} ctrl_data;
 };
+
+//////////////////
+// samsung
+enum ext_cfg_command
+{
+    EXT_CFG_SET_FLASH = 0,
+    EXT_CFG_SET_SCENE,
+    EXT_CFG_SET_SHARPNESS,
+    EXT_CFG_SET_EFFECT,  
+    EXT_CFG_SET_SATURATION,
+    EXT_CFG_SET_ISO, // 5
+    EXT_CFG_SET_WB,
+    EXT_CFG_SET_CONTRAST,
+    EXT_CFG_SET_BRIGHTNESS, 
+    EXT_CFG_SET_ZOOM,
+    EXT_CFG_SET_FPS, // 10
+    EXT_CFG_SET_AF_MODE,
+    EXT_CFG_SET_AF_START,
+    EXT_CFG_SET_AF_STOP,
+    EXT_CFG_SET_AF_OPERATION,
+    EXT_CFG_SET_TOUCHAF_MODE, // 15
+    EXT_CFG_GET_AF_STATUS,
+    EXT_CFG_SET_TOUCHAF_POS,
+    EXT_CFG_SET_METERING,
+    EXT_CFG_SET_PREVIEW_SIZE,
+    EXT_CFG_SET_PICTURE_SIZE, // 20
+    EXT_CFG_SET_JPEG_QUALITY,
+    EXT_CFG_GET_JPEG_SIZE,
+    EXT_CFG_SET_ANTISHAKE,
+    EXT_CFG_SET_WDR,
+    EXT_CFG_SET_DTP, // 25
+    EXT_CFG_SET_AE_AWB,
+    EXT_CFG_SET_FRONT_CAMERA_MODE,
+    EXT_CFG_SET_BEAUTY,
+    EXT_CFG_SET_BLUR,
+    EXT_CFG_TEST_ESD, // 30
+    EXT_CFG_SET_MOVIE_MODE,
+    EXT_CFG_SET_FIRMWARE_UPDATE,
+    EXT_CFG_GET_SENSOR_FW_VER,
+    EXT_CFG_SET_VT_MODE,
+    EXT_CFG_SET_FLIP, // 36 
+    EXT_CFG_GET_EXIF,
+    EXT_CFG_SET_HDR,
+    EXT_CFG_MAX,
+    EXT_CFG_SET_LOW_LEVEL = 51,
+    EXT_CFG_SET_APPS = 52,
+};
+
 
 #define GET_NAME			0
 #define GET_PREVIEW_LINE_PER_FRAME	1

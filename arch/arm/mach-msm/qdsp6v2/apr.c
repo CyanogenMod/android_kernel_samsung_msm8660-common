@@ -34,6 +34,12 @@
 #include <mach/qdsp6v2/dsp_debug.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
+#if defined(CONFIG_KOR_MODEL_SHV_E120L)|| defined(CONFIG_KOR_MODEL_SHV_E160L)
+#define CONFIG_VPCM_INTERFACE_ON_SVLTE2
+#endif
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_KOR_MODEL_SHV_E120S) || defined(CONFIG_KOR_MODEL_SHV_E120K) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I717)
+#define CONFIG_VPCM_INTERFACE_ON_CSFB
+#endif
 
 struct apr_q6 q6;
 struct apr_client client[APR_DEST_MAX][APR_CLIENT_MAX];
@@ -101,6 +107,28 @@ int apr_send_pkt(void *handle, uint32_t *buf)
 		hdr->dest_domain = APR_DOMAIN_ADSP;
 
 	hdr->dest_svc = svc->id;
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB)
+/* BEGIN: VPCM */
+	if ( hdr->opcode == 0x10001001 || hdr->opcode == 0x10001002 
+#ifdef CONFIG_SEC_DHA_SOL_MAL
+		|| hdr->opcode == 0x0001128A
+#endif /* CONFIG_SEC_DHA_SOL_MAL */
+	) {
+		hdr->dest_domain = 0x03;
+		hdr->dest_svc = 0x02;
+	}
+#elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+	if ( hdr->opcode == 0x0001128D || hdr->opcode == 0x0001128E ||hdr->opcode == 0x0001128F ||hdr->opcode == 0x0001128C 
+#ifdef CONFIG_SEC_DHA_SOL_MAL
+		|| hdr->opcode == 0x0001128A
+#endif /* CONFIG_SEC_DHA_SOL_MAL */
+	) {
+		hdr->dest_domain = 0x03;
+		hdr->dest_svc = 0x07;
+	}
+/* END: VPCM */
+#endif 
 
 	w_len = apr_tal_write(clnt->handle, buf, hdr->pkt_size);
 	if (w_len != hdr->pkt_size)
@@ -176,11 +204,30 @@ static void apr_cb_func(void *buf, int len, void *priv)
 	}
 
 	svc = hdr->dest_svc;
+
+#if defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+/* BEGIN: VPCM */
+	/* If the incoming message is from modem domain and for CVP (VPCM hack) */
+	if (hdr->src_domain == APR_DOMAIN_MODEM && svc == APR_SVC_ADSP_CVP) {
+		src = APR_DEST_QDSP6;
+		clnt = APR_CLIENT_AUDIO;
+	} else
+/* END: VPCM */
+#endif
 	if (hdr->src_domain == APR_DOMAIN_MODEM) {
 		src = APR_DEST_MODEM;
 		if (svc == APR_SVC_MVS || svc == APR_SVC_MVM ||
 			svc == APR_SVC_CVS || svc == APR_SVC_CVP ||
-			svc == APR_SVC_TEST_CLIENT)
+			svc == APR_SVC_TEST_CLIENT
+#if defined(CONFIG_VPCM_INTERFACE_ON_CSFB) 
+/* BEGIN: VPCM */
+			|| svc == 0x02
+#elif defined(CONFIG_VPCM_INTERFACE_ON_SVLTE2)
+			|| svc == 0x07
+#endif
+/* END: VPCM */
+		)
+
 			clnt = APR_CLIENT_VOICE;
 		else {
 			pr_err("APR: Wrong svc :%d\n", svc);
