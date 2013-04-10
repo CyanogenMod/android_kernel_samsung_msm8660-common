@@ -2,17 +2,56 @@
 #define _MSM_KGSL_H
 
 #define KGSL_VERSION_MAJOR        3
-#define KGSL_VERSION_MINOR        8
+#define KGSL_VERSION_MINOR        14
 
 /*context flags */
-#define KGSL_CONTEXT_SAVE_GMEM	1
-#define KGSL_CONTEXT_NO_GMEM_ALLOC	2
-#define KGSL_CONTEXT_SUBMIT_IB_LIST	4
-#define KGSL_CONTEXT_CTX_SWITCH	8
-#define KGSL_CONTEXT_PREAMBLE	16
+#define KGSL_CONTEXT_SAVE_GMEM		0x00000001
+#define KGSL_CONTEXT_NO_GMEM_ALLOC	0x00000002
+#define KGSL_CONTEXT_SUBMIT_IB_LIST	0x00000004
+#define KGSL_CONTEXT_CTX_SWITCH		0x00000008
+#define KGSL_CONTEXT_PREAMBLE		0x00000010
+#define KGSL_CONTEXT_TRASH_STATE	0x00000020
+#define KGSL_CONTEXT_PER_CONTEXT_TS	0x00000040
+#define KGSL_CONTEXT_USER_GENERATED_TS	0x00000080
+
+#define KGSL_CONTEXT_INVALID 0xffffffff
 
 /* Memory allocayion flags */
 #define KGSL_MEMFLAGS_GPUREADONLY	0x01000000
+
+#define KGSL_MEMTYPE_MASK		0x0000FF00
+#define KGSL_MEMTYPE_SHIFT		8
+
+/* Memory types for which allocations are made */
+#define KGSL_MEMTYPE_OBJECTANY			0
+#define KGSL_MEMTYPE_FRAMEBUFFER		1
+#define KGSL_MEMTYPE_RENDERBUFFER		2
+#define KGSL_MEMTYPE_ARRAYBUFFER		3
+#define KGSL_MEMTYPE_ELEMENTARRAYBUFFER		4
+#define KGSL_MEMTYPE_VERTEXARRAYBUFFER		5
+#define KGSL_MEMTYPE_TEXTURE			6
+#define KGSL_MEMTYPE_SURFACE			7
+#define KGSL_MEMTYPE_EGL_SURFACE		8
+#define KGSL_MEMTYPE_GL				9
+#define KGSL_MEMTYPE_CL				10
+#define KGSL_MEMTYPE_CL_BUFFER_MAP		11
+#define KGSL_MEMTYPE_CL_BUFFER_NOMAP		12
+#define KGSL_MEMTYPE_CL_IMAGE_MAP		13
+#define KGSL_MEMTYPE_CL_IMAGE_NOMAP		14
+#define KGSL_MEMTYPE_CL_KERNEL_STACK		15
+#define KGSL_MEMTYPE_COMMAND			16
+#define KGSL_MEMTYPE_2D				17
+#define KGSL_MEMTYPE_EGL_IMAGE			18
+#define KGSL_MEMTYPE_EGL_SHADOW			19
+#define KGSL_MEMTYPE_MULTISAMPLE		20
+#define KGSL_MEMTYPE_KERNEL			255
+
+/*
+ * Alignment hint, passed as the power of 2 exponent.
+ * i.e 4k (2^12) would be 12, 64k (2^16)would be 16.
+ */
+#define KGSL_MEMALIGN_MASK		0x00FF0000
+#define KGSL_MEMALIGN_SHIFT		16
 
 /* generic flag values */
 #define KGSL_FLAGS_NORMALMODE  0x00000000
@@ -25,6 +64,7 @@
 #define KGSL_FLAGS_RESERVED1   0x00000040
 #define KGSL_FLAGS_RESERVED2   0x00000080
 #define KGSL_FLAGS_SOFT_RESET  0x00000100
+#define KGSL_FLAGS_PER_CONTEXT_TIMESTAMPS 0x00000200
 
 /* Clock flags to show which clocks should be controled by a given platform */
 #define KGSL_CLK_SRC	0x00000001
@@ -33,6 +73,9 @@
 #define KGSL_CLK_MEM	0x00000008
 #define KGSL_CLK_MEM_IFACE 0x00000010
 #define KGSL_CLK_AXI	0x00000020
+
+/* Server Side Sync Timeout in milliseconds */
+#define KGSL_SYNCOBJ_SERVER_TIMEOUT 2000
 
 /*
  * Reset status values for context
@@ -43,8 +86,6 @@ enum kgsl_ctx_reset_stat {
 	KGSL_CTX_STAT_INNOCENT_CONTEXT_RESET_EXT	= 0x00000002,
 	KGSL_CTX_STAT_UNKNOWN_CONTEXT_RESET_EXT		= 0x00000003
 };
-
-#define KGSL_MAX_PWRLEVELS 5
 
 #define KGSL_CONVERT_TO_MBPS(val) \
 	(val*1000*1000U)
@@ -99,15 +140,15 @@ struct kgsl_devmemstore {
 	unsigned int sbz5;
 };
 
-#define KGSL_DEVICE_MEMSTORE_OFFSET(field) \
-	offsetof(struct kgsl_devmemstore, field)
-
+#define KGSL_MEMSTORE_OFFSET(ctxt_id, field) \
+	((ctxt_id)*sizeof(struct kgsl_devmemstore) + \
+	 offsetof(struct kgsl_devmemstore, field))
 
 /* timestamp id*/
 enum kgsl_timestamp_type {
 	KGSL_TIMESTAMP_CONSUMED = 0x00000001, /* start-of-pipeline timestamp */
 	KGSL_TIMESTAMP_RETIRED  = 0x00000002, /* end-of-pipeline timestamp*/
-	KGSL_TIMESTAMP_MAX      = 0x00000002,
+	KGSL_TIMESTAMP_QUEUED   = 0x00000003,
 };
 
 /* property types - used with kgsl_device_getproperty */
@@ -120,7 +161,8 @@ enum kgsl_property_type {
 	KGSL_PROP_MMU_ENABLE 	  = 0x00000006,
 	KGSL_PROP_INTERRUPT_WAITS = 0x00000007,
 	KGSL_PROP_VERSION         = 0x00000008,
-	KGSL_PROP_GPU_RESET_STAT  = 0x00000009
+	KGSL_PROP_GPU_RESET_STAT  = 0x00000009,
+	KGSL_PROP_PWRCTRL         = 0x0000000E,
 };
 
 struct kgsl_shadowprop {
@@ -129,43 +171,12 @@ struct kgsl_shadowprop {
 	unsigned int flags; /* contains KGSL_FLAGS_ values */
 };
 
-struct kgsl_pwrlevel {
-	unsigned int gpu_freq;
-	unsigned int bus_freq;
-	unsigned int io_fraction;
-};
-
 struct kgsl_version {
 	unsigned int drv_major;
 	unsigned int drv_minor;
 	unsigned int dev_major;
 	unsigned int dev_minor;
 };
-
-#ifdef __KERNEL__
-
-#define KGSL_3D0_REG_MEMORY	"kgsl_3d0_reg_memory"
-#define KGSL_3D0_IRQ		"kgsl_3d0_irq"
-#define KGSL_2D0_REG_MEMORY	"kgsl_2d0_reg_memory"
-#define KGSL_2D0_IRQ		"kgsl_2d0_irq"
-#define KGSL_2D1_REG_MEMORY	"kgsl_2d1_reg_memory"
-#define KGSL_2D1_IRQ		"kgsl_2d1_irq"
-
-struct kgsl_device_platform_data {
-	struct kgsl_pwrlevel pwrlevel[KGSL_MAX_PWRLEVELS];
-	int init_level;
-	int num_levels;
-	int (*set_grp_async)(void);
-	unsigned int idle_timeout;
-	unsigned int nap_allowed;
-	unsigned int clk_map;
-	unsigned int idle_needed;
-	struct msm_bus_scale_pdata *bus_scale_table;
-	const char *iommu_user_ctx_name;
-	const char *iommu_priv_ctx_name;
-};
-
-#endif
 
 /* structure holds list of ibs */
 struct kgsl_ibdesc {
@@ -197,19 +208,8 @@ struct kgsl_device_getproperty {
 #define IOCTL_KGSL_DEVICE_GETPROPERTY \
 	_IOWR(KGSL_IOC_TYPE, 0x2, struct kgsl_device_getproperty)
 
-
-/* read a GPU register.
-   offsetwords it the 32 bit word offset from the beginning of the
-   GPU register space.
+/* IOCTL_KGSL_DEVICE_READ (0x3) - removed 03/2012
  */
-struct kgsl_device_regread {
-	unsigned int offsetwords;
-	unsigned int value; /* output param */
-};
-
-#define IOCTL_KGSL_DEVICE_REGREAD \
-	_IOWR(KGSL_IOC_TYPE, 0x3, struct kgsl_device_regread)
-
 
 /* block until the GPU has executed past a given timestamp
  * timeout is in milliseconds.
@@ -222,6 +222,14 @@ struct kgsl_device_waittimestamp {
 #define IOCTL_KGSL_DEVICE_WAITTIMESTAMP \
 	_IOW(KGSL_IOC_TYPE, 0x6, struct kgsl_device_waittimestamp)
 
+struct kgsl_device_waittimestamp_ctxtid {
+	unsigned int context_id;
+	unsigned int timestamp;
+	unsigned int timeout;
+};
+
+#define IOCTL_KGSL_DEVICE_WAITTIMESTAMP_CTXTID \
+	_IOW(KGSL_IOC_TYPE, 0x7, struct kgsl_device_waittimestamp_ctxtid)
 
 /* issue indirect commands to the GPU.
  * drawctxt_id must have been created with IOCTL_KGSL_DRAWCTXT_CREATE
@@ -308,12 +316,31 @@ struct kgsl_map_user_mem {
 	unsigned int offset;
 	unsigned int hostptr;   /*input param */
 	enum kgsl_user_mem_type memtype;
-	unsigned int reserved;	/* May be required to add
-				params for another mem type */
+	unsigned int flags;
 };
 
 #define IOCTL_KGSL_MAP_USER_MEM \
 	_IOWR(KGSL_IOC_TYPE, 0x15, struct kgsl_map_user_mem)
+
+struct kgsl_cmdstream_readtimestamp_ctxtid {
+	unsigned int context_id;
+	unsigned int type;
+	unsigned int timestamp; /*output param */
+};
+
+#define IOCTL_KGSL_CMDSTREAM_READTIMESTAMP_CTXTID \
+	_IOWR(KGSL_IOC_TYPE, 0x16, struct kgsl_cmdstream_readtimestamp_ctxtid)
+
+struct kgsl_cmdstream_freememontimestamp_ctxtid {
+	unsigned int context_id;
+	unsigned int gpuaddr;
+	unsigned int type;
+	unsigned int timestamp;
+};
+
+#define IOCTL_KGSL_CMDSTREAM_FREEMEMONTIMESTAMP_CTXTID \
+	_IOW(KGSL_IOC_TYPE, 0x17, \
+	struct kgsl_cmdstream_freememontimestamp_ctxtid)
 
 /* add a block of pmem or fb into the GPU address space */
 struct kgsl_sharedmem_from_pmem {
@@ -377,6 +404,12 @@ struct kgsl_bind_gmem_shadow {
     _IOW(KGSL_IOC_TYPE, 0x22, struct kgsl_bind_gmem_shadow)
 
 /* add a block of memory into the GPU address space */
+
+/*
+ * IOCTL_KGSL_SHAREDMEM_FROM_VMALLOC deprecated 09/2012
+ * use IOCTL_KGSL_GPUMEM_ALLOC instead
+ */
+
 struct kgsl_sharedmem_from_vmalloc {
 	unsigned int gpuaddr;	/*output param */
 	unsigned int hostptr;
@@ -466,6 +499,14 @@ struct kgsl_timestamp_event_genlock {
 struct kgsl_timestamp_event_fence {
 	int fence_fd; /* Fence to signal */
 };
+
+/*
+ * Set a property within the kernel.  Uses the same structure as
+ * IOCTL_KGSL_GETPROPERTY
+ */
+
+#define IOCTL_KGSL_SETPROPERTY \
+	_IOW(KGSL_IOC_TYPE, 0x32, struct kgsl_device_getproperty)
 
 #define IOCTL_KGSL_TIMESTAMP_EVENT \
 	_IOWR(KGSL_IOC_TYPE, 0x33, struct kgsl_timestamp_event)

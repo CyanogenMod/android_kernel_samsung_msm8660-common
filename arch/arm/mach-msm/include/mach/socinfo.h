@@ -278,4 +278,9 @@ static inline int cpu_is_msm9615(void)
 	return 0;
 #endif
 }
+
+static inline int cpu_is_msm8625(void)
+{
+	return 0;
+}
 #endif
