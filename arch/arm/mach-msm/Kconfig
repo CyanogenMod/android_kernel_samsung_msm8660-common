@@ -1619,12 +1619,12 @@ choice
 		  Support models of celox series
 
 	config TARGET_SERIES_DALI
-		bool "SERIES_CELOX"
+		bool "SERIES_DALI"
 		help
 		  Support models of dali series
 
 	config TARGET_SERIES_Q1
-		bool "SERIES_CELOX"
+		bool "SERIES_Q1"
 		help
 		  Support models of q1 series		  
 
