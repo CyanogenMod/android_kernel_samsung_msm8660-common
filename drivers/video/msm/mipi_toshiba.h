@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -23,7 +23,7 @@ int mipi_toshiba_device_register(struct msm_panel_info *pinfo,
 
 #define MIPI_TOSHIBA_PWM_FREQ_HZ 300
 #define MIPI_TOSHIBA_PWM_PERIOD_USEC (USEC_PER_SEC / MIPI_TOSHIBA_PWM_FREQ_HZ)
-#define MIPI_TOSHIBA_PWM_LEVEL 100
+#define MIPI_TOSHIBA_PWM_LEVEL 255
 #define MIPI_TOSHIBA_PWM_DUTY_LEVEL \
 	(MIPI_TOSHIBA_PWM_PERIOD_USEC / MIPI_TOSHIBA_PWM_LEVEL)
 

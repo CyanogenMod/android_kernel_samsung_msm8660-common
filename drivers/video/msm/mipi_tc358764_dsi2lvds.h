@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,8 @@
 
 #ifndef MIPI_TC358764_DSI2LVDS_H
 #define MIPI_TC358764_DSI2LVDS_H
+
+#define PWM_LEVEL 255
 
 int mipi_tc358764_dsi2lvds_register(struct msm_panel_info *pinfo,
 	u32 channel_id, u32 panel_id);

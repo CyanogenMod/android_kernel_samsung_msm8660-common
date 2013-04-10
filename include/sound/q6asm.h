@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -143,6 +143,7 @@ struct audio_client {
 
 	atomic_t		cmd_state;
 	atomic_t		time_flag;
+	atomic_t		nowait_cmd_cnt;
 	wait_queue_head_t	cmd_wait;
 	wait_queue_head_t	time_wait;
 
@@ -150,6 +151,7 @@ struct audio_client {
 	void			*priv;
 	uint32_t         io_mode;
 	uint64_t         time_stamp;
+	bool             perf_mode;
 };
 
 void q6asm_audio_client_free(struct audio_client *ac);
@@ -172,6 +174,7 @@ int q6asm_audio_client_buf_free_contiguous(unsigned int dir,
 			struct audio_client *ac);
 
 int q6asm_open_read(struct audio_client *ac, uint32_t format);
+int q6asm_open_read_v2_1(struct audio_client *ac, uint32_t format);
 
 int q6asm_open_write(struct audio_client *ac, uint32_t format);
 
@@ -228,6 +231,12 @@ int q6asm_enc_cfg_blk_aac(struct audio_client *ac,
 			 uint32_t mode, uint32_t format);
 
 int q6asm_enc_cfg_blk_pcm(struct audio_client *ac,
+			uint32_t rate, uint32_t channels);
+
+int q6asm_enc_cfg_blk_pcm_native(struct audio_client *ac,
+			uint32_t rate, uint32_t channels);
+
+int q6asm_enc_cfg_blk_multi_ch_pcm(struct audio_client *ac,
 			uint32_t rate, uint32_t channels);
 
 int q6asm_enable_sbrps(struct audio_client *ac,

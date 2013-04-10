@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -786,7 +786,7 @@ u32 vcd_free_one_buffer_internal(
 	buf_entry->alloc = buf_entry->virtual = buf_entry->physical = NULL;
 	buf_entry->sz = 0;
 	memset(&buf_entry->frame, 0, sizeof(struct vcd_frame_data));
-	 
+
 	buf_pool->validated--;
 	if (buf_pool->validated == 0)
 		vcd_free_buffer_pool_entries(buf_pool);

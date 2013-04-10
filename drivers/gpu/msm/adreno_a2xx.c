@@ -1,4 +1,4 @@
-/* Copyright (c) 2002,2007-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2002,2007-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1668,16 +1668,6 @@ static void a2xx_cp_intrcallback(struct kgsl_device *device)
 		return;
 	}
 
-	if (status & CP_INT_CNTL__RB_INT_MASK) {
-		/* signal intr completion event */
-		unsigned int enableflag = 0;
-		kgsl_sharedmem_writel(&rb->device->memstore,
-			KGSL_DEVICE_MEMSTORE_OFFSET(ts_cmp_enable),
-			enableflag);
-		wmb();
-		KGSL_CMD_WARN(rb->device, "ringbuffer rb interrupt\n");
-	}
-
 	for (i = 0; i < ARRAY_SIZE(kgsl_cp_error_irqs); i++) {
 		if (status & kgsl_cp_error_irqs[i].mask) {
 			KGSL_CMD_CRIT(rb->device, "%s\n",
@@ -1775,6 +1765,19 @@ static void a2xx_irq_control(struct adreno_device *adreno_dev, int state)
 	wmb();
 }
 
+static unsigned int a2xx_irq_pending(struct adreno_device *adreno_dev)
+{
+	struct kgsl_device *device = &adreno_dev->dev;
+	unsigned int rbbm, cp, mh;
+
+	adreno_regread(device, REG_RBBM_INT_CNTL, &rbbm);
+	adreno_regread(device, REG_CP_INT_CNTL, &cp);
+	adreno_regread(device, MH_INTERRUPT_MASK, &mh);
+
+	return ((rbbm & RBBM_INT_MASK) || (cp & CP_INT_MASK) ||
+			(mh & MH_INTERRUPT_MASK)) ? 1 : 0;
+}
+
 /* Defined in adreno_a2xx_snapshot.c */
 void *a2xx_snapshot(struct adreno_device *adreno_dev, void *snapshot,
 	int *remain, int hang);
@@ -1786,5 +1789,6 @@ struct adreno_gpudev adreno_a2xx_gpudev = {
 	.ctxt_draw_workaround = a2xx_drawctxt_draw_workaround,
 	.irq_handler = a2xx_irq_handler,
 	.irq_control = a2xx_irq_control,
+	.irq_pending = a2xx_irq_pending,
 	.snapshot = a2xx_snapshot,
 };

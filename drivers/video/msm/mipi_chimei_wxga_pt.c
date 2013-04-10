@@ -1,4 +1,4 @@
-/* Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -121,7 +121,7 @@ static int __init mipi_chimei_wxga_init(void)
 	pinfo->lcdc.hsync_skew = 0;
 
 	/* Backlight levels - controled via PMIC pwm gpio */
-	pinfo->bl_max = 15;
+	pinfo->bl_max = PWM_LEVEL;
 	pinfo->bl_min = 1;
 
 	/* mipi - general */

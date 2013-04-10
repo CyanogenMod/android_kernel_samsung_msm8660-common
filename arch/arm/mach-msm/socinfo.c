@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -240,6 +240,12 @@ static enum msm_cpu cpu_of_id[] = {
 
 	/* Copper IDs */
 	[126] = MSM_CPU_COPPER,
+
+	/* 8960AB IDs */
+	[138] = MSM_CPU_8960AB,
+	[139] = MSM_CPU_8960AB,
+	[140] = MSM_CPU_8960AB,
+	[141] = MSM_CPU_8960AB,
 
 	/* Uninitialized IDs are not known to run Linux.
 	   MSM_CPU_UNKNOWN is set to 0 to ensure these IDs are
@@ -760,12 +766,36 @@ const int read_msm_cpu_type(void)
 	};
 }
 
+const int cpu_is_krait(void)
+{
+	return ((read_cpuid_id() & 0xFF00FC00) == 0x51000400);
+}
+
 const int cpu_is_krait_v1(void)
 {
 	switch (read_cpuid_id()) {
 	case 0x510F04D0:
 	case 0x510F04D1:
 	case 0x510F04D2:
+		return 1;
+
+	default:
+		return 0;
+	};
+}
+
+const int cpu_is_krait_v2(void)
+{
+	switch (read_cpuid_id()) {
+	case 0x511F04D0:
+	case 0x511F04D1:
+	case 0x511F04D2:
+	case 0x511F04D3:
+	case 0x511F04D4:
+
+	case 0x510F06F0:
+	case 0x510F06F1:
+	case 0x510F06F2:
 		return 1;
 
 	default:

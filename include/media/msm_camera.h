@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,9 +25,30 @@
 #include <linux/time.h>
 #endif
 
-#ifdef __KERNEL__
 #include <linux/ion.h>
-#endif
+#define VFE_FRAME_NUM_MAX	0x00FFFFFF
+#define ZERO_OUT_FRAME		0xFF000000
+#define CLEAR_FOCUS_BIT		0x7FFFFFFF
+#define get_focus_bit(x) ({ \
+	(x & 0x80000000) >> 31; \
+})
+#define get_frame_num(x) ({ \
+	x & VFE_FRAME_NUM_MAX; \
+})
+#define get_focus_in_position(x) ({ \
+	(x & 00000001) << 31; \
+})
+#define increment_frame_num(x) ({ \
+	uint32_t num = get_frame_num(x); \
+	num = num + 1; \
+	(x & ZERO_OUT_FRAME) | num; \
+})
+#define decrement_frame_num(x) ({ \
+	uint32_t num = get_frame_num(x); \
+	num = num - 1; \
+	(x & ZERO_OUT_FRAME) | num; \
+})
+
 #define MSM_CAM_IOCTL_MAGIC 'm'
 
 #define MSM_CAM_IOCTL_GET_SENSOR_INFO \

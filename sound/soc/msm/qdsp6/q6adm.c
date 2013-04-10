@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -65,6 +65,18 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			}
 			this_adm.apr = NULL;
 		}
+		pr_debug("Resetting calibration blocks");
+		for (i = 0; i < MAX_AUDPROC_TYPES; i++) {
+			/* Device calibration */
+			mem_addr_audproc[i].cal_size = 0;
+			mem_addr_audproc[i].cal_kvaddr = 0;
+			mem_addr_audproc[i].cal_paddr = 0;
+
+			/* Volume calibration */
+			mem_addr_audvol[i].cal_size = 0;
+			mem_addr_audvol[i].cal_kvaddr = 0;
+			mem_addr_audvol[i].cal_paddr = 0;
+		}
 		return 0;
 	}
 
@@ -82,7 +94,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			return 0;
 		}
 		if (data->opcode == APR_BASIC_RSP_RESULT) {
-			pr_debug("APR_BASIC_RSP_RESULT\n");
+			pr_debug("APR_BASIC_RSP_RESULT id %x\n", payload[0]);
 			switch (payload[0]) {
 			case ADM_CMD_SET_PARAMS:
 				if (rtac_make_adm_callback(payload,
@@ -94,7 +106,7 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 			case ADM_CMD_MEMORY_MAP_REGIONS:
 			case ADM_CMD_MEMORY_UNMAP_REGIONS:
 			case ADM_CMD_MATRIX_MAP_ROUTINGS:
-				pr_debug("ADM_CMD_MATRIX_MAP_ROUTINGS\n");
+			case ADM_CMD_MULTI_CHANNEL_COPP_OPEN_V3:
 				atomic_set(&this_adm.copp_stat[index], 1);
 				wake_up(&this_adm.wait);
 				break;
@@ -107,6 +119,8 @@ static int32_t adm_callback(struct apr_client_data *data, void *priv)
 		}
 
 		switch (data->opcode) {
+
+		case ADM_CMDRSP_MULTI_CHANNEL_COPP_OPEN_V3:
 		case ADM_CMDRSP_COPP_OPEN:
 		case ADM_CMDRSP_MULTI_CHANNEL_COPP_OPEN: {
 			struct adm_copp_open_respond *open = data->payload;
@@ -143,14 +157,14 @@ static int send_adm_cal_block(int port_id, struct acdb_cal_block *aud_cal)
 	s32				result = 0;
 	struct adm_set_params_command	adm_params;
 	int index = afe_get_port_index(port_id);
-
-	pr_debug("%s: Port id %d, index %d\n", __func__, port_id, index);
-
 	if (index < 0 || index >= AFE_MAX_PORTS) {
 		pr_err("%s: invalid port idx %d portid %d\n",
 				__func__, index, port_id);
-		goto done;
+		return 0;
 	}
+
+	pr_debug("%s: Port id %d, index %d\n", __func__, port_id, index);
+
 	if (!aud_cal || aud_cal->cal_size == 0) {
 		pr_debug("%s: No ADM cal to send for port_id = %d!\n",
 			__func__, port_id);
@@ -340,8 +354,8 @@ int adm_open(int port_id, int path, int rate, int channel_mode, int topology)
 		open.channel_config = channel_mode & 0x00FF;
 		open.rate  = rate;
 
-		pr_debug("%s: channel_config=%d port_id=%d rate=%d\
-			topology_id=0x%X\n", __func__, open.channel_config,\
+		pr_debug("%s: channel_config=%d port_id=%d rate=%d"
+			"topology_id=0x%X\n", __func__, open.channel_config,\
 			open.endpoint_id1, open.rate,\
 			open.topology_id);
 
@@ -375,7 +389,7 @@ fail_cmd:
 
 
 int adm_multi_ch_copp_open(int port_id, int path, int rate, int channel_mode,
-				int topology)
+				int topology, int perfmode)
 {
 	struct adm_multi_ch_copp_open_command open;
 	int ret = 0;
@@ -413,7 +427,17 @@ int adm_multi_ch_copp_open(int port_id, int path, int rate, int channel_mode,
 
 		open.hdr.pkt_size =
 			sizeof(struct adm_multi_ch_copp_open_command);
-		open.hdr.opcode = ADM_CMD_MULTI_CHANNEL_COPP_OPEN;
+
+		if (perfmode) {
+			pr_debug("%s Performance mode", __func__);
+			open.hdr.opcode = ADM_CMD_MULTI_CHANNEL_COPP_OPEN_V3;
+			open.flags = ADM_MULTI_CH_COPP_OPEN_PERF_MODE_BIT;
+			open.reserved = PCM_BITS_PER_SAMPLE;
+		} else {
+			open.hdr.opcode = ADM_CMD_MULTI_CHANNEL_COPP_OPEN;
+			open.reserved = 0;
+		}
+
 		memset(open.dev_channel_mapping, 0, 8);
 
 		if (channel_mode == 1)	{
@@ -421,6 +445,11 @@ int adm_multi_ch_copp_open(int port_id, int path, int rate, int channel_mode,
 		} else if (channel_mode == 2) {
 			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
 			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+		} else if (channel_mode == 4) {
+			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+			open.dev_channel_mapping[2] = PCM_CHANNEL_RB;
+			open.dev_channel_mapping[3] = PCM_CHANNEL_LB;
 		} else if (channel_mode == 6) {
 			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
 			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
@@ -428,13 +457,20 @@ int adm_multi_ch_copp_open(int port_id, int path, int rate, int channel_mode,
 			open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
 			open.dev_channel_mapping[4] = PCM_CHANNEL_LB;
 			open.dev_channel_mapping[5] = PCM_CHANNEL_RB;
+		} else if (channel_mode == 8) {
+			open.dev_channel_mapping[0] = PCM_CHANNEL_FL;
+			open.dev_channel_mapping[1] = PCM_CHANNEL_FR;
+			open.dev_channel_mapping[2] = PCM_CHANNEL_LFE;
+			open.dev_channel_mapping[3] = PCM_CHANNEL_FC;
+			open.dev_channel_mapping[4] = PCM_CHANNEL_LB;
+			open.dev_channel_mapping[5] = PCM_CHANNEL_RB;
+			open.dev_channel_mapping[6] = PCM_CHANNEL_FLC;
+			open.dev_channel_mapping[7] = PCM_CHANNEL_FRC;
 		} else {
 			pr_err("%s invalid num_chan %d\n", __func__,
 					channel_mode);
 			return -EINVAL;
 		}
-
-
 		open.hdr.src_svc = APR_SVC_ADM;
 		open.hdr.src_domain = APR_DOMAIN_APPS;
 		open.hdr.src_port = port_id;

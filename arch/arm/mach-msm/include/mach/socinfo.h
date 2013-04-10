@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2011, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -52,6 +52,7 @@ enum msm_cpu {
 	MSM_CPU_8X55,
 	MSM_CPU_8X60,
 	MSM_CPU_8960,
+	MSM_CPU_8960AB,
 	MSM_CPU_7X27A,
 	FSM_CPU_9XXX,
 	MSM_CPU_7X25A,
@@ -74,7 +75,9 @@ uint32_t socinfo_get_platform_version(void);
 int __init socinfo_init(void) __must_check;
 const int read_msm_cpu_type(void);
 const int get_core_count(void);
+const int cpu_is_krait(void);
 const int cpu_is_krait_v1(void);
+const int cpu_is_krait_v2(void);
 
 static inline int cpu_is_msm7x01(void)
 {
@@ -209,6 +212,15 @@ static inline int cpu_is_msm8960(void)
 {
 #ifdef CONFIG_ARCH_MSM8960
 	return read_msm_cpu_type() == MSM_CPU_8960;
+#else
+	return 0;
+#endif
+}
+
+static inline int cpu_is_msm8960ab(void)
+{
+#ifdef CONFIG_ARCH_MSM8960
+	return read_msm_cpu_type() == MSM_CPU_8960AB;
 #else
 	return 0;
 #endif

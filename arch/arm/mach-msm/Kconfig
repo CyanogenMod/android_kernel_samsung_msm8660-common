@@ -169,6 +169,7 @@ config ARCH_MSM8960
 	select MSM_PM8X60 if PM
 	select HOLES_IN_ZONE if SPARSEMEM
 	select MSM_KRAIT_WFE_FIXUP
+	select MSM_CPU_PWRCTL
 
 config ARCH_MSM8930
 	bool "MSM8930"
@@ -207,6 +208,7 @@ config ARCH_MSM8930
 	select MSM_PM8X60 if PM
 	select HOLES_IN_ZONE if SPARSEMEM
 	select MSM_KRAIT_WFE_FIXUP
+	select MSM_CPU_PWRCTL
 
 config ARCH_APQ8064
 	bool "APQ8064"
@@ -225,6 +227,7 @@ config ARCH_APQ8064
 	select MSM_PM8X60 if PM
 	select HOLES_IN_ZONE if SPARSEMEM
 	select MSM_KRAIT_WFE_FIXUP
+	select MSM_CPU_PWRCTL
 
 config ARCH_MSMCOPPER
 	bool "MSM Copper"
@@ -2301,6 +2304,31 @@ config MSM_L1_ERR_PANIC
 
 	  For production builds, you should probably say 'N' here.
 
+config MSM_L1_RECOV_ERR_PANIC
+	bool "Panic on recoverable L1 cache errors"
+	depends on MSM_CACHE_ERP && MSM_L1_ERR_PANIC
+	help
+	  Certain CPU designs may be able to automatically recover from certain
+	  kinds of L1 cache errors, even though the L1 cache itself may not
+	  support error correction. These errors should not result in any kind
+	  of corruption, but their presence is nevertheless an indication of
+	  poor system health. To cause the kernel to panic whenever a
+	  recoverable L1 cache error is detected, say 'Y' here. This may be
+	  useful as a debugging technique if general system instability is
+	  suspected.
+
+	  For production builds, you should definitely say 'N' here.
+
+config MSM_L1_ERR_LOG
+	bool "Log CPU ERP events to system memory"
+	depends on MSM_CACHE_ERP
+	help
+	  Enable logging CPU ERP events to an area of memory that will be
+	  preserved across a system reset. This may be useful for detecting and
+	  troubleshooting ERP-related system crashes in the field.
+
+	  For production builds, you may want to say 'Y' here.
+
 config MSM_L2_ERP_PRINT_ACCESS_ERRORS
 	bool "Report L2 master port slave/decode errors in kernel log"
 	depends on MSM_CACHE_ERP
@@ -2314,15 +2342,6 @@ config MSM_L2_ERP_PRINT_ACCESS_ERRORS
 	  interrupt rather than as an exception, meaning that the backtrace may
 	  have some skid. This option may help with debugging, though production
 	  builds should probably say 'N' here.
-config MSM_L1_ERR_LOG
-	bool "Log CPU ERP events to system memory"
-	depends on MSM_CACHE_ERP
-	help
-	  Enable logging CPU ERP events to an area of memory that will be
-	  preserved across a system reset. This may be useful for detecting and
-	  troubleshooting ERP-related system crashes in the field.
-
-	  For production builds, you may want to say 'Y' here.
 
 config MSM_L2_ERP_PORT_PANIC
 	bool "Panic on L2 master port errors"
@@ -2374,11 +2393,19 @@ config MSM_DCVS
 	  algorithm and the algorithm returns a frequency for the core which is
 	  passed to the frequency change driver.
 
+config MSM_CPU_PWRCTL
+	bool "Ensures that krait droop detectors are always off"
+	help
+	  Droop detector mechanism can adversely affect krait plls during
+	  stand alone power collapse operation. Selecting this option
+	  ensures that they are always off.
+
+endif
+
 config PMIC8058_XOADC_CAL
 	bool "PMIC8058 adc calibration"
 	help
 	  Support PMIC8058 adc calibration
-endif
 
 config SEC_AUDIO_I2S_DRIVING_CURRENT
 	bool "Sec I2S Driving Current"
