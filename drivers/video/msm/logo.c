@@ -149,10 +149,10 @@ int load_565rle_image(char *filename, bool bf_supported)
 #ifndef CONFIG_FRAMEBUFFER_CONSOLE 
 	owner = info->fbops->owner; 
 	if (!try_module_get(owner)) 
-		return NULL; 
+		return 0; 
 	if (info->fbops->fb_open && info->fbops->fb_open(info, 0)) { 
 		module_put(owner); 
-		return NULL; 
+		return 0; 
 	}
 #endif
 	fd = sys_open(filename, O_RDONLY, 0);
