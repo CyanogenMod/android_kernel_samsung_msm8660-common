@@ -4140,7 +4140,8 @@ unsigned char hdmi_is_primary;
 #define USER_SMI_SIZE         (MSM_SMI_SIZE - KERNEL_SMI_SIZE)
 #define MSM_PMEM_SMIPOOL_SIZE USER_SMI_SIZE
 
-#if defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) && defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) && defined(CONFIG_USA_MODEL_SGH_I717) \
+    && !defined(CONFIG_USA_MODEL_SGH_T879)
 #define MSM_ION_SF_BASE		0x7a000000
 #endif
 #define MSM_ION_SF_SIZE		0x5000000 /* 64MB -> 80MB */
@@ -4159,7 +4160,7 @@ unsigned char hdmi_is_primary;
 #define MSM_ION_HEAP_NUM	8
 #endif
 #define MSM_HDMI_PRIM_ION_SF_SIZE MSM_HDMI_PRIM_PMEM_SF_SIZE
-#ifndef CONFIG_USA_MODEL_SGH_I717
+#if !defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_T879)
 static unsigned msm_ion_sf_size = MSM_ION_SF_SIZE;
 #endif
 #else
@@ -9674,7 +9675,8 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_SF_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CARVEOUT,
 			.name	= ION_SF_HEAP_NAME,
-#if defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) && defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) && defined(CONFIG_USA_MODEL_SGH_I717) \
+            && !defined (CONFIG_USA_MODEL_SGH_T879)
 			.base = MSM_ION_SF_BASE,
 #endif
 			.size	= MSM_ION_SF_SIZE,
@@ -9772,7 +9774,8 @@ static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
 static void reserve_ion_memory(void)
 {
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
-#ifndef CONFIG_USA_MODEL_SGH_I717
+#if !defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION) || !defined(CONFIG_USA_MODEL_SGH_I717) \
+	|| defined (CONFIG_USA_MODEL_SGH_T879)
 	unsigned int i;
 
 	if (hdmi_is_primary) {
