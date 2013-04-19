@@ -799,7 +799,7 @@ void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd)
 	/* base pipe may change after borderfill_stage_down */
 	pipe = vctrl->base_pipe;
 	mdp4_mixer_stage_down(pipe, 1);
-	mdp4_overlay_pipe_free(pipe);
+	mdp4_overlay_pipe_free(pipe, 1);
 	vctrl->base_pipe = NULL;
 }
 
@@ -1149,8 +1149,10 @@ void mdp_dsi_cmd_overlay_suspend(struct msm_fb_data_type *mfd)
 			if (pipe->pipe_type == OVERLAY_TYPE_BF)
 				mdp4_overlay_borderfill_stage_down(pipe);
 
-			/* pipe == rgb1 */
-			mdp4_overlay_unset_mixer(pipe->mixer_num);
+			/* base pipe may change after borderfill_stage_down */
+			pipe = vctrl->base_pipe;
+			mdp4_mixer_stage_down(pipe, 1);
+			mdp4_overlay_pipe_free(pipe, 1);
 			vctrl->base_pipe = NULL;
 		} else {
 			mdp4_mixer_stage_down(pipe, 1);
