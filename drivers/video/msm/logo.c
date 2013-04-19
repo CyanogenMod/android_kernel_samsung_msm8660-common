@@ -197,11 +197,12 @@ printk("%s: max %d, n %d 0x%x\n",__func__, max, ptr[0], (unsigned int)bits);
 		ptr += 2;
 		count -= 4;
 	}
+#ifdef CONFIG_SEC_DEBUG
 #if !defined (CONFIG_USA_OPERATOR_ATT) && !defined (CONFIG_JPN_MODEL_SC_03D) && !defined (CONFIG_CAN_OPERATOR_RWC)
 	if (!is_lpcharging_state() && !sec_debug_is_recovery_mode())
 		s3cfb_start_progress(info);
 #endif
-
+#endif
 err_logo_free_data:
 	kfree(data);
 err_logo_close_file:

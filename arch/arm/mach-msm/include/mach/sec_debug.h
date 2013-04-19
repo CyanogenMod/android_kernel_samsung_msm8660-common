@@ -26,8 +26,9 @@ extern int sec_debug_is_enabled(void);
 #else
 static inline int sec_debug_init(void)
 {
+    return 0;
 }
-static inline int sec_debug_dump_stack(void) {}
+static inline int sec_debug_dump_stack(void) { return 0; }
 static inline void sec_debug_hw_reset(void){}
 static inline void sec_debug_check_crash_key(unsigned int code, int value) {}
 
