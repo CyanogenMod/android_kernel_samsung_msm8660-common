@@ -947,7 +947,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	switch (blank_mode) {
 	case FB_BLANK_UNBLANK:
 		if (!mfd->panel_power_on) {
-			msleep(16);
 			ret = pdata->on(mfd->pdev);
 			if (ret == 0) {
 				down(&mfd->sem);
@@ -978,9 +977,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 				del_timer(&mfd->msmfb_no_update_notify_timer);
 			complete(&mfd->msmfb_no_update_notify);
 
-			bl_updated = 0;
-			msleep(16);
-
 			/* clean fb to prevent displaying old fb */
 			if (info->screen_base)
 				memset((void *)info->screen_base, 0,
@@ -992,7 +988,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 
 			msm_fb_release_timeline(mfd);
 			mfd->op_enable = TRUE;
-			bl_updated = 0;
 		}
 		break;
 	}
@@ -1887,22 +1882,6 @@ int msm_fb_signal_timeline(struct msm_fb_data_type *mfd)
 	return 0;
 }
 
-static void bl_workqueue_handler(struct work_struct *work)
-{
-	struct msm_fb_data_type *mfd = container_of(to_delayed_work(work),
-				struct msm_fb_data_type, backlight_worker);
-	struct msm_fb_panel_data *pdata = mfd->pdev->dev.platform_data;
-
-	if ((pdata) && (pdata->set_backlight) && (!bl_updated)) {
-		down(&mfd->sem);
-		mfd->bl_level = unset_bl_level;
-		pdata->set_backlight(mfd);
-		bl_level_old = unset_bl_level;
-		bl_updated = 1;
-		up(&mfd->sem);
-	}
-}
-
 void msm_fb_release_timeline(struct msm_fb_data_type *mfd)
 {
 	mutex_lock(&mfd->sync_mutex);
@@ -1923,7 +1902,6 @@ static int msm_fb_pan_idle(struct msm_fb_data_type *mfd)
 	mutex_lock(&mfd->sync_mutex);
 	if (mfd->is_committing) {
 		mutex_unlock(&mfd->sync_mutex);
-				&mfd->commit_comp,
 		ret = wait_for_completion_interruptible_timeout(
 				&mfd->commit_comp,
 			msecs_to_jiffies(WAIT_DISP_OP_TIMEOUT));
