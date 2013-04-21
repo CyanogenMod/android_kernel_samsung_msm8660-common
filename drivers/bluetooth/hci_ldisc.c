@@ -137,6 +137,9 @@ restart:
 	while ((skb = hci_uart_dequeue(hu))) {
 		int len;
 
+		if (hdev->wake_peer)
+			hdev->wake_peer(hdev);
+
 		set_bit(TTY_DO_WRITE_WAKEUP, &tty->flags);
 		len = tty->ops->write(tty, skb->data, skb->len);
 		hdev->stat.byte_tx += len;
