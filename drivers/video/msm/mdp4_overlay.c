@@ -133,6 +133,8 @@ void  mdp4_overlay_free_base_pipe(struct msm_fb_data_type *mfd)
 
 static struct ion_client *display_iclient;
 
+static int mdp4_overlay_cache_reg(struct msm_fb_data_type *mfd,
+				u32 offset, u32 val);
 
 /*
  * mdp4_overlay_iommu_unmap_freelist()
@@ -884,7 +886,7 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	uint32 frame_size, src_size, src_xy, dst_size, dst_xy;
 	uint32 format, pattern, luma_offset, chroma_offset;
 	uint32 mask;
-	int pnum, ptype, i;
+	int pnum, ptype, i, ret;
 	uint32_t block;
 
 	pnum = pipe->pipe_num - OVERLAY_PIPE_VG1; /* start from 0 */
@@ -971,24 +973,30 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 		struct mdp4_overlay_pipe *real_pipe;
 		u32 psize, csize;
 
-		/*
-		 * video tile frame size register is NOT double buffered.
-		 * when this register updated, it kicks in immediatly
-		 * During transition from smaller resolution to higher
-		 * resolution  it may have possibility that mdp still fetch
-		 * from smaller resolution buffer with new higher resolution
-		 * frame size. This will cause iommu page fault.
-		 */
-		real_pipe = mdp4_overlay_ndx2pipe(pipe->pipe_ndx);
-		psize = real_pipe->prev_src_height * real_pipe->prev_src_width;
-		csize = pipe->src_height * pipe->src_width;
-		if (psize && (csize > psize)) {
-			frame_size = (real_pipe->prev_src_height << 16 |
-					real_pipe->prev_src_width);
+		ret = mdp4_overlay_cache_reg(pipe->mfd,
+				(u32)(vg_base + 0x0048), frame_size);
+		if (ret) {
+			/*
+			 * video tile frame size register is NOT double
+			 * buffered. When this register updated, it kicks
+			 * in immediatly. During transition from smaller
+			 * resolution to higher resolution it may have
+			 * possibility that mdp still fetch from smaller
+			 * resolution buffer with new higher resolution
+			 * frame size. This will cause iommu page fault.
+			 */
+			real_pipe = mdp4_overlay_ndx2pipe(pipe->pipe_ndx);
+			psize = real_pipe->prev_src_height *
+					real_pipe->prev_src_width;
+			csize = pipe->src_height * pipe->src_width;
+			if (psize && (csize > psize)) {
+				frame_size = (real_pipe->prev_src_height << 16 |
+						real_pipe->prev_src_width);
+			}
+			outpdw(vg_base + 0x0048, frame_size);
+			real_pipe->prev_src_height = pipe->src_height;
+			real_pipe->prev_src_width = pipe->src_width;
 		}
-		outpdw(vg_base + 0x0048, frame_size);	/* TILE frame size */
-		real_pipe->prev_src_height = pipe->src_height;
-		real_pipe->prev_src_width = pipe->src_width;
 	}
 
 	/*
@@ -4058,4 +4066,26 @@ int mdp4_overlay_reset()
 	memset(&perf_request, 0, sizeof(perf_request));
 	memset(&perf_current, 0, sizeof(perf_current));
 	return 0;
+}
+
+static int mdp4_overlay_cache_reg(struct msm_fb_data_type *mfd,
+					u32 offset, u32 val)
+{
+	if ((!mfd) || (!mfd->cache_reg_en) ||
+		(mfd->cached_reg_cnt >= MDP_MAX_CACHED_REG)) {
+		pr_err("%s: exceed max cached reg number", __func__);
+		return -EINVAL;
+	}
+	mfd->cached_reg[mfd->cached_reg_cnt].reg = offset;
+	mfd->cached_reg[mfd->cached_reg_cnt].val = val;
+	mfd->cached_reg_cnt++;
+	return 0;
+}
+
+void mdp4_overlay_update_cached_reg(struct msm_fb_data_type *mfd)
+{
+	int i;
+	for (i = 0; i < mfd->cached_reg_cnt; i++)
+		outpdw((char *)mfd->cached_reg[i].reg,  mfd->cached_reg[i].val);
+	mfd->cached_reg_cnt = 0;
 }

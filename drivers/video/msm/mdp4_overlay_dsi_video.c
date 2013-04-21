@@ -220,6 +220,7 @@ int mdp4_dsi_video_pipe_commit(int cndx, int wait)
 
 	pipe = vp->plist;
 
+	vctrl->mfd->cached_reg_cnt = 0;
 	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
 		if (pipe->pipe_used) {
 			cnt++;
@@ -229,6 +230,11 @@ int mdp4_dsi_video_pipe_commit(int cndx, int wait)
 				 * commit pipes which are in pending queue
 				 * and not be unset yet
 				 */
+				pipe->mfd = vctrl->mfd;
+				if (!wait || vctrl->base_pipe->ov_blt_addr)
+					pipe->mfd->cache_reg_en = false;
+				else
+					pipe->mfd->cache_reg_en = true;
 				mdp4_overlay_vsync_commit(pipe);
 			}
 		}
@@ -1104,6 +1110,7 @@ void mdp4_dmap_done_dsi_video(int cndx)
 		return;
 	}
 	vctrl = &vsync_ctrl_db[cndx];
+	mdp4_overlay_update_cached_reg(vctrl->mfd);
 	pipe = vctrl->base_pipe;
 
 	spin_lock(&vctrl->spin_lock);
