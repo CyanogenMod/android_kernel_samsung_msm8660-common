@@ -792,6 +792,7 @@ static inline void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd)
 }
 #endif  /* CONFIG_FB_MSM_MIPI_DSI */
 
+void mdp4_lcdc_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_lcdc_overlay_blt(struct msm_fb_data_type *mfd,
 					struct msmfb_overlay_blt *req);
 int mdp4_lcdc_overlay_blt_offset(struct msm_fb_data_type *mfd,
