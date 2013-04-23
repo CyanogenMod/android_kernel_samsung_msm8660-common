@@ -488,6 +488,7 @@ void mdp4_dmae_done_dtv(void);
 void mdp4_dtv_wait4vsync(int cndx);
 void mdp4_dtv_vsync_ctrl(struct fb_info *info, int enable);
 void mdp4_dtv_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
+void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd);
 #else
 static inline void mdp4_overlay_dtv_start(void)
 {
@@ -538,6 +539,10 @@ static inline void mdp4_dtv_base_swap(struct mdp4_overlay_pipe *pipe)
 {
 	/* empty */
 }
+static inline void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd)
+{
+    /* empty */
+}
 #endif /* CONFIG_FB_MSM_DTV */
 
 void mdp4_dtv_set_black_screen(void);
@@ -555,6 +560,7 @@ int mdp4_atv_off(struct platform_device *pdev);
 void mdp4_dsi_video_fxn_register(cmd_fxn_t fxn);
 void mdp4_dsi_video_overlay(struct msm_fb_data_type *mfd);
 void mdp4_overlay_free_base_pipe(struct msm_fb_data_type *mfd);
+void mdp4_lcdc_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_lcdc_vsync_ctrl(struct fb_info *info, int enable);
 void mdp4_overlay0_done_dsi_video(int cndx);
 void mdp4_overlay0_done_dsi_cmd(int cndx);
@@ -702,9 +708,6 @@ static inline void mdp4_mddi_blt_stop(struct msm_fb_data_type *mfd)
 }
 void mdp4_dsi_video_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd);
-void mdp4_lcdc_free_base_pipe(struct msm_fb_data_type *mfd);
-void mdp4_dtv_free_base_pipe(struct msm_fb_data_type *mfd);
-
 #ifdef CONFIG_FB_MSM_MDP40
 static inline void mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 {
@@ -773,6 +776,14 @@ static inline void mdp4_dsi_cmd_blt_start(struct msm_fb_data_type *mfd)
 static inline void mdp4_dsi_cmd_blt_stop(struct msm_fb_data_type *mfd)
 {
         /* empty */
+}
+static inline void mdp4_dsi_video_free_base_pipe(struct msm_fb_data_type *mfd)
+{
+    /* empty */
+}
+static inline void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd)
+{
+    /* empty */
 }
 #endif  /* CONFIG_FB_MSM_MIPI_DSI */
 
@@ -902,6 +913,7 @@ static inline void mdp4_overlay_dsi_video_start(void)
 
 static int mdp4_dsi_video_splash_done(void)
 {
+	return 0;
 }
 
 #ifdef CONFIG_FB_MSM_MDP40
