@@ -1659,12 +1659,6 @@ void mdp4_mixer_stage_commit(int mixer)
 		if (pipe == NULL)
 			continue;
 
-//		pr_err("[JG] %s: ##### pipe->flags: 0x%x #####", __func__, pipe->flags);
-		if (pipe->flags & MDP_BLOCK_PIPE) {
-//			pr_err("[JG] %s:     ##### MDP_BLOCK_PIPE ##### continue", __func__);
-			continue;
-		}
-		
 		pr_debug("%s: mixer=%d ndx=%d stage=%d\n", __func__,
 					mixer, pipe->pipe_ndx, i);
 		stage = pipe->mixer_stage;
@@ -2740,27 +2734,6 @@ static int mdp4_calc_pipe_mdp_clk(struct msm_fb_data_type *mfd,
 
 	rst >>= shift;
 
-#if 0 // QC1115
-	/*
-	 * There is one special case for the panels that have low
-	 * v_back_porch (<=4), mdp clk should be fast enough to buffer
-	 * 4 lines input during back porch time if scaling is
-	 * required(FIR).
-	 */
-	if ((mfd->panel_info.lcdc.v_back_porch <= 4) &&
-			(pipe->src_h != pipe->dst_h)&& 
-			(mfd->panel_info.lcdc.v_back_porch != 0)) {
-		u32 clk = 0;
-		clk = 4 * (pclk >> shift) / mfd->panel_info.lcdc.v_back_porch;
-		clk <<= shift;
-		pr_debug("%s: mdp clk rate %d based on low vbp %d\n",
-			__func__, (u32)clk, mfd->panel_info.lcdc.v_back_porch);
-		rst = (rst > clk) ? rst : clk;
-		pr_debug("%s: calculated rst clk = %d\n",
-			__func__, (u32)rst);
-	}
-#endif
-
 	/*
 	 * There is one special case for the panels that have low
 	 * v_back_porch (<=4), mdp clk should be fast enough to buffer
@@ -3465,12 +3438,6 @@ int mdp4_overlay_unset(struct fb_info *info, int ndx)
 		return -ENODEV;
 	}
 
-/*
-	if (pipe->flags & MDP_BLOCK_PIPE) {
-		pipe->flags = pipe->flags & ~MDP_BLOCK_PIPE;
-		pr_err("[JG] %s: ##### MDP_BLOCK_PIPE #####", __func__);
-	}
-*/
 	if (pipe->pipe_type == OVERLAY_TYPE_BF) {
 		mdp4_overlay_borderfill_stage_down(pipe);
 		mutex_unlock(&mfd->dma->ov_mutex);
@@ -3789,8 +3756,6 @@ int mdp4_overlay_play(struct fb_info *info, struct msmfb_overlay_data *req)
 			mdp4_wfd_pipe_queue(0, pipe);/* cndx = 0 */
 	}
 
-	if (!(pipe->flags & MDP_OV_PLAY_NOWAIT))
-		mdp4_iommu_unmap(pipe);
 	mdp4_stat.overlay_play[pipe->mixer_num]++;
 
 end:
