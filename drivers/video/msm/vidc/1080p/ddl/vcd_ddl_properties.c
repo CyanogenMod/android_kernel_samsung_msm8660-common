@@ -974,8 +974,8 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 					align_virtual_addr =
 					recon_buffers->kernel_virtual_addr +
 					recon_buffers->ysize;
-				DDL_MSG_LOW("Y::KVirt: %p,KPhys: %p"
-							"UV::KVirt: %p,KPhys: %p\n",
+				DDL_MSG_LOW("Y::KVirt: %p, KPhys: %p "\
+					"UV::KVirt: %p, KPhys: %p\n",
 				encoder->hw_bufs.dpb_y[index_hw_bufs].
 				align_virtual_addr,
 				encoder->hw_bufs.dpb_y[index_hw_bufs].
@@ -985,7 +985,7 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 				encoder->hw_bufs.dpb_c[index_hw_bufs].
 				align_physical_addr);
 				vcd_status = VCD_S_SUCCESS;
-				}
+			}
 		}
 	}
 	break;
