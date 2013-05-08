@@ -957,7 +957,7 @@ int mdp4_mddi_off(struct platform_device *pdev)
 	/* sanity check, free pipes besides base layer */
 	mdp4_overlay_unset_mixer(pipe->mixer_num);
 	mdp4_mixer_stage_down(pipe, 1);
-	mdp4_overlay_pipe_free(pipe);
+	mdp4_overlay_pipe_free(pipe, 1);
 	vctrl->base_pipe = NULL;
 
 	if (vctrl->clk_enabled) {

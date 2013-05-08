@@ -197,11 +197,6 @@ int mdp4_dsi_video_pipe_commit(int cndx, int wait)
 	 * overlay_unset
 	 */
 
-	if (vp->update_cnt == 0) {
-		mutex_unlock(&vctrl->update_lock);
-		return cnt;
-	}
-
 	vctrl->update_ndx++;
 	vctrl->update_ndx &= 0x01;
 	vp->update_cnt = 0;     /* reset */
