@@ -274,7 +274,7 @@ void arch_reset(char mode, const char *cmd)
 			__raw_writel(RESTART_OTHERBOOT_MODE, restart_reason);
 		}
 	}
-#ifdef CONFIG_SEC_DEBUG
+#if 1
 	else {
 		writel(0x12345678, restart_reason);    /* clear abnormal reset flag */
 	}
