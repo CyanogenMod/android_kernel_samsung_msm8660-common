@@ -918,10 +918,6 @@ static inline void mdp4_iommu_detach(void)
 
 void mdp_vid_quant_set(void);
 #ifndef CONFIG_FB_MSM_MDP40
-static inline void mdp_dsi_cmd_overlay_suspend(struct msm_fb_data_type *mfd)
-{
-	/* empty */
-}
 static inline int msmfb_overlay_vsync_ctrl(struct fb_info *info,
 						void __user *argp)
 {

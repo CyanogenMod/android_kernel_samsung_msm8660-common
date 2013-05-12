@@ -989,31 +989,6 @@ int mdp4_mddi_off(struct platform_device *pdev)
 	return ret;
 }
 
-void mdp_mddi_overlay_suspend(struct msm_fb_data_type *mfd)
-{
-	int cndx = 0;
-	struct vsycn_ctrl *vctrl;
-	struct mdp4_overlay_pipe *pipe;
-
-	vctrl = &vsync_ctrl_db[cndx];
-	pipe = vctrl->base_pipe;
-	/* dis-engage rgb0 from mixer0 */
-	if (pipe) {
-		if (mfd->ref_cnt == 0) {
-			/* adb stop */
-			if (pipe->pipe_type == OVERLAY_TYPE_BF)
-				mdp4_overlay_borderfill_stage_down(pipe);
-
-			/* pipe == rgb1 */
-			mdp4_overlay_unset_mixer(pipe->mixer_num);
-			vctrl->base_pipe = NULL;
-		} else {
-			mdp4_mixer_stage_down(pipe, 1);
-			mdp4_overlay_iommu_pipe_free(pipe->pipe_ndx, 1);
-		}
-	}
-}
-
 void mdp4_mddi_overlay(struct msm_fb_data_type *mfd)
 {
 	int cndx = 0;
