@@ -96,3 +96,9 @@ config MSM_KGSL_DISABLE_SHADOW_WRITES
 	bool "Disable register shadow writes for context switches"
 	default n
 	depends on MSM_KGSL
+
+config KGSL_COMPAT
+    bool "Compatibility with older kernel versions"
+    default y
+    depends on MSM_KGSL
+

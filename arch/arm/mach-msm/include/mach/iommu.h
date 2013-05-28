@@ -116,9 +116,7 @@ static inline struct device *msm_iommu_get_ctx(const char *ctx_name)
 }
 #endif
 
-#endif
-
-static inline int msm_soc_version_supports_iommu(void)
+static inline int msm_soc_version_supports_iommu_v1(void)
 {
 	if (cpu_is_msm8960() &&
 	    SOCINFO_VERSION_MAJOR(socinfo_get_version()) < 2)
@@ -131,3 +129,5 @@ static inline int msm_soc_version_supports_iommu(void)
 	}
 	return 1;
 }
+
+#endif
