@@ -1274,17 +1274,18 @@ static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 		ld9040_disp_powerup();
 		ld9040_disp_on();
 		ld9040_state.disp_initialized = TRUE;
-
-		if(lcd.current_brightness != lcd.bl)
-		{
-		        lcdc_ld9040_set_brightness(lcd.current_brightness);
-		}
 //		flag_gammaupdate = 0;
 #if 0
 		if ( get_hw_rev() >= 12 ) // TEMP
 			key_led_control(1);
 #endif
 	}
+
+	// set brightness when display is on
+	if ((lcd.current_brightness != lcd.bl) && (ld9040_state.display_on))
+	{
+		lcdc_ld9040_set_brightness(lcd.current_brightness);
+        }
 
 	DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
 	mutex_unlock(&lcd.lock);
