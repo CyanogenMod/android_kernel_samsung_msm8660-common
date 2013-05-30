@@ -1275,10 +1275,11 @@ static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 		ld9040_disp_on();
 		ld9040_state.disp_initialized = TRUE;
 
-		if(lcd.current_brightness != lcd.bl)
-		{
-		        lcdc_ld9040_set_brightness(lcd.current_brightness);
-		}
+                if (lcd.current_brightness != lcd.bl)
+                {
+                        lcdc_ld9040_set_brightness(lcd.current_brightness);
+                }
+
 //		flag_gammaupdate = 0;
 #if 0
 		if ( get_hw_rev() >= 12 ) // TEMP
@@ -2153,6 +2154,12 @@ static void ld9040_late_resume(struct early_suspend *h) {
 		ld9040_disp_powerup();
 		ld9040_disp_on();
 		ld9040_state.disp_initialized = TRUE;
+
+		if (lcd.current_brightness != lcd.bl)
+                {
+                        lcdc_ld9040_set_brightness(lcd.current_brightness);
+                }
+
 //		flag_gammaupdate = 0;
 	}
 	mutex_unlock(&lcd.lock);
