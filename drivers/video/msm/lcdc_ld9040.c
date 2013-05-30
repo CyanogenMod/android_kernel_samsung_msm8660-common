@@ -2153,6 +2153,14 @@ static void ld9040_late_resume(struct early_suspend *h) {
 		ld9040_disp_powerup();
 		ld9040_disp_on();
 		ld9040_state.disp_initialized = TRUE;
+
+		if(lcd.current_brightness != lcd.bl)
+		{
+			DPRINT("ld9040_late_resume() DAF setting current brightness (lcd.current_brightness=%d, lcd.bl=%d)\n", lcd.current_brightness, lcd.bl);
+		        lcdc_ld9040_set_brightness(lcd.current_brightness);
+		} else {
+                        DPRINT("ld9040_late_resume() DAF testing current brightness was not changed (lcd.current_brightness=lcd.bl=%d)\n", lcd.bl);
+                }
 //		flag_gammaupdate = 0;
 	}
 	mutex_unlock(&lcd.lock);
