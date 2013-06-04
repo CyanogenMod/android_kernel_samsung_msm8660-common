@@ -499,6 +499,7 @@ struct ld9040_state_type{
 	boolean disp_initialized;
 	boolean display_on;
 	boolean disp_powered_up;
+	boolean early_suspend;
 };
 
 #if defined(SMART_DIMMING) // smartdimming
@@ -1266,25 +1267,29 @@ extern void key_led_control(int on);
 
 static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 {
-	mutex_lock(&lcd.lock);
-	DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
-	
-	if (!ld9040_state.disp_initialized) {
-        lcdc_ld9040_panel_on_seq();
+	if (!ld9040_state.early_suspend)
+	{
+		mutex_lock(&lcd.lock);
+		DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
 
-		if(lcd.current_brightness != lcd.bl)
-		{
-		        lcdc_ld9040_set_brightness(lcd.current_brightness);
-		}
+		if (!ld9040_state.disp_initialized) {
+
+			lcdc_ld9040_panel_on_seq();
+
+			if(lcd.current_brightness != lcd.bl)
+			{
+				lcdc_ld9040_set_brightness(lcd.current_brightness);
+			}
 
 #if 0
-		if ( get_hw_rev() >= 12 ) // TEMP
-			key_led_control(1);
+			if ( get_hw_rev() >= 12 ) // TEMP
+				key_led_control(1);
 #endif
-	}
+		}
 
-	DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
-	mutex_unlock(&lcd.lock);
+		DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
+		mutex_unlock(&lcd.lock);
+	}
 
 	return 0;
 }
@@ -2121,6 +2126,8 @@ static void ld9040_early_suspend(struct early_suspend *h) {
 			ld9040_state.disp_powered_up,
 			ld9040_state.display_on);
 
+    ld9040_state.early_suspend = TRUE;
+
 	if (ld9040_state.disp_powered_up && ld9040_state.display_on) {
 		lcdc_ld9040_panel_off_seq();
 	}
@@ -2139,6 +2146,7 @@ static void ld9040_late_resume(struct early_suspend *h) {
 
 	if (!ld9040_state.disp_initialized) {
 		lcdc_ld9040_panel_on_seq();
+		ld9040_state.early_suspend = FALSE;
 	}
 	mutex_unlock(&lcd.lock);
 
