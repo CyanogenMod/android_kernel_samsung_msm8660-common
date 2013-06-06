@@ -14581,17 +14581,17 @@ static int mipi_S6E8AA0_panel_power(int enable)
 }
 #endif
 
- static int lcdc_LD9040_panel_power(int enable)
+static int lcdc_LD9040_panel_power(int enable)
 {
 	static struct regulator *l3 = NULL;
-    static struct regulator *l19 = NULL;
+	static struct regulator *l19 = NULL;
 	int ret;
 
 	printk("[kmj] %s:enable:%d\n", __FUNCTION__, enable);
 
-    if(l3 == NULL)
-    {
-        	l3 = regulator_get(NULL, "8058_l3");
+	if(l3 == NULL)
+	{
+		l3 = regulator_get(NULL, "8058_l3");
         	if (IS_ERR(l3))
         		return -1;
 
@@ -14599,10 +14599,10 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	if (ret) {
         		printk("%s: error setting voltage\n", __func__);
         	}
-    }
-            
-    if(l19 == NULL)
-    {            
+	}
+
+	if(l19 == NULL)
+	{
         	l19 = regulator_get(NULL, "8058_l19");
         	if (IS_ERR(l19))
         		return -1;
@@ -14611,8 +14611,8 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	if (ret) {
         		printk("%s: error setting voltage\n", __func__);
         	}
-    }
-    
+	}
+
 	if (enable) {
 
         	ret = regulator_enable(l3);
@@ -14622,7 +14622,7 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	ret = regulator_enable(l19);
         	if (ret) {
         		printk("%s: error enabling regulator\n", __func__);
-        	}        	
+		}
 	} else {
         	ret = regulator_disable(l3);
         	if (ret) {
@@ -14631,9 +14631,16 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	ret = regulator_disable(l19);
         	if (ret) {
         		printk("%s: error enabling regulator\n", __func__);
-        	}        		
+		}
         }
-        
+
+	// debugging code for LCD
+	printk("[kmj] %s: l3 current voltage: %i\n", __FUNCTION__, regulator_get_voltage(l3));
+	printk("[kmj] %s: l19 current voltage: %i\n", __FUNCTION__, regulator_get_voltage(l19));
+	printk("[kmj] %s: l3 enabled: %i\n", __FUNCTION__, regulator_is_enabled(l3));
+	printk("[kmj] %s: l19 enabled: %i\n", __FUNCTION__, regulator_is_enabled(l19));
+	printk("[kmj] %s: end\n", __FUNCTION__);
+
 	return ret;
 }
 
