@@ -141,6 +141,7 @@ struct i2c_touchkey_driver {
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	struct early_suspend early_suspend;
+	struct mutex lock;
 };
 struct i2c_touchkey_driver *touchkey_driver = NULL;
 struct work_struct touchkey_work;
@@ -222,7 +223,9 @@ static int i2c_touchkey_read(u8 reg, u8 * val, unsigned int len)
 		msg->flags = I2C_M_RD;
 		msg->len = len;
 		msg->buf = val;
+		mutex_lock(&touchkey_driver->lock);
 		err = i2c_transfer(touchkey_driver->client->adapter, msg, 1);
+		mutex_unlock(&touchkey_driver->lock);
 		if (err >= 0) {
 			return 0;
 		}
@@ -248,7 +251,9 @@ static int i2c_touchkey_write(u8 * val, unsigned int len)
 		msg->flags = I2C_M_WR;
 		msg->len = len;
 		msg->buf = val;
+		mutex_lock(&touchkey_driver->lock);
 		err = i2c_transfer(touchkey_driver->client->adapter, msg, 1);
+		mutex_unlock(&touchkey_driver->lock);
 		if (err >= 0)
 			return 0;
 
@@ -988,6 +993,8 @@ static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device
 		input_free_device(input_dev);
 		return err;
 	}
+
+	mutex_init(&touchkey_driver->lock);
 
     //	gpio_pend_mask_mem = ioremap(INT_PEND_BASE, 0x10);  //temp ks
     INIT_DELAYED_WORK(&touch_resume_work, touchkey_resume_func);
