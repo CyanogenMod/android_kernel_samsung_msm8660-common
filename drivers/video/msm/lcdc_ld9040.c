@@ -2137,17 +2137,18 @@ static void ld9040_early_suspend(struct early_suspend *h) {
 
 static void ld9040_late_resume(struct early_suspend *h) {
 
-	mutex_lock(&lcd.lock);
 	DPRINT("panel on at late_resume (%d,%d,%d)\n",
 			ld9040_state.disp_initialized,
 			ld9040_state.disp_powered_up,
 			ld9040_state.display_on);
 
+#if 0
+	mutex_lock(&lcd.lock);
 	if (!ld9040_state.disp_initialized) {
 		lcdc_ld9040_panel_on_seq();
 	}
 	mutex_unlock(&lcd.lock);
-
+#endif
 	return;
 }
 #endif
