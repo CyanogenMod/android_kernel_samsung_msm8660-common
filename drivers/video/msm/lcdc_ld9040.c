@@ -63,6 +63,7 @@
 #include <linux/backlight.h>
 #include <linux/miscdevice.h>
 #include "mdp4_video_enhance.h"
+#include <linux/regulator/consumer.h>
 
 #define MAPPING_TBL_AUTO_BRIGHTNESS 1
 #include "lcdc_ld9040_seq.h"
@@ -2140,22 +2141,40 @@ static void ld9040_early_suspend(struct early_suspend *h) {
 
 static void ld9040_late_resume(struct early_suspend *h) {
 
-	mutex_lock(&lcd.lock);
-	DPRINT("panel on at late_resume (%d,%d,%d)\n",
+	static struct regulator *l3 = NULL;
+	static struct regulator *l19 = NULL;
+	int l3_enabled, l19_enabled;
+
+	// get regulators
+	l3 = regulator_get(NULL, "8058_l3");
+	l19 = regulator_get(NULL, "8058_l19");
+
+	// get status of regulators
+	l3_enabled = regulator_is_enabled(l3);
+	l19_enabled = regulator_is_enabled(l19);
+
+	DPRINT("l3 enabled: %d l19 enabled: %d", l3_enabled, l19_enabled);
+
+	// make sure lcd regulators are enabled before doing initialization
+	if (l3_enabled && l19_enabled) {
+
+		mutex_lock(&lcd.lock);
+		DPRINT("panel on at late_resume (%d,%d,%d)\n",
 			ld9040_state.disp_initialized,
 			ld9040_state.disp_powered_up,
 			ld9040_state.display_on);
 
-	if (!ld9040_state.disp_initialized) {
-		/* Configure reset GPIO that drives DAC */
-		lcdc_ld9040_pdata->panel_config_gpio(1);
-		spi_init();	/* LCD needs SPI */
-		ld9040_disp_powerup();
-		ld9040_disp_on();
-		ld9040_state.disp_initialized = TRUE;
-//		flag_gammaupdate = 0;
+		if (!ld9040_state.disp_initialized) {
+			/* Configure reset GPIO that drives DAC */
+			lcdc_ld9040_pdata->panel_config_gpio(1);
+			spi_init();	/* LCD needs SPI */
+			ld9040_disp_powerup();
+			ld9040_disp_on();
+			ld9040_state.disp_initialized = TRUE;
+			//flag_gammaupdate = 0;
+		}
+		mutex_unlock(&lcd.lock);
 	}
-	mutex_unlock(&lcd.lock);
 
 	return;
 }
