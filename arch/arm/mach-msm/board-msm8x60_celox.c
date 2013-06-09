@@ -4236,7 +4236,7 @@ static void set_mdp_clocks_for_wuxga(void);
 
 static int msm_fb_detect_panel(const char *name)
 {
-// kmj_ea25.lcd		
+// kmj_ea25.lcd
 #if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL)
 	if (!strcmp(name, "lcdc_ld9040_wvga"))
 		return 0;
@@ -14581,17 +14581,17 @@ static int mipi_S6E8AA0_panel_power(int enable)
 }
 #endif
 
- static int lcdc_LD9040_panel_power(int enable)
+static int lcdc_LD9040_panel_power(int enable)
 {
 	static struct regulator *l3 = NULL;
-    static struct regulator *l19 = NULL;
+	static struct regulator *l19 = NULL;
 	int ret;
 
 	printk("[kmj] %s:enable:%d\n", __FUNCTION__, enable);
 
-    if(l3 == NULL)
-    {
-        	l3 = regulator_get(NULL, "8058_l3");
+	if(l3 == NULL) {
+
+		l3 = regulator_get(NULL, "8058_l3");
         	if (IS_ERR(l3))
         		return -1;
 
@@ -14599,11 +14599,11 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	if (ret) {
         		printk("%s: error setting voltage\n", __func__);
         	}
-    }
-            
-    if(l19 == NULL)
-    {            
-        	l19 = regulator_get(NULL, "8058_l19");
+	}
+
+	if(l19 == NULL) {
+
+		l19 = regulator_get(NULL, "8058_l19");
         	if (IS_ERR(l19))
         		return -1;
 
@@ -14611,29 +14611,40 @@ static int mipi_S6E8AA0_panel_power(int enable)
         	if (ret) {
         		printk("%s: error setting voltage\n", __func__);
         	}
-    }
-    
+	}
+
 	if (enable) {
 
-        	ret = regulator_enable(l3);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}
-        	ret = regulator_enable(l19);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}        	
+		if (!regulator_is_enabled(l3)) {
+			ret = regulator_enable(l3);
+			if (ret) {
+				printk("%s: error enabling regulator\n", __func__);
+			}
+		}
+
+		if (!regulator_is_enabled(l19)) {
+			ret = regulator_enable(l19);
+			if (ret) {
+				printk("%s: error enabling regulator\n", __func__);
+			}
+		}
+
 	} else {
-        	ret = regulator_disable(l3);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}
-        	ret = regulator_disable(l19);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}        		
-        }
-        
+
+		if (regulator_is_enabled(l3)) {
+			ret = regulator_disable(l3);
+			if (ret) {
+				printk("%s: error enabling regulator\n", __func__);
+			}
+		}
+
+		if (regulator_is_enabled(l19)) {
+			ret = regulator_disable(l19);
+			if (ret) {
+				printk("%s: error enabling regulator\n", __func__);
+			}
+		}
+	}
 	return ret;
 }
 
