@@ -6,6 +6,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
+ *
  */
 
 #include <linux/module.h>
@@ -28,6 +29,9 @@
 #include <asm/uaccess.h>
 #include <linux/earlysuspend.h>
 #include <asm/io.h>
+#if defined(CONFIG_GENERIC_BLN)
+#include <linux/bln.h>
+#endif
 #ifdef CONFIG_CPU_FREQ
 //#include <mach/cpu-freq-v210.h>  //temp ks
 #endif
@@ -147,6 +151,7 @@ struct i2c_touchkey_driver {
 	struct input_dev *input_dev;
 	struct early_suspend early_suspend;
 	struct mutex mutex;
+	bool is_bln_active;
 };
 struct i2c_touchkey_driver *touchkey_driver = NULL;
 struct work_struct touchkey_work;
@@ -244,7 +249,11 @@ static int i2c_touchkey_write(u8 * val, unsigned int len)
 	struct i2c_msg msg[1];
 	int retry = 2;
 
-	if ((touchkey_driver == NULL) || !(touchkey_enable == 1)) {
+	if ((touchkey_driver == NULL || touchkey_enable != 1)
+#if defined(CONFIG_GENERIC_BLN)
+		&& (!touchkey_driver->is_bln_active)
+#endif
+	) {
 		printk(KERN_DEBUG "[TKEY] touchkey is not enabled.W\n");
 		return -ENODEV;
 	}
@@ -630,6 +639,7 @@ static void sec_touchkey_early_suspend(struct early_suspend *h)
     printk(KERN_DEBUG "sec_touchkey_early_suspend\n");
 
     disable_irq(IRQ_TOUCHKEY_INT);
+
 #if defined (CONFIG_USA_MODEL_SGH_I717)
     ret = cancel_work_sync(&touchkey_work);
     if (ret) {
@@ -734,15 +744,16 @@ static void sec_touchkey_early_resume(struct early_suspend *h)
 #if defined (CONFIG_EUR_MODEL_GT_I9210) || defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R) || defined (CONFIG_USA_MODEL_SGH_T769) || defined (CONFIG_USA_MODEL_SGH_T989)
  	int ret =0;
 #endif
-        mutex_lock(&touchkey_driver->mutex);
 
 	set_touchkey_debug('R');
 	printk(KERN_DEBUG "[TKEY] sec_touchkey_early_resume\n");
+
 	if (touchkey_enable < 0) {
 		printk("[TKEY] %s touchkey_enable: %d\n", __FUNCTION__, touchkey_enable);
-                mutex_unlock(&touchkey_driver->mutex);
 		return;
 	}
+
+	mutex_lock(&touchkey_driver->mutex);
 
 #if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
 	if (get_hw_rev() >= 0x0d){
@@ -902,12 +913,61 @@ if(touchled_cmd_reversed) {
 		msleep(50);
 		touchkey_auto_calibration(1/*on*/);
 #else
-schedule_delayed_work(&touch_resume_work, msecs_to_jiffies(500));
+	schedule_delayed_work(&touch_resume_work, msecs_to_jiffies(500));
 #endif
 
         mutex_unlock(&touchkey_driver->mutex);
 }
 #endif				// End of CONFIG_HAS_EARLYSUSPEND
+
+#if defined(CONFIG_GENERIC_BLN)
+static void cypress_touchkey_enable_backlight(void) {
+    signed char int_data[] ={0x10};
+    mutex_lock(&touchkey_driver->mutex);
+    i2c_touchkey_write(int_data, 1);
+
+    mutex_unlock(&touchkey_driver->mutex);
+}
+
+static void cypress_touchkey_disable_backlight(void) {
+    signed char int_data[] ={0x20};
+    mutex_lock(&touchkey_driver->mutex);
+    i2c_touchkey_write(int_data, 1);
+
+    mutex_unlock(&touchkey_driver->mutex);
+}
+
+static bool cypress_touchkey_enable_led_notification(void) {
+    if (touchkey_enable)
+        return false;
+
+    mutex_lock(&touchkey_driver->mutex);
+    tkey_vdd_enable(1);
+    msleep(50);
+    tkey_led_vdd_enable(1);
+
+    touchkey_driver->is_bln_active = true;
+    mutex_unlock(&touchkey_driver->mutex);
+    return true;
+}
+
+static void cypress_touchkey_disable_led_notification(void) {
+    mutex_lock(&touchkey_driver->mutex);
+
+    tkey_vdd_enable(0);
+    tkey_led_vdd_enable(0);
+
+    touchkey_driver->is_bln_active = false;
+    mutex_unlock(&touchkey_driver->mutex);
+}
+
+static struct bln_implementation cypress_touchkey_bln = {
+    .enable = cypress_touchkey_enable_led_notification,
+    .disable = cypress_touchkey_disable_led_notification,
+    .on = cypress_touchkey_enable_backlight,
+    .off = cypress_touchkey_disable_backlight,
+};
+#endif
 
 extern int mcsdl_download_binary_data(void);
 static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -1026,7 +1086,7 @@ static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device
     INIT_DELAYED_WORK(&touch_resume_work, touchkey_resume_func);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    //	touchkey_driver->early_suspend.level = EARLY_SUSPEND_LEVEL_STOP_DRAWING + 1;
+    touchkey_driver->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 10;
     touchkey_driver->early_suspend.suspend = sec_touchkey_early_suspend;
     touchkey_driver->early_suspend.resume = sec_touchkey_early_resume;
     register_early_suspend(&touchkey_driver->early_suspend);
@@ -1089,7 +1149,12 @@ if (get_hw_rev() >=0x02) {
 }
 #endif
 	set_touchkey_debug('K');
-        mutex_unlock(&touchkey_driver->mutex);
+
+#if defined(CONFIG_GENERIC_BLN)
+	register_bln_implementation(&cypress_touchkey_bln);
+#endif
+
+	mutex_unlock(&touchkey_driver->mutex);
 	return 0;
 }
 
