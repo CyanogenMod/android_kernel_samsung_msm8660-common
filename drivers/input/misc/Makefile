@@ -52,6 +52,9 @@ obj-$(CONFIG_PMIC8058_OTHC)             += pmic8058-othc.o
 obj-$(CONFIG_INPUT_PMIC8058_VIBRA_MEMLESS) += pmic8058-vib-memless.o
 obj-$(CONFIG_BOSCH_BMA150)              += bma150.o
 obj-$(CONFIG_INPUT_BMP180)              += bmp180.o
+ifeq ($(CONFIG_GENERIC_BLN),y)
+obj-$(CONFIG_GENERIC_BLN)		+= bln.o
+endif
 
 #debug setting
 ifeq ($(CONFIG_SENSORS_CORE),y)
