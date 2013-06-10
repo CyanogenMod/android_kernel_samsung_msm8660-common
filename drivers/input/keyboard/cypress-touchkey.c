@@ -6,6 +6,7 @@
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
+ *
  */
 
 #include <linux/module.h>
@@ -28,6 +29,9 @@
 #include <asm/uaccess.h>
 #include <linux/earlysuspend.h>
 #include <asm/io.h>
+#if defined(CONFIG_GENERIC_BLN)
+#include <linux/bln.h>
+#endif
 #ifdef CONFIG_CPU_FREQ
 //#include <mach/cpu-freq-v210.h>  //temp ks
 #endif
@@ -69,7 +73,6 @@ Cypress touchkey register
 /*sec_class sysfs*/
 extern struct class *sec_class;
 struct device *sec_touchkey;
-
 
 #if defined(CONFIG_S5PC110_T959_BOARD)
 static int touchkey_keycode[] = {NULL, KEY_BACK, KEY_ENTER, KEY_MENU, KEY_END}; // BEHOLD3
@@ -242,8 +245,8 @@ static int i2c_touchkey_write(u8 * val, unsigned int len)
 	struct i2c_msg msg[1];
 	int retry = 2;
 
-	if ((touchkey_driver == NULL) || !(touchkey_enable == 1)) {
-		printk(KERN_DEBUG "[TKEY] touchkey is not enabled.W\n");
+	if (touchkey_driver == NULL) {
+		printk(KERN_ERR "[TKEY] touchkey is not enabled.W\n");
 		return -ENODEV;
 	}
 
@@ -253,6 +256,9 @@ static int i2c_touchkey_write(u8 * val, unsigned int len)
 		msg->len = len;
 		msg->buf = val;
 		err = i2c_transfer(touchkey_driver->client->adapter, msg, 1);
+#if 1 /* creams */
+		printk("write value %d to address %d\n",*val, msg->addr);
+#endif
 		if (err >= 0)
 			return 0;
 
@@ -623,6 +629,9 @@ static void sec_touchkey_early_suspend(struct early_suspend *h)
 #endif
     mutex_lock(&touchkey_driver->mutex);
 
+    if (touchkey_enable < 0)
+        return;
+
     touchkey_enable = 0;
     set_touchkey_debug('S');
     printk(KERN_DEBUG "sec_touchkey_early_suspend\n");
@@ -730,6 +739,13 @@ static void sec_touchkey_early_resume(struct early_suspend *h)
 
 	set_touchkey_debug('R');
 	printk(KERN_DEBUG "[TKEY] sec_touchkey_early_resume\n");
+
+#if defined(CONFIG_GENERIC_BLN)
+	if (touchkey_enable == -3) {
+		cancel_bln_activity();
+	} else
+#endif
+
 	if (touchkey_enable < 0) {
 		printk("[TKEY] %s touchkey_enable: %d\n", __FUNCTION__, touchkey_enable);
                 mutex_unlock(&touchkey_driver->mutex);
@@ -900,6 +916,44 @@ schedule_delayed_work(&touch_resume_work, msecs_to_jiffies(500));
         mutex_unlock(&touchkey_driver->mutex);
 }
 #endif				// End of CONFIG_HAS_EARLYSUSPEND
+
+#if defined(CONFIG_GENERIC_BLN)
+static void cypress_touchkey_enable_backlight(void) {
+    signed char int_data[] ={0x10};
+    i2c_touchkey_write(int_data, 1);
+}
+
+static void cypress_touchkey_disable_backlight(void) {
+    signed char int_data[] ={0x20};
+    i2c_touchkey_write(int_data, 1);
+}
+
+static bool cypress_touchkey_enable_led_notification(void) {
+    if (touchkey_enable)
+        return false;
+
+    tkey_vdd_enable(1);
+    msleep(50);
+    tkey_led_vdd_enable(1);
+
+    touchkey_enable = -3;
+    return true;
+}
+
+static void cypress_touchkey_disable_led_notification(void) {
+    tkey_led_vdd_enable(0);
+    tkey_vdd_enable(0);
+
+    touchkey_enable = 0;
+}
+
+static struct bln_implementation cypress_touchkey_bln = {
+    .enable = cypress_touchkey_enable_led_notification,
+    .disable = cypress_touchkey_disable_led_notification,
+    .on = cypress_touchkey_enable_backlight,
+    .off = cypress_touchkey_disable_backlight,
+};
+#endif
 
 extern int mcsdl_download_binary_data(void);
 static int i2c_touchkey_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -1077,7 +1131,12 @@ if (get_hw_rev() >=0x02) {
 }
 #endif
 	set_touchkey_debug('K');
-        mutex_unlock(&touchkey_driver->mutex);
+
+#if defined(CONFIG_GENERIC_BLN)
+	register_bln_implementation(&cypress_touchkey_bln);
+#endif
+
+	mutex_unlock(&touchkey_driver->mutex);
 	return 0;
 }
 
@@ -1336,12 +1395,12 @@ static ssize_t touch_led_control(struct device *dev, struct device_attribute *at
 
 #endif
 		if(g_debug_switch)
-			printk(KERN_DEBUG "touch_led_control int_data: %d  \n", int_data);
+			printk(KERN_DEBUG "touch_led_control int_data: %d\n", int_data);
 
-		#if defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_USA_MODEL_SGH_I717)
 			if(Q1_debug_msg)
-				printk(KERN_DEBUG "touch_led_control int_data: %d  \n", int_data);
-		#endif
+				printk(KERN_DEBUG "touch_led_control int_data: %d\n", int_data);
+#endif
 
 		errnum = i2c_touchkey_write((u8*)&int_data, 1);
 		if(errnum==-ENODEV) {
