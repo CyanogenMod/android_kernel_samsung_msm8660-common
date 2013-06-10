@@ -12,6 +12,13 @@ menuconfig INPUT_MISC
 
 if INPUT_MISC
 
+config GENERIC_BLN
+	bool "Generic BLN support for backlight notification"
+	default y
+	help
+	  Say Y here to enable the backlight notification
+	  for android led-notification (modified liblight needed)
+
 config INPUT_88PM860X_ONKEY
 	tristate "88PM860x ONKEY support"
 	depends on MFD_88PM860X
