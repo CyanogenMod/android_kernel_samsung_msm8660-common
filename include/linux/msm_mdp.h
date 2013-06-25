@@ -544,13 +544,6 @@ enum {
 #define MDP_MAX_FENCE_FD	10
 #define MDP_BUF_SYNC_FLAG_WAIT	1
 
-struct mdp_buf_sync {
-	uint32_t flags;
-	uint32_t acq_fen_fd_cnt;
-	int *acq_fen_fd;
-	int *rel_fen_fd;
-};
-
 struct mdp_blend_cfg {
 	uint32_t is_premultiplied;
 };
@@ -563,11 +556,13 @@ struct msmfb_metadata {
 		uint32_t panel_frame_rate;
 	} data;
 };
-struct mdp_buf_fence {
+
+struct mdp_buf_sync {
 	uint32_t flags;
 	uint32_t acq_fen_fd_cnt;
-	int acq_fen_fd[MDP_MAX_FENCE_FD];
-	int rel_fen_fd[MDP_MAX_FENCE_FD];
+	int *acq_fen_fd;
+	int *rel_fen_fd;
+	int *retire_fen_fd;
 };
 
 #define MDP_DISPLAY_COMMIT_OVERLAY 0x00000001
