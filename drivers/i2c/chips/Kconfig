@@ -91,7 +91,7 @@ config SENSORS_YAS529_MAGNETIC
 	depends on I2C
 
 config INPUT_YAS529_POSITION
-	int "YAS529 Mounting Position on Board"
+	tristate "YAS529 Mounting Position on Board"
 	depends on SENSORS_YAS529_MAGNETIC
 	default n
 	help
