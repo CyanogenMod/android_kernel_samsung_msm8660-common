@@ -185,7 +185,7 @@ static void a2220_i2c_sw_reset(unsigned int reset_cmd)
 static ssize_t  a2220_hw_reset(struct a2220img *img)
 {
 	struct a2220img *vp = img;
-	int rc,i, pass = 0;
+	int rc = 0,i, pass = 0;
 	int remaining;
 	int retry = RETRY_CNT;
 	unsigned char *index;
@@ -2126,7 +2126,7 @@ static int a2220_probe(
 #elif defined(CONFIG_USA_MODEL_SGH_I717)
 		pr_debug(MODULE_NAME "%s : GPIO 33\n", __func__);
 		gpio_tlmm_config(GPIO_CFG(33,0,GPIO_CFG_OUTPUT,GPIO_CFG_NO_PULL,GPIO_CFG_2MA),GPIO_CFG_ENABLE); // 2MIC_PWDN
-		//gpio_tlmm_config(GPIO_CFG(34,0,GPIO_CFG_OUTPUT,GPIO_CFG_PULL_DOWN,GPIO_CFG_2MA),GPIO_CFG_ENABLE); // 2MIC_PWDN#elif defined(CONFIG_USA_MODEL_SGH_I757)		pr_debug(MODULE_NAME "%s : GPIO 33\n", __func__);		gpio_tlmm_config(GPIO_CFG(33,0,GPIO_CFG_OUTPUT,GPIO_CFG_NO_PULL,GPIO_CFG_2MA),GPIO_CFG_ENABLE); // 2MIC_PWDN
+		//gpio_tlmm_config(GPIO_CFG(34,0,GPIO_CFG_OUTPUT,GPIO_CFG_PULL_DOWN,GPIO_CFG_2MA),GPIO_CFG_ENABLE); // 2MIC_PWDN#elif defined(CONFIG_USA_MODEL_SGH_I757)		pr_debug(MODULE_NAME "%s : GPIO 33\n", __func__);		gpio_tlmm_config(GPIO_CFG(33,0,GPIO_CFG_OUTPUT,GPIO_CFG_NO_PULL,GPIO_CFG_2MA),GPIO_CFG_ENABLE); // 2MIC_PWDN
 #else
 	if (pdata->gpio_a2220_wakeup) {
 		pr_debug(MODULE_NAME "%s : Wakeup GPIO %d\n", __func__, pdata->gpio_a2220_wakeup);
