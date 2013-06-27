@@ -276,6 +276,7 @@ struct ddl_encoder_data{
 	u32  closed_gop;
 	struct vcd_property_slice_delivery_info slice_delivery_info;
 	struct ddl_batch_frame_data batch_frame;
+	u32 bitstream_restrict_enable;
 };
 struct ddl_decoder_data {
 	struct ddl_codec_data_hdr  hdr;
