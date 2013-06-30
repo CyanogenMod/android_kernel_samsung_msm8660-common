@@ -1741,33 +1741,32 @@ choice
 endchoice
 
 choice
-		prompt "USA Model Name"
-		depends on TARGET_LOCALE_USA
+	prompt "USA Model Name"
+	depends on TARGET_LOCALE_USA
+	default USA_MODEL_SGH_I727
 
-		config USA_MODEL_SGH_I717
-			bool "USA ATT SGH-I717"
+	config USA_MODEL_SGH_I717
+		bool "USA ATT SGH-I717"
 
-		config USA_MODEL_SGH_I727
-                depends on (TARGET_LOCALE_USA && (USA_OPERATOR_ATT || CAN_OPERATOR_RWC) )
-                        default y
-			bool "USA ATT SGH-I727"
+	config USA_MODEL_SGH_I727
+        depends on (TARGET_LOCALE_USA && (USA_OPERATOR_ATT || CAN_OPERATOR_RWC) )
+		bool "USA ATT SGH-I727"
 			
-		config USA_MODEL_SGH_I727R
-                depends on (USA_MODEL_SGH_I727)
-                        default n
-                        bool "USA ATT SGH-I727R"
+	config USA_MODEL_SGH_I727R
+        depends on (USA_MODEL_SGH_I727)
+        	bool "USA ATT SGH-I727R"
 	
-		config USA_MODEL_SGH_I757 
-		    bool "USA ATT SGH-I757"
+	config USA_MODEL_SGH_I757 
+	    	bool "USA ATT SGH-I757"
 
-		config USA_MODEL_SGH_T989
-			bool "USA ATT SGH-T989"
+	config USA_MODEL_SGH_T989
+		bool "USA ATT SGH-T989"
  
-		config USA_MODEL_SGH_T769
-		    bool "USA TMO SGH-T769"
+	config USA_MODEL_SGH_T769
+		bool "USA TMO SGH-T769"
 
-		config USA_MODEL_SGH_I957
-			bool "USA ATT SGH-I957"
+	config USA_MODEL_SGH_I957
+		bool "USA ATT SGH-I957"
 
         config USA_MODEL_SGH_I577 
         	bool "USA ATT SGH-I577"
