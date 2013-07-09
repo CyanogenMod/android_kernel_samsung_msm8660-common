@@ -40,7 +40,7 @@ MODULE_LICENSE("GPL");
 #define TORCH_EN	62
 #define TORCH_SET	63
 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) ||defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) ||defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define TORCH_MINOR 216
 #endif
 
@@ -103,7 +103,7 @@ static const struct file_operations ledflash_fops = {
 };
 
 static struct miscdevice ledflash_device = {
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) ||defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) ||defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	.minor = TORCH_MINOR,
 #else  
 	.minor = MISC_DYNAMIC_MINOR,

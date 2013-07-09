@@ -415,7 +415,7 @@ static int sec_switch_probe(struct platform_device *pdev)
 
 	secsw->pdata = pdata;
 	
-#if defined (CONFIG_TARGET_LOCALE_US_ATT_REV01) || defined(CONFIG_KOR_MODEL_SHV_E160S)|| defined (CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined (CONFIG_TARGET_LOCALE_US_ATT_REV01) || defined(CONFIG_KOR_MODEL_SHV_E160S)|| defined (CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 	secsw->switch_sel = 3;
 #else
 	secsw->switch_sel = 3;

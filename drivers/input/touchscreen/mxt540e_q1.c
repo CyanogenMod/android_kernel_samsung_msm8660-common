@@ -26,7 +26,7 @@
 #include <asm/unaligned.h>
 #include <linux/firmware.h>
 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) 
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 #include "mXT540e__APP_V1-3-AA_.h"
 #else
 #include "mXT540e__APP_V1-2-AA_.h"
@@ -207,7 +207,7 @@ extern int sec_debug_level(void);
 int touch_is_pressed;
 EXPORT_SYMBOL(touch_is_pressed);
 static int mxt540e_enabled;
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)|| defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)|| defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 #if defined (SEC_TSP_POSITION_DEBUG_XTOPHER)
 static bool g_debug_switch = true;
 #else
@@ -942,7 +942,7 @@ static void report_input_data(struct mxt540e_data *data)
 				printk(KERN_DEBUG "[TSP] id[%d] status:%d\n", i, data->fingers[i].z);
 #endif
 #else
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 		// use all debug-log below.
 #else
 		if (data->fingers[i].z == 0)
@@ -1644,7 +1644,7 @@ static ssize_t mxt540e_object_show(struct device *dev,
 }
 
 struct device *sec_touchscreen;
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 static u8 firmware_latest =0x13; /* mxt540E : 0x10 */
 #else
 static u8 firmware_latest =0x12; /* mxt540E : 0x10 */
@@ -1749,7 +1749,7 @@ void read_dbg_data(uint8_t dbg_mode , uint16_t node, uint16_t *dbg_data)
 	}
 }
 
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) // For Kor's Factory test Mode 
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D) // For Kor's Factory test Mode
 #define MIN_VALUE 19744
 #define MAX_VALUE 28864
 
@@ -2087,7 +2087,7 @@ static int mxt540e_load_fw(struct device *dev, const char *fn)
         return -ENOMEM;
     }
     
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) 
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
     fw->size = ARRAY_SIZE(mXT540e__APP_V1_3_AA);
     fw->data = mXT540e__APP_V1_3_AA;
 #else    
@@ -2201,7 +2201,7 @@ static int mxt540e_load_fw_bootmode(struct device *dev, const char *fn)
         return -ENOMEM;
     }
     
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) 
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
     fw->size = ARRAY_SIZE(mXT540e__APP_V1_3_AA);
     fw->data = mXT540e__APP_V1_3_AA;
 #else    

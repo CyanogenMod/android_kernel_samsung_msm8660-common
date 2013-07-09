@@ -277,7 +277,7 @@ signed char fDetectHiLoTransition(void)
 
     while(1) {
         SCLKLow(); //issp_test_20100709 unblock
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
         udelay(300);   
 #else
 		//udelay(1);
@@ -285,7 +285,7 @@ signed char fDetectHiLoTransition(void)
         if (!fSDATACheck()) {   // exit once SDATA returns LOW
             break;
         }
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		//SCLKHigh(); //issp_test_20100709 unblock
 		udelay(300);   
 #else

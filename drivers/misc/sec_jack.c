@@ -94,7 +94,7 @@
 #endif
 
 
-#if defined CONFIG_TARGET_LOCALE_KOR
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 #if defined (CONFIG_KOR_MODEL_SHV_E120S) || defined (CONFIG_KOR_MODEL_SHV_E120K)
 #if defined (CONFIG_PMIC8058_XOADC_CAL)
 #define KEY_VOLUMEUP_ADC_MIN 151
@@ -197,7 +197,7 @@
 #define KEY_VOLUMEDOWN_ADC_MAX 660
 #endif
 
-#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
+#if defined(CONFIG_USA_MODEL_SGH_I717) || defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989) || defined(CONFIG_JPN_MODEL_SC_05D)
 #define JACK_WATERPROOF
 #endif
 
@@ -527,7 +527,7 @@ static void sec_jack_send_key_work_func(struct work_struct *work)
 	struct sec_jack_platform_data *pdata = hi->pdata;
 	int time_left_ms = SEND_KEY_CHECK_TIME_MS;
 	int send_key_state=0;
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 	int adc = 0;
 #endif
 	
@@ -552,7 +552,7 @@ static void sec_jack_send_key_work_func(struct work_struct *work)
 		msleep(10);
 		time_left_ms -= 10;
 		
-#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_JPN_MODEL_SC_05D)
 		if(time_left_ms <= 20) {
 			adc = pdata->get_adc_value();
 			if((adc >= KEY_MEDIA_ADC_MIN && adc < KEY_MEDIA_ADC_MAX)) {

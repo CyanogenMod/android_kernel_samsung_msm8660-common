@@ -35,7 +35,7 @@ static ssize_t mode_store(struct device *dev,struct device_attribute *attr,
 	{
 		set_mode = reg;	
 		
-#if defined (CONFIG_TARGET_LOCALE_KOR)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_TARGET_LOCALE_JPN)
 		temp.in1_gain = g_ampgain[set_mode].in1_gain;
 		temp.in2_gain = g_ampgain[set_mode].in2_gain;
 		temp.hp_att = g_ampgain[set_mode].hp_att;

@@ -1784,6 +1784,10 @@ choice
 
 		config JPN_MODEL_SC_01D
 			bool "JPN NTT SC-01D"
+
+		config JPN_MODEL_SC_05D
+			bool "JPN NTT SC-05D"
+
 endchoice
 
 config SAMSUNG_8X60_TABLET
