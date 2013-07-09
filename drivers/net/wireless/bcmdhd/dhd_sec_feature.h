@@ -75,6 +75,14 @@
 #endif
 #endif
 
+#if defined(CONFIG_TARGET_SERIES_Q1)\
+	&& defined(CONFIG_JPN_OPERATOR_NTT)
+#undef READ_MACADDR
+#undef RDWR_MACADDR
+#define WRITE_MACADDR
+#define USE_CID_CHECK
+#endif
+
 #ifdef CONFIG_ARCH_MSM7X30
 #define HW_OOB
 #define READ_MACADDR

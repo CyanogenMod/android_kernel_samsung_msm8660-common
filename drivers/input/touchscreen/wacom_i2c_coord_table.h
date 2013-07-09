@@ -65,7 +65,7 @@ short CodTblY_LLeft_48[] = {
 
 
 
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 const short CodTblX_CCW_LLeft_44[] = {
 #include "wacom_i2c_coordX_CCW_LLeft_44_KOR.h"
 };
@@ -175,7 +175,7 @@ const short *tableY_48[MAX_HAND][MAX_ROTATION]={{CodTblY_PLeft_48, CodTblY_LLeft
 /* Tilt offset */
 /* 0: Left, 1: Right */
 /* 0: Portrait 0, 1: Landscape 90, 2: Landscape 270 */
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 //short tilt_offsetX[MAX_HAND][MAX_ROTATION]= {{120, 110, -110, -100},{-120, 120, -130, 100}};
 //short tilt_offsetY[MAX_HAND][MAX_ROTATION]={{-160, 110, -150, 100},{-130, -160, 70, 100}};
 //short tilt_offsetX[MAX_HAND][MAX_ROTATION]= {{120, 110, -110, -100},{-70, 120, -130, 100}};

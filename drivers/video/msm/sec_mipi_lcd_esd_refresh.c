@@ -239,7 +239,7 @@ static void sec_esd_work_func(struct work_struct *work)
 	return;
 }
 
-#if defined (CONFIG_KOR_MODEL_SHV_E160S)
+#if defined (CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
 extern unsigned int get_hw_rev(void);
 #endif
 
@@ -248,7 +248,7 @@ static int sec_esd_probe(struct platform_device *pdev)
 	struct sec_esd_info *hi;
 	struct sec_esd_platform_data *pdata = pdev->dev.platform_data;
 	int ret;
-#if defined(CONFIG_KOR_MODEL_SHV_E160S)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if( get_hw_rev() < 0x05 ){
 		DPRINT( "%s : Esd driver END (HW REV < 05)\n", __func__);
 		return 0;

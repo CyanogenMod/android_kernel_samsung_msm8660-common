@@ -36,7 +36,7 @@
 
 #if defined(CONFIG_USA_MODEL_SGH_I717)
 #define HWREV_PEN_PITCH4P4   0x02
-#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+#elif defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 #define HWREV_PEN_PITCH4P4   0x05
 #endif
 
@@ -968,7 +968,7 @@ static int wacom_i2c_probe(struct i2c_client *client,
 		wac_i2c->wac_feature->fw_version, Firmware_version_of_file);
 	if( wac_i2c->wac_feature->fw_version < Firmware_version_of_file ) 
 	{
-		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L)
+		#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined(CONFIG_KOR_MODEL_SHV_E160L) || defined (CONFIG_JPN_MODEL_SC_05D)
 		printk("[E-PEN] %s\n", __func__);
 		
 		disable_irq(wac_i2c->irq);

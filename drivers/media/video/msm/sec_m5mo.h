@@ -224,6 +224,9 @@ struct m5mo_frmsizeenum {
 #if defined(CONFIG_USA_MODEL_SGH_T989)
 #define M5MOS_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_S_TMO.bin"	/* SEMKO */
 #define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_O_TMO.bin"	/* Optical communication */
+#elif defined(CONFIG_JPN_MODEL_SC_05D)
+#define M5MOS_FW_REQUEST_PATH	"/system/etc/firmware/RS_M5LS_S.bin"
+#define M5MOO_FW_REQUEST_PATH	"/system/etc/firmware/RS_M5LS_OO.bin"
 #elif defined (CONFIG_TARGET_SERIES_Q1)
 #define M5MOS_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_S.bin"	/* Samsung Electro-Mechanics */
 #define M5MOO_FW_REQUEST_PATH	"/system/cameradata/RS_M5LS_OO.bin"	/* Optical communication */

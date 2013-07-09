@@ -218,6 +218,12 @@ proximity_enable_store(struct device *dev, struct device_attribute *attr, const 
         return count;
     }
 
+
+#if defined(CONFIG_JPN_MODEL_SC_05D)
+    if (data)
+        mutex_lock(&data->enable_mutex);
+#endif
+
     if (data->enabled && !value) { 			/* Proximity power off */
         disable_irq(data->gp2a_irq);
 
@@ -253,6 +259,10 @@ proximity_enable_store(struct device *dev, struct device_attribute *attr, const 
 		spin_unlock_irqrestore(&prox_lock, flags);
     }
 
+#if defined(CONFIG_JPN_MODEL_SC_05D)
+    if (data)
+        mutex_unlock(&data->enable_mutex);
+#endif
 	data->enabled = value;
     input_report_abs(input_data, ABS_CONTROL_REPORT, (value<<16) | data->delay);
     return count;

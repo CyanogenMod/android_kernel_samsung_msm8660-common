@@ -67,6 +67,8 @@
 #include "timpani_profile_dali_lgt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E160S) /* QUINCY-SKT */
 #include "timpani_profile_quincy_skt.h"
+#elif defined(CONFIG_JPN_MODEL_SC_05D) /* QUINCY-DCM */
+#include "timpani_profile_quincy_skt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E160K) /* QUINCY-KT */
 #include "timpani_profile_quincy_kt.h"
 #elif defined(CONFIG_KOR_MODEL_SHV_E160L) /* QUINCY-LGT */

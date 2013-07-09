@@ -817,7 +817,7 @@ static int s5k5bafx_set_flip(uint32_t flip)
 	
 	CAM_DEBUG("%d",flip);
 	
-#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_I717)
+#if defined (CONFIG_TARGET_LOCALE_KOR) || defined (CONFIG_JPN_MODEL_SC_03D) || defined(CONFIG_USA_MODEL_SGH_I717) || defined (CONFIG_TARGET_LOCALE_JPN)
 	if(s5k5bafx_ctrl->check_dataline)
 		return 0;
 

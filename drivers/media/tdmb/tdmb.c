@@ -524,7 +524,7 @@ static struct tdmb_drv_func *tdmb_get_drv_func(void)
 
 #if ((defined(CONFIG_TDMB_T3900) || defined(CONFIG_TDMB_T39F0)) \
 	&& defined(CONFIG_TDMB_FC8050))
-#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K)
+#if defined(CONFIG_KOR_MODEL_SHV_E160S) || defined(CONFIG_KOR_MODEL_SHV_E160K) || defined (CONFIG_JPN_MODEL_SC_05D)
 	if (get_hw_rev() > 7)
 		func = fc8050_drv_func;
 	else
