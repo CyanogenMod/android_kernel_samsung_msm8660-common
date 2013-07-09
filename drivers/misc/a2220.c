@@ -185,7 +185,7 @@ static void a2220_i2c_sw_reset(unsigned int reset_cmd)
 static ssize_t  a2220_hw_reset(struct a2220img *img)
 {
 	struct a2220img *vp = img;
-	int rc,i, pass = 0;
+	int rc = 0,i, pass = 0;
 	int remaining;
 	int retry = RETRY_CNT;
 	unsigned char *index;
