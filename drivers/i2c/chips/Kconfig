@@ -92,8 +92,8 @@ config SENSORS_YAS529_MAGNETIC
 
 config INPUT_YAS529_POSITION
 	int "YAS529 Mounting Position on Board"
+	range 0 7
 	depends on SENSORS_YAS529_MAGNETIC
-	default n
 	help
 	  Chip mounting position (pin 1).
 	    0: top, upper-left
