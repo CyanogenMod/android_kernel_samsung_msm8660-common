@@ -354,8 +354,11 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 CFLAGS_MODULE   =
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
+CFLAGS_KERNEL	= -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr \
+		  -ffast-math -fsingle-precision-constant -mtune=cortex-a8 \
+		  -marm -march=armv7-a -mfpu=neon -ftree-vectorize -funroll-loops
+AFLAGS_KERNEL	= -fgcse -fsingle-precision-constant -mtune=cortex-a8 -march=armv7-a \
+		  -mfpu=neon -ftree-vectorize
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 
@@ -376,8 +379,14 @@ KBUILD_CFLAGS   := -Wall -Werror -Wundef -Wstrict-prototypes -Wno-trigraphs \
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
-KBUILD_AFLAGS_MODULE  := -DMODULE
-KBUILD_CFLAGS_MODULE  := -DMODULE
+KBUILD_AFLAGS_MODULE  := -DMODULE -fgcse-lm -fgcse-sm -fsched-spec-load \
+			 -fforce-addr -ffast-math -fsingle-precision-constant \
+			 -mtune=cortex-a8 -marm -march=armv7-a -mfpu=neon \
+			 -ftree-vectorize -funroll-loops
+KBUILD_CFLAGS_MODULE  := -DMODULE -fgcse-lm -fgcse-sm -fsched-spec-load \
+			 -fforce-addr -ffast-math -fsingle-precision-constant \
+			 -mtune=cortex-a8 -marm -march=armv7-a -mfpu=neon \
+			 -ftree-vectorize -funroll-loops
 KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Read KERNELRELEASE from include/config/kernel.release (if it exists)
