@@ -116,7 +116,9 @@ void kgsl_cancel_events(struct kgsl_device *device,
 		 * "cancel" the events by calling their callback.
 		 * Currently, events are used for lock and memory
 		 * management, so if the process is dying the right
-		 * thing to do is release or free.
+		 * thing to do is release or free. Send the current timestamp so
+		 * the callback knows how far the GPU made it before things went
+		 * explosion
 		 */
 		if (event->func)
 			event->func(device, event->priv, cur);
@@ -136,8 +138,15 @@ static inline void _process_event_list(struct kgsl_device *device,
 		if (timestamp_cmp(timestamp, event->timestamp) < 0)
 			break;
 
+		/*
+		 * Send the timestamp of the expired event, not the current
+		 * timestamp.  This prevents the event handlers from getting
+		 * confused if they don't bother comparing the current timetamp
+		 * to the timestamp they wanted
+		 */
+
 		if (event->func)
-			event->func(device, event->priv, timestamp);
+			event->func(device, event->priv, event->timestamp);
 
 		list_del(&event->list);
 		kfree(event);
