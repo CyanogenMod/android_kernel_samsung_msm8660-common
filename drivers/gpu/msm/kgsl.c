@@ -49,96 +49,6 @@ MODULE_PARM_DESC(ksgl_mmu_type,
 
 static struct ion_client *kgsl_ion_client;
 
-/**
- * kgsl_add_event - Add a new timstamp event for the KGSL device
- * @device - KGSL device for the new event
- * @ts - the timestamp to trigger the event on
- * @cb - callback function to call when the timestamp expires
- * @priv - private data for the specific event type
- * @owner - driver instance that owns this event
- *
- * @returns - 0 on success or error code on failure
- */
-
-int kgsl_add_event(struct kgsl_device *device, u32 ts,
-	void (*cb)(struct kgsl_device *, void *, u32), void *priv,
-	void *owner)
-{
-	struct kgsl_event *event;
-	struct list_head *n;
-	unsigned int cur = device->ftbl->readtimestamp(device,
-		KGSL_TIMESTAMP_RETIRED);
-
-	if (cb == NULL)
-		return -EINVAL;
-
-	/* Check to see if the requested timestamp has already fired */
-
-	if (timestamp_cmp(cur, ts) >= 0) {
-		cb(device, priv, cur);
-		return 0;
-	}
-
-	event = kzalloc(sizeof(*event), GFP_KERNEL);
-	if (event == NULL)
-		return -ENOMEM;
-
-	event->timestamp = ts;
-	event->priv = priv;
-	event->func = cb;
-	event->owner = owner;
-
-	/* Add the event in order to the list */
-
-	for (n = device->events.next ; n != &device->events; n = n->next) {
-		struct kgsl_event *e =
-			list_entry(n, struct kgsl_event, list);
-
-		if (timestamp_cmp(e->timestamp, ts) > 0) {
-			list_add(&event->list, n->prev);
-			break;
-		}
-	}
-
-	if (n == &device->events)
-		list_add_tail(&event->list, &device->events);
-
-	queue_work(device->work_queue, &device->ts_expired_ws);
-	return 0;
-}
-EXPORT_SYMBOL(kgsl_add_event);
-
-/**
- * kgsl_cancel_events - Cancel all events for a process
- * @device - KGSL device for the events to cancel
- * @owner - driver instance that owns the events to cancel
- *
- */
-void kgsl_cancel_events(struct kgsl_device *device,
-	void *owner)
-{
-	struct kgsl_event *event, *event_tmp;
-	unsigned int cur = device->ftbl->readtimestamp(device,
-		KGSL_TIMESTAMP_RETIRED);
-
-	list_for_each_entry_safe(event, event_tmp, &device->events, list) {
-		if (event->owner != owner)
-			continue;
-		/*
-		 * "cancel" the events by calling their callback.
-		 * Currently, events are used for lock and memory
-		 * management, so if the process is dying the right
-		 * thing to do is release or free.
-		 */
-		if (event->func)
-			event->func(device, event->priv, cur);
-
-		list_del(&event->list);
-		kfree(event);
-	}
-}
-EXPORT_SYMBOL(kgsl_cancel_events);
-
 static inline struct kgsl_mem_entry *
 kgsl_mem_entry_create(void)
 {
@@ -260,8 +170,27 @@ kgsl_create_context(struct kgsl_device_private *dev_priv)
 
 	if (kgsl_sync_timeline_create(context)) {
 		idr_remove(&dev_priv->device->context_idr, id);
+		goto func_end;
+	}
+
+	/* Initialize the pending event list */
+	INIT_LIST_HEAD(&context->events);
+
+	/*
+	 * Initialize the node that is used to maintain the master list of
+	 * contexts with pending events in the device structure. Normally we
+	 * wouldn't take the time to initalize a node but at event add time we
+	 * call list_empty() on the node as a quick way of determining if the
+	 * context is already in the master list so it needs to always be either
+	 * active or in an unused but initialized state
+	 */
+
+	INIT_LIST_HEAD(&context->events_list);
+
+func_end:
+	if (ret) {
 		kfree(context);
-		return NULL;
+		return ERR_PTR(ret);
 	}
 
 	return context;
@@ -284,58 +213,6 @@ kgsl_destroy_context(struct kgsl_device_private *dev_priv,
 	kfree(context);
 
 	idr_remove(&dev_priv->device->context_idr, id);
-}
-static inline int _mark_next_event(struct kgsl_device *device,
-		struct list_head *head)
-{
-	struct kgsl_event *event;
-
-	if (!list_empty(head)) {
-		event = list_first_entry(head, struct kgsl_event, list);
-		if (device->ftbl->next_event)
-			return device->ftbl->next_event(device, event);
-	}
-	return 0;
-}
-
-static void kgsl_timestamp_expired(struct work_struct *work)
-{
-	struct kgsl_device *device = container_of(work, struct kgsl_device,
-		ts_expired_ws);
-	struct kgsl_event *event, *event_tmp;
-	uint32_t ts_processed;
-
-	mutex_lock(&device->mutex);
-
-	while (1) {
-		/* get current EOP timestamp */
-		ts_processed = device->ftbl->readtimestamp(device,
-			KGSL_TIMESTAMP_RETIRED);
-
-		/* Process expired events */
-		list_for_each_entry_safe(event, event_tmp, &device->events, list) {
-			if (timestamp_cmp(ts_processed, event->timestamp) < 0)
-				break;
-
-			if (event->func)
-				event->func(device, event->priv, ts_processed);
-
-			list_del(&event->list);
-			kfree(event);
-		}
-
-		/*
-		 * Keep looping until we hit an event which has not
-		 * passed and then we write a dummy interrupt.
-		 * mark_next_event will return 1 for every event
-		 * that has passed and return 0 for the event which has not
-		 * passed yet.
-		 */
-		if (_mark_next_event(device, &device->events) == 0)
-			break;
-	}
-
-	mutex_unlock(&device->mutex);
 }
 
 static void kgsl_check_idle_locked(struct kgsl_device *device)
@@ -2262,9 +2139,10 @@ kgsl_register_device(struct kgsl_device *device)
 		goto err_devlist;
 
 	INIT_WORK(&device->idle_check_ws, kgsl_idle_check);
-	INIT_WORK(&device->ts_expired_ws, kgsl_timestamp_expired);
+	INIT_WORK(&device->ts_expired_ws, kgsl_process_events);
 
 	INIT_LIST_HEAD(&device->events);
+	INIT_LIST_HEAD(&device->events_pending_list);
 
 	ret = kgsl_mmu_init(device);
 	if (ret != 0)
