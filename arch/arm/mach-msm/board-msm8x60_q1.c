@@ -4390,7 +4390,7 @@ unsigned char hdmi_is_primary;
 #else
 #if defined(CONFIG_JPN_MODEL_SC_05D)
 #define MSM_ION_SF_SIZE		0x06000000 /* 64MB -> 96MB same as Gingerbread of ATT Quincy */
-else
+#else
 #define MSM_ION_SF_SIZE		0x5000000 /* 64MB -> 80MB */
 #endif
 #endif
