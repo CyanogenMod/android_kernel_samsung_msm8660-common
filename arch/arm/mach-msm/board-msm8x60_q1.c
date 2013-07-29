@@ -3587,6 +3587,10 @@ static struct platform_device msm_gemini_device = {
 #endif
 
 #ifdef CONFIG_I2C_QUP
+static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
+{
+}
+
 #if defined(CONFIG_JPN_MODEL_SC_05D)
 /*	QC patch for case 00580204 , I2C QTR failure
 * GSBI7 GPIO configuration for recovery of QTR I2C lines
@@ -3604,10 +3608,6 @@ static uint32_t gsbi7_i2c_table[] = {
 	GPIO_CFG(GSBI7_SDA, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 	GPIO_CFG(GSBI7_SCL, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 };
-
-static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
-{
-}
 
 //QC patch for case 00580204 , I2C QTR failure	//rohbt
 static void gsbi7_qup_i2c_gpio_config(int adap_id, int config_type)
