@@ -1924,6 +1924,12 @@ static void l2cap_ertm_send_sframe(struct sock *sk,
 	if (control->frame_type != 's')
 		return;
 
+	if (conn->mtu < L2CAP_HDR_SIZE + L2CAP_CMD_HDR_SIZE)
+		return;
+
+	len = L2CAP_HDR_SIZE + L2CAP_CMD_HDR_SIZE + dlen;
+	count = min_t(unsigned int, conn->mtu, len);
+
 	pi = l2cap_pi(sk);
 
 	if (pi->amp_move_state != L2CAP_AMP_STATE_STABLE &&
