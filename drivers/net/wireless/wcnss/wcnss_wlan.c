@@ -49,6 +49,8 @@ static struct {
 	int		triggered;
 	int		smd_channel_ready;
 	unsigned int	serial_number;
+	int		thermal_mitigation;
+	void		(*tm_notify)(struct device *, int);
 	struct wcnss_wlan_config wlan_config;
 	struct delayed_work wcnss_work;
 } *penv = NULL;
@@ -87,17 +89,59 @@ void wcnss_reset_intr(void)
 }
 EXPORT_SYMBOL(wcnss_reset_intr);
 
+static ssize_t wcnss_thermal_mitigation_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	if (!penv)
+		return -ENODEV;
+
+	return scnprintf(buf, PAGE_SIZE, "%u\n", penv->thermal_mitigation);
+}
+
+static ssize_t wcnss_thermal_mitigation_store(struct device *dev,
+		struct device_attribute *attr, const char * buf, size_t count)
+{
+	int value;
+
+	if (!penv)
+		return -ENODEV;
+
+	if (sscanf(buf, "%d", &value) != 1)
+		return -EINVAL;
+	penv->thermal_mitigation = value;
+	if (penv->tm_notify)
+		(penv->tm_notify)(dev, value);
+	return count;
+}
+
+static DEVICE_ATTR(thermal_mitigation, S_IRUSR | S_IWUSR,
+	wcnss_thermal_mitigation_show, wcnss_thermal_mitigation_store);
+
 static int wcnss_create_sysfs(struct device *dev)
 {
+	int ret;
+
 	if (!dev)
 		return -ENODEV;
-	return device_create_file(dev, &dev_attr_serial_number);
+
+	ret = device_create_file(dev, &dev_attr_serial_number);
+	if (ret)
+		return ret;
+
+	ret = device_create_file(dev, &dev_attr_thermal_mitigation);
+	if (ret) {
+		device_remove_file(dev, &dev_attr_serial_number);
+		return ret;
+	}
+	return 0;
 }
 
 static void wcnss_remove_sysfs(struct device *dev)
 {
-	if (dev)
+	if (dev) {
 		device_remove_file(dev, &dev_attr_serial_number);
+		device_remove_file(dev, &dev_attr_thermal_mitigation);
+	}
 }
 
 static void wcnss_post_bootup(struct work_struct *work)
@@ -242,6 +286,25 @@ void wcnss_wlan_unregister_pm_ops(struct device *dev,
 }
 EXPORT_SYMBOL(wcnss_wlan_unregister_pm_ops);
 
+void wcnss_register_thermal_mitigation(struct device *dev,
+				void (*tm_notify)(struct device *, int))
+{
+	if (penv && dev && tm_notify)
+		penv->tm_notify = tm_notify;
+}
+EXPORT_SYMBOL(wcnss_register_thermal_mitigation);
+
+void wcnss_unregister_thermal_mitigation(
+				void (*tm_notify)(struct device *, int))
+{
+	if (penv && tm_notify) {
+		if (tm_notify != penv->tm_notify)
+			pr_err("tm_notify doesn't match registered\n");
+		penv->tm_notify = NULL;
+	}
+}
+EXPORT_SYMBOL(wcnss_unregister_thermal_mitigation);
+
 unsigned int wcnss_get_serial_number(void)
 {
 	if (penv)
@@ -284,6 +347,8 @@ wcnss_trigger_config(struct platform_device *pdev)
 	if (WCNSS_CONFIG_UNSPECIFIED == has_48mhz_xo)
 		has_48mhz_xo = pdata->has_48mhz_xo;
 	penv->wlan_config.use_48mhz_xo = has_48mhz_xo;
+
+	penv->thermal_mitigation = 0;
 
 	penv->gpios_5wire = platform_get_resource_byname(pdev, IORESOURCE_IO,
 							"wcnss_gpios_5wire");

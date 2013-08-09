@@ -54,6 +54,8 @@
 #define VCD_REQ_PERF_LEVEL (VCD_START_BASE + 0x26)
 #define VCD_I_VOP_TIMING_CONSTANT_DELTA (VCD_START_BASE + 0x27)
 #define VCD_I_SLICE_DELIVERY_MODE (VCD_START_BASE + 0x28)
+#define VCD_I_ENABLE_VUI_BITSTREAM_RESTRICT_FLAG (VCD_START_BASE + 0x2F)
+
 
 #define VCD_START_REQ      (VCD_START_BASE + 0x1000)
 #define VCD_I_REQ_IFRAME   (VCD_START_REQ + 0x1)
@@ -369,4 +371,7 @@ struct vcd_property_sps_pps_for_idr_enable {
 	u32 sps_pps_for_idr_enable_flag;
 };
 
+struct vcd_property_bitstream_restrict_enable {
+	u32 bitstream_restrict_enable_flag;
+};
 #endif
