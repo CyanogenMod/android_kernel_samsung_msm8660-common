@@ -3605,10 +3605,6 @@ static uint32_t gsbi7_i2c_table[] = {
 	GPIO_CFG(GSBI7_SCL, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 };
 
-static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
-{
-}
-
 //QC patch for case 00580204 , I2C QTR failure	//rohbt
 static void gsbi7_qup_i2c_gpio_config(int adap_id, int config_type)
 {
@@ -3619,6 +3615,10 @@ static void gsbi7_qup_i2c_gpio_config(int adap_id, int config_type)
 		gpio_tlmm_config(gsbi7_i2c_table[0], GPIO_CFG_ENABLE);
 		gpio_tlmm_config(gsbi7_i2c_table[1], GPIO_CFG_ENABLE);
 	}
+}
+#else
+static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
+{
 }
 #endif
 
@@ -4390,7 +4390,7 @@ unsigned char hdmi_is_primary;
 #else
 #if defined(CONFIG_JPN_MODEL_SC_05D)
 #define MSM_ION_SF_SIZE		0x06000000 /* 64MB -> 96MB same as Gingerbread of ATT Quincy */
-else
+#else
 #define MSM_ION_SF_SIZE		0x5000000 /* 64MB -> 80MB */
 #endif
 #endif
