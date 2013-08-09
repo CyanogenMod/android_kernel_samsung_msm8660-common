@@ -7200,6 +7200,7 @@ scan_done_out:
 	mutex_unlock(&wl->usr_sync);
 	return err;
 }
+
 static s32
 wl_frame_get_mgmt(u16 fc, const struct ether_addr *da,
 	const struct ether_addr *sa, const struct ether_addr *bssid,
@@ -7572,7 +7573,7 @@ exit:
 /* If target scan is not reliable, set the below define to "1" to do a
  * full escan
  */
-#define FULL_ESCAN_ON_PFN_NET_FOUND		0
+#define FULL_ESCAN_ON_PFN_NET_FOUND		1
 static s32
 wl_notify_sched_scan_results(struct wl_priv *wl, struct net_device *ndev,
 	const wl_event_msg_t *e, void *data)
@@ -8232,9 +8233,7 @@ static s32 wl_notify_escan_complete(struct wl_priv *wl,
 #ifdef WL_SCHED_SCAN
 	if (wl->sched_scan_req && !wl->scan_request) {
 		WL_PNO((">>> REPORTING SCHED SCAN RESULTS \n"));
-		if (aborted)
-			cfg80211_sched_scan_stopped(wl->sched_scan_req->wiphy);
-		else
+		if (!aborted)
 			cfg80211_sched_scan_results(wl->sched_scan_req->wiphy);
 		wl->sched_scan_running = FALSE;
 		wl->sched_scan_req = NULL;
@@ -8298,9 +8297,9 @@ static s32 wl_escan_handler(struct wl_priv *wl,
 #if defined(DUAL_ESCAN_RESULT_BUFFER)
 	escan_result = (wl_escan_result_t *) data;
 #endif
+
 	if (status == WLC_E_STATUS_PARTIAL) {
 		WL_INFO(("WLC_E_STATUS_PARTIAL \n"));
-		escan_result = (wl_escan_result_t *) data;
 		if (!escan_result) {
 			WL_ERR(("Invalid escan result (NULL pointer)\n"));
 			goto exit;
@@ -8890,11 +8889,10 @@ s32 wl_cfg80211_attach_post(struct net_device *ndev)
 	if (!wl_get_drv_status(wl, READY, ndev)) {
 			if (wl->wdev &&
 				wl_cfgp2p_supported(wl, ndev)) {
-#if !defined(WL_ENABLE_P2P_IF)
 				wl->wdev->wiphy->interface_modes |=
 					(BIT(NL80211_IFTYPE_P2P_CLIENT)|
 					BIT(NL80211_IFTYPE_P2P_GO));
-#endif
+
 				if ((err = wl_cfgp2p_init_priv(wl)) != 0)
 					goto fail;
 
