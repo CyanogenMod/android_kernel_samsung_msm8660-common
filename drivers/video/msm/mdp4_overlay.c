@@ -2790,6 +2790,7 @@ static int mdp4_calc_req_blt(struct msm_fb_data_type *mfd,
 			     struct mdp_overlay *req)
 {
 	int ret = 0;
+	int clk = 0;
 
 	if (!req) {
 		pr_err("%s: req is null!\n", __func__);
@@ -2801,10 +2802,14 @@ static int mdp4_calc_req_blt(struct msm_fb_data_type *mfd,
 		return ret;
 	}
 
-	if (mdp4_calc_req_mdp_clk
+	clk = mdp4_calc_req_mdp_clk
 		(mfd, req->src_rect.h, req->dst_rect.h,
-		 req->src_rect.w, req->dst_rect.w) > mdp_max_clk)
+		 req->src_rect.w, req->dst_rect.w);
+
+	if (clk > mdp_max_clk * 2) {
+		pr_err("%s: blt required, clk=%d max=%d", clk, mdp_max_clk * 2);
 		ret = -EINVAL;
+	}
 
 	return ret;
 }
@@ -3049,12 +3054,6 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd)
 						   pipe->bw_ib_quota);
 		}
 		if (mfd->mdp_rev == MDP_REV_41) {
-
-			if ((pipe->flags & MDP_BACKEND_COMPOSITION) && perf_req->use_ov_blt[MDP4_MIXER0]) {
-				pr_err("%s: BLT requested while composing, switch to GPU! req=%d max=%d",
-						__func__, pipe->req_clk, mdp_max_clk);
-				return -EINVAL;
-			}
 
 			/*
 			 * writeback (blt) mode to provide work around
@@ -3497,17 +3496,6 @@ int mdp4_overlay_set(struct fb_info *info, struct mdp_overlay *req)
 		return ret;
 	}
 	
-	if ((pipe->flags & MDP_BACKEND_COMPOSITION) &&
-		((mdp4_calc_pipe_mdp_clk(mfd, pipe) == 0 &&
-		pipe->req_clk > mdp_max_clk)))
-	{
-		if (req->id == MSMFB_NEW_REQUEST)
-			mdp4_overlay_pipe_free(pipe, 0);
-		mutex_unlock(&mfd->dma->ov_mutex);
-		pr_info("do not fall back to BLT when backend_composition\n");
-		return -EINVAL;
-	}
-
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
 	if (mixer == MDP4_MIXER0 && DMB_Qseed_change == 1) {
 		if(pipe->pipe_num == OVERLAY_PIPE_VG1)
@@ -4225,7 +4213,7 @@ static int mdp4_overlay_cache_reg(struct msm_fb_data_type *mfd,
 {
 	if ((!mfd) || (!mfd->cache_reg_en) ||
 		(mfd->cached_reg_cnt >= MDP_MAX_CACHED_REG)) {
-		pr_err("%s: exceed max cached reg number", __func__);
+		pr_debug("%s: exceed max cached reg number", __func__);
 		return -EINVAL;
 	}
 	mfd->cached_reg[mfd->cached_reg_cnt].reg = offset;
