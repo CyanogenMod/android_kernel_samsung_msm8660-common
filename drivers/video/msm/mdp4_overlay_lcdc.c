@@ -333,8 +333,6 @@ static void mdp4_lcdc_vsync_irq_ctrl(int cndx, int enable)
 			if (vsync_irq_cnt == 0)
 				vsync_irq_disable(INTR_PRIMARY_VSYNC,
 						MDP_PRIM_VSYNC_TERM);
-			vctrl->wait_vsync_cnt = 0;
-			complete_all(&vctrl->vsync_comp);
 		}
 	}
 	pr_debug("%s: enable=%d cnt=%d\n", __func__, enable, vsync_irq_cnt);
@@ -366,7 +364,6 @@ void mdp4_lcdc_wait4vsync(int cndx)
 	struct vsycn_ctrl *vctrl;
 	struct mdp4_overlay_pipe *pipe;
 	unsigned long flags;
-	int ret;
 
 	if (cndx >= MAX_CONTROLLER) {
 		pr_err("%s: out or range: cndx=%d\n", __func__, cndx);
@@ -388,11 +385,9 @@ void mdp4_lcdc_wait4vsync(int cndx)
 	vctrl->wait_vsync_cnt++;
 	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 
-	/* double the timeout in vsync time stamp generation */
-	ret = wait_for_completion_interruptible_timeout(&vctrl->vsync_comp,
-		msecs_to_jiffies(VSYNC_PERIOD * 8));
-	if (ret <= 0)
-		pr_err("%s timeout ret=%d", __func__, ret);
+	if (!wait_for_completion_timeout(&vctrl->vsync_comp, msecs_to_jiffies(100)))
+		pr_err("%s %d  TIMEOUT_\n", __func__, __LINE__);
+
 	mdp4_lcdc_vsync_irq_ctrl(cndx, 0);
 	mdp4_stat.wait4vsync0++;
 }
@@ -782,9 +777,15 @@ int mdp4_lcdc_on(struct platform_device *pdev)
 /* timing generator off */
 static void mdp4_lcdc_tg_off(struct vsycn_ctrl *vctrl)
 {
+	unsigned long flags;
+
+	spin_lock_irqsave(&vctrl->spin_lock, flags);
+	INIT_COMPLETION(vctrl->vsync_comp);
+	vctrl->wait_vsync_cnt++;
 	MDP_OUTP(MDP_BASE + LCDC_BASE, 0); /* turn off timing generator */
-	/* some delay after turning off the tg */
-	msleep(20);
+	spin_unlock_irqrestore(&vctrl->spin_lock, flags);
+
+	mdp4_lcdc_wait4vsync(0);
 }
 int mdp4_lcdc_off(struct platform_device *pdev)
 {
@@ -868,11 +869,6 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 	 */
 	mdp4_overlay_iommu_unmap_freelist(mixer);
 	mdp4_overlay_iommu_unmap_freelist(mixer);
-
-	if (vctrl->vsync_irq_enabled) {
-		vctrl->vsync_irq_enabled = 0;
-		mdp4_lcdc_vsync_irq_ctrl(cndx, 0);
-	}
 
 	/* MDP clock disable */
 	mdp_clk_ctrl(0);
