@@ -4358,7 +4358,7 @@ unsigned char hdmi_is_primary;
 #define MSM_PMEM_ADSP_SIZE         0x02A00000 /* 42MB */
 #endif
 #endif
-#define MSM_PMEM_AUDIO_SIZE        0x28B000
+#define MSM_PMEM_AUDIO_SIZE        0x4CF000
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 #if defined(CONFIG_JPN_MODEL_SC_05D)
