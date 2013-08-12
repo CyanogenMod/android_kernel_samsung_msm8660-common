@@ -378,7 +378,11 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	vp->update_cnt = 0;     /* reset */
 	mutex_unlock(&vctrl->update_lock);
 
-	mdp4_wfd_dequeue_update(mfd, &node);
+	rc = mdp4_wfd_dequeue_update(mfd, &node);
+	if (rc != 0) {
+		pr_err("%s: mdp4_wfd_dequeue_update failed !! mfd=%x\n",
+			__func__, (int)mfd);
+	}
 
 	/* free previous committed iommu back to pool */
 	mdp4_overlay_iommu_unmap_freelist(mixer);
@@ -406,6 +410,10 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	mdp4_mixer_stage_commit(mixer);
 
 	pipe = vctrl->base_pipe;
+	if (!pipe->ov_blt_addr) {
+		schedule_work(&vctrl->clk_work);
+		return cnt;
+	}
 	spin_lock_irqsave(&vctrl->spin_lock, flags);
 	vctrl->ov_koff++;
 	INIT_COMPLETION(vctrl->ov_comp);
