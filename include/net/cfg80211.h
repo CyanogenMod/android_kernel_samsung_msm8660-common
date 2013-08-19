@@ -368,6 +368,26 @@ struct cfg80211_crypto_settings {
 	bool control_port_no_encrypt;
 };
 
+struct mac_address {
+	u8 addr[ETH_ALEN];
+};
+
+/**
+ * struct cfg80211_acl_data - Access control list data
+ *
+ * @acl_policy: ACL policy to be applied on the station's
+ *	entry specified by mac_addr
+ * @n_acl_entries: Number of MAC address entries passed
+ * @mac_addrs: List of MAC addresses of stations to be used for ACL
+ */
+struct cfg80211_acl_data {
+	enum nl80211_acl_policy acl_policy;
+	int n_acl_entries;
+
+	/* Keep it last */
+	struct mac_address mac_addrs[];
+};
+
 /**
  * struct beacon_parameters - beacon parameters
  *
@@ -396,6 +416,8 @@ struct cfg80211_crypto_settings {
  * @assocresp_ies: extra information element(s) to add into (Re)Association
  *	Response frames or %NULL
  * @assocresp_ies_len: length of assocresp_ies in octets
+ * @acl: ACL configuration used by the drivers which has support for
+ *	MAC address based access control
  */
 struct beacon_parameters {
 	u8 *head, *tail;
@@ -413,6 +435,7 @@ struct beacon_parameters {
 	size_t proberesp_ies_len;
 	const u8 *assocresp_ies;
 	size_t assocresp_ies_len;
+	const struct cfg80211_acl_data *acl;
 };
 
 /**
@@ -1377,6 +1400,14 @@ struct cfg80211_wowlan {
  * @set_ringparam: Set tx and rx ring sizes.
  *
  * @get_ringparam: Get tx and rx ring current and maximum sizes.
+ *
+ * @set_mac_acl: Sets MAC address control list in AP and P2P GO mode.
+ *	Parameters include ACL policy, an array of MAC address of stations
+ *	and the number of MAC addresses. If there is already a list in driver
+ *	this new list replaces the existing one. Driver has to clear its ACL
+ *	when number of MAC addresses entries is passed as 0. Drivers which
+ *	advertise the support for MAC based ACL have to implement this callback.
+ *
  */
 struct cfg80211_ops {
 	int	(*suspend)(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
@@ -1553,6 +1584,9 @@ struct cfg80211_ops {
 				struct net_device *dev,
 				struct cfg80211_sched_scan_request *request);
 	int	(*sched_scan_stop)(struct wiphy *wiphy, struct net_device *dev);
+
+	int	(*set_mac_acl)(struct wiphy *wiphy, struct net_device *dev,
+				const struct cfg80211_acl_data *params);
 };
 
 /*
@@ -1714,10 +1748,6 @@ struct ieee80211_iface_combination {
 	bool beacon_int_infra_match;
 };
 
-struct mac_address {
-	u8 addr[ETH_ALEN];
-};
-
 struct ieee80211_txrx_stypes {
 	u16 tx, rx;
 };
@@ -1836,6 +1866,9 @@ struct wiphy_wowlan_support {
  *
  * @wowlan: WoWLAN support information
  * @ap_sme_capa: AP SME capabilities, flags from &enum nl80211_ap_sme_features.
+ *
+ * @max_acl_mac_addrs: Maximum number of MAC addresses that the device
+ *	supports for ACL.
  */
 struct wiphy {
 	/* assign these fields before you register the wiphy */
@@ -1858,6 +1891,7 @@ struct wiphy {
 	u16 interface_modes;
 
 	u32 flags;
+	u16 max_acl_mac_addrs;
 
 	u32 ap_sme_capa;
 
