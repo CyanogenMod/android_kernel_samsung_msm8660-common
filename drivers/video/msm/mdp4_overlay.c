@@ -2257,13 +2257,6 @@ void mdp4_mixer_blend_setup(int mixer)
 		else
 			mdp4_set_blend_by_op(s_pipe, d_pipe, alpha_drop, blend);
 
-		if (mdp_rev < MDP_REV_42 && mixer == MDP4_MIXER1 &&
-			s_pipe->pipe_type == OVERLAY_TYPE_VIDEO &&
-			mdp4_overlay_format2type(s_pipe->src_format) == OVERLAY_TYPE_VIDEO) {
-			blend->op = MDP4_BLEND_BG_ALPHA_BG_PIXEL | MDP4_BLEND_FG_INV_ALPHA | MDP4_BLEND_FG_ALPHA_BG_PIXEL;	//for ARGB_8888
-//			blend->op = MDP4_BLEND_FG_INV_ALPHA | MDP4_BLEND_FG_ALPHA_FG_PIXEL;		//for RGB_565
-		}
-
 		if (s_pipe->transp != MDP_TRANSP_NOP) {
 			if (s_pipe->is_fg) {
 				transp_color_key(s_pipe->src_format,
@@ -3769,7 +3762,7 @@ int mdp4_overlay_vsync_ctrl(struct fb_info *info, int enable)
 		else if (ctrl->panel_mode & MDP4_PANEL_MDDI)
 			mdp4_mddi_vsync_ctrl(info, cmd);
 	} else if (hdmi_prim_display || info->node == 1) {
-		mdp4_dtv_vsync_ctrl(0, cmd);
+		mdp4_dtv_vsync_ctrl(info, cmd);
 	}
 
 	return 0;
