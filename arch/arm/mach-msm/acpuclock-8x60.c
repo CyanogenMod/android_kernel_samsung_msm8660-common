@@ -884,11 +884,7 @@ static unsigned int __init select_freq_plan(void)
 		speed_bin = (pte_efuse >> 4) & 0xF;
 
 	if (speed_bin == 0x1) {
-#ifdef CONFIG_USA_MODEL_SGH_I577
-		max_khz = 1242000;
-#else
-		max_khz = 1512000;
-#endif
+		max_khz = MAX_FREQ_LIMIT;
 		pvs = (pte_efuse >> 10) & 0x7;
 		if (pvs == 0x7)
 			pvs = (pte_efuse >> 13) & 0x7;
