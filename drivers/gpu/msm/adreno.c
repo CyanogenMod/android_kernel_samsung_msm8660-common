@@ -34,6 +34,12 @@
 #define DRIVER_VERSION_MAJOR   3
 #define DRIVER_VERSION_MINOR   1
 
+/*Adreno First Wait timeout part 100msec*/
+#define ADRENO_WAIT_FIRST_TIMEOUT_PART 100
+
+/*Adreno Wait timeout part 200msec */
+#define ADRENO_WAIT_TIMEOUT_PART 200
+
 /* Adreno MH arbiter config*/
 #define ADRENO_CFG_MHARB \
 	(0x10 \
@@ -936,13 +942,8 @@ int adreno_idle(struct kgsl_device *device, unsigned int timeout)
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 	unsigned int rbbm_status;
-	unsigned long wait_timeout =
-		msecs_to_jiffies(adreno_dev->wait_timeout);
 	unsigned long wait_time;
 	unsigned long wait_time_part;
-	unsigned int msecs;
-	unsigned int msecs_first;
-	unsigned int msecs_part;
 
 	kgsl_cffdump_regpoll(device->id, REG_RBBM_STATUS << 2,
 		0x00000000, 0x80000000);
@@ -951,29 +952,29 @@ int adreno_idle(struct kgsl_device *device, unsigned int timeout)
 	 */
 retry:
 	if (rb->flags & KGSL_FLAGS_STARTED) {
-		msecs = adreno_dev->wait_timeout;
-		msecs_first = (msecs <= 100) ? ((msecs + 4) / 5) : 100;
-		msecs_part = (msecs - msecs_first + 3) / 4;
-		wait_time = jiffies + wait_timeout;
-		wait_time_part = jiffies + msecs_to_jiffies(msecs_first);
+		wait_time = jiffies + msecs_to_jiffies(adreno_dev->wait_timeout);
+		/* Keep the first timeout as 100msecs before rewriting
+		 * the WPTR. */
+		wait_time_part = jiffies + msecs_to_jiffies(ADRENO_WAIT_FIRST_TIMEOUT_PART);
 		adreno_poke(device);
 		do {
 			if (time_after(jiffies, wait_time_part)) {
 				adreno_poke(device);
 				wait_time_part = jiffies +
-					msecs_to_jiffies(msecs_part);
+					msecs_to_jiffies(ADRENO_WAIT_TIMEOUT_PART);
 			}
 			GSL_RB_GET_READPTR(rb, &rb->rptr);
 			if (time_after(jiffies, wait_time)) {
 				KGSL_DRV_ERR(device, "rptr: %x, wptr: %x\n",
 					rb->rptr, rb->wptr);
-				goto err;
+				if (rb->rptr != rb->wptr)
+					goto err;
 			}
 		} while (rb->rptr != rb->wptr);
 	}
 
 	/* now, wait for the GPU to finish its operations */
-	wait_time = jiffies + wait_timeout;
+	wait_time = jiffies + msecs_to_jiffies(adreno_dev->wait_timeout);
 	while (time_before(jiffies, wait_time)) {
 		adreno_regread(device, REG_RBBM_STATUS, &rbbm_status);
 		if (rbbm_status == 0x110)
@@ -984,7 +985,7 @@ err:
 	KGSL_DRV_ERR(device, "spun too long waiting for RB to idle\n");
 	if (KGSL_STATE_DUMP_AND_RECOVER != device->state &&
 		!adreno_dump_and_recover(device)) {
-		wait_time = jiffies + wait_timeout;
+		wait_time = jiffies + msecs_to_jiffies(adreno_dev->wait_timeout);
 		goto retry;
 	}
 	return -ETIMEDOUT;
@@ -1238,9 +1239,7 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 	static uint io_cnt;
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
-	int retries;
-	unsigned int msecs_first;
-	unsigned int msecs_part;
+	unsigned long wait_time;
 
 	/* Don't wait forever, set a max value for now */
 	if (msecs == -1)
@@ -1254,13 +1253,8 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 		goto done;
 	}
 
-	/* Keep the first timeout as 100msecs before rewriting
-	 * the WPTR. Less visible impact if the WPTR has not
-	 * been updated properly.
-	 */
-	msecs_first = (msecs <= 100) ? ((msecs + 4) / 5) : 100;
-	msecs_part = (msecs - msecs_first + 3) / 4;
-	for (retries = 0; retries < 5; retries++) {
+	wait_time = jiffies + msecs_to_jiffies(msecs);
+	do {
 		if (kgsl_check_timestamp(device, timestamp)) {
 			/* if the timestamp happens while we're not
 			 * waiting, there's a chance that an interrupt
@@ -1284,8 +1278,7 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 				device->wait_queue,
 				adreno_check_interrupt_timestamp(device,
 					timestamp),
-				msecs_to_jiffies(retries ?
-					msecs_part : msecs_first), io);
+				msecs_to_jiffies(ADRENO_WAIT_TIMEOUT_PART), io);
 
 		mutex_lock(&device->mutex);
 
@@ -1297,8 +1290,9 @@ static int adreno_waittimestamp(struct kgsl_device *device,
 			/*an error occurred*/
 			goto done;
 		}
+
 		/*this wait timed out*/
-	}
+	} while (time_before(jiffies, wait_time));
 
 	/* Check if timestamp has retired here because we may have hit
 	 * recovery which can take some time and cause waiting threads
