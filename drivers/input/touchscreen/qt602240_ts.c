@@ -1880,7 +1880,6 @@ static irqreturn_t mxt224_irq_thread(int irq, void *ptr)
 #if !defined (CONFIG_USA_MODEL_SGH_I577) && !defined(CONFIG_CAN_MODEL_SGH_I577R) &&  !defined (CONFIG_USA_MODEL_SGH_I727) && !defined (CONFIG_USA_MODEL_SGH_T989)
 	u16 size_one;
 	u8 value, ret;
-	bool ta_status=0;
 	u16 obj_address = 0;
 
 	#ifndef CLEAR_MEDIAN_FILTER_ERROR
