@@ -533,8 +533,6 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 	total_sizedwords += !(flags & KGSL_CMD_FLAGS_NO_TS_CMP) ? 10 : 0;
 	/* 2 dwords to store the start of command sequence */
 	total_sizedwords += 2;
-	/* CP_WAIT_FOR_IDLE */
-	total_sizedwords += 2;
 
 	ringcmds = adreno_ringbuffer_allocspace(rb, total_sizedwords);
 	/* GPU may hang during space allocation, if thats the case the current
@@ -605,13 +603,6 @@ adreno_ringbuffer_addcmds(struct adreno_ringbuffer *rb,
 			cp_type3_packet(CP_INTERRUPT, 1));
 		GSL_RB_WRITE(ringcmds, rcmd_gpu, CP_INT_CNTL__RB_INT_MASK);
 	}
-
-	/* HW Workaround for MMU Page fault
-	 * due to memory getting free early before
-	 * GPU completes it.
-	 */
-	GSL_RB_WRITE(ringcmds, rcmd_gpu, cp_type3_packet(CP_WAIT_FOR_IDLE, 1));
-	GSL_RB_WRITE(ringcmds, rcmd_gpu, 0x00);
 
 	adreno_ringbuffer_submit(rb);
 
