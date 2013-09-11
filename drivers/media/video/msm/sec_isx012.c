@@ -1110,62 +1110,54 @@ static int isx012_set_flash(int8_t value1, int8_t value2)
 		return 0;
 	}
 
-	if ((value1 > -1) && (value2 == 50)) {
-		switch (value1) {
-			case 0:	//off
-				gpio_set_value_cansleep(CAM_FLASH_EN, 0);
-				gpio_set_value_cansleep(CAM_FLASH_SET, 0);
-				err = 0;
-				break;
+	switch (value1) {
+		case 0:	//off
+			gpio_set_value_cansleep(CAM_FLASH_EN, 0);
+			gpio_set_value_cansleep(CAM_FLASH_SET, 0);
+			err = 0;
+			break;
 
-			case 1: //Auto
-				if (gLowLight_check) {
-					gpio_set_value_cansleep(CAM_FLASH_EN, 1);
-					gpio_set_value_cansleep(CAM_FLASH_SET, 0);
-					isx012_exif->flash = 1;
-				} else {
-					gpio_set_value_cansleep(CAM_FLASH_EN, 0);
-					gpio_set_value_cansleep(CAM_FLASH_SET, 0);
-					isx012_exif->flash = 0;
-				}
-				err = 0;
-				break;
-
-			case 2:	//on
+		case 1: //Auto
+			if (gLowLight_check) {
 				gpio_set_value_cansleep(CAM_FLASH_EN, 1);
 				gpio_set_value_cansleep(CAM_FLASH_SET, 0);
-				err = 0;
-				break;
-
-			case 3:	//torch
+				isx012_exif->flash = 1;
+			} else {
 				gpio_set_value_cansleep(CAM_FLASH_EN, 0);
-				torch = gpio_get_value(CAM_FLASH_EN);
+				gpio_set_value_cansleep(CAM_FLASH_SET, 0);
+				isx012_exif->flash = 0;
+			}
+			err = 0;
+			break;
 
-				for (i = 5; i > 1; i--) {
-					gpio_set_value_cansleep(CAM_FLASH_SET, 1);
-					torch2 = gpio_get_value(CAM_FLASH_SET);
-					udelay(1);
-					gpio_set_value_cansleep(CAM_FLASH_SET, 0);
-					torch3 = gpio_get_value(CAM_FLASH_SET);
-					udelay(1);
-				}
+		case 2:	//on
+			gpio_set_value_cansleep(CAM_FLASH_EN, 1);
+			gpio_set_value_cansleep(CAM_FLASH_SET, 0);
+			err = 0;
+			break;
+
+		case 3:	//torch
+			gpio_set_value_cansleep(CAM_FLASH_EN, 0);
+			torch = gpio_get_value(CAM_FLASH_EN);
+
+			for (i = 5; i > 1; i--) {
 				gpio_set_value_cansleep(CAM_FLASH_SET, 1);
-				usleep(2*1000);
-				err = 0;
-				break;
+				torch2 = gpio_get_value(CAM_FLASH_SET);
+				udelay(1);
+				gpio_set_value_cansleep(CAM_FLASH_SET, 0);
+				torch3 = gpio_get_value(CAM_FLASH_SET);
+				udelay(1);
+			}
+			gpio_set_value_cansleep(CAM_FLASH_SET, 1);
+			usleep(2*1000);
+			err = 0;
+			break;
 
-			default :
-				printk(KERN_DEBUG "[ISX012][%s:%d] invalid[%d/%d]\n", __func__, __LINE__, value1, value2);
-				err = 0;
-				break;
-		}
-	} else if ((value1 == 50 && value2 > -1)) {
-		isx012_ctrl->setting.flash_mode = value2;
-		cam_err("flash value1(%d) value2(%d) isx012_ctrl->setting.flash_mode(%d)", value1, value2, isx012_ctrl->setting.flash_mode);
-		err = 0;
+		default :
+			printk(KERN_DEBUG "[ISX012][%s:%d] invalid[%d/%d]\n", __func__, __LINE__, value1, value2);
+			err = 0;
+			break;
 	}
-
-	cam_err("FINAL flash value1(%d) value2(%d) isx012_ctrl->setting.flash_mode(%d)", value1, value2, isx012_ctrl->setting.flash_mode);
 
 	return err;
 }
