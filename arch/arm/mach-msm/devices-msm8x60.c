@@ -1540,7 +1540,7 @@ static struct msm_rotator_platform_data rotator_pdata = {
 #ifdef CONFIG_MSM_BUS_SCALING
 	.bus_scale_table = &rotator_bus_scale_pdata,
 #endif
-
+	.rot_iommu_split_domain = 0,
 };
 
 struct platform_device msm_rotator_device = {
