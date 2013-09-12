@@ -746,7 +746,6 @@ int mdp4_lcdc_off(struct platform_device *pdev)
 	mdp_clk_ctrl(0);
 	mdp_pipe_ctrl(MDP_OVERLAY0_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 
-	mdp4_iommu_detach();
 	return ret;
 }
 
