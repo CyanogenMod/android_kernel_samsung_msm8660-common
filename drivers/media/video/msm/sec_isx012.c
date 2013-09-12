@@ -3098,7 +3098,11 @@ int isx012_sensor_probe(const struct msm_camera_sensor_info *info,
 	s->s_config	= isx012_sensor_config;
 	s->s_ext_config	= isx012_sensor_ext_config;
 	s->s_camera_type = BACK_CAMERA_2D;
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+	s->s_mount_angle = 0;
+#else
 	s->s_mount_angle = 90;
+#endif
 
 probe_done:
 	cam_err("Sensor probe done(%d)", err);
