@@ -1391,7 +1391,11 @@ int s5k6aafx_sensor_probe(const struct msm_camera_sensor_info *info,
 	s->s_config	= s5k6aafx_sensor_config;
 	s->s_ext_config	= s5k6aafx_sensor_ext_config;
 	s->s_camera_type = FRONT_CAMERA_2D;
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+	s->s_mount_angle = 180;
+#else
 	s->s_mount_angle = 270;
+#endif
 
 probe_done:
 	cam_err("Sensor probe done(%d)", rc);
