@@ -1110,7 +1110,7 @@ static int isx012_set_flash(int8_t value1, int8_t value2)
 		return 0;
 	}
 
-	if ((value1 > -1) && (value2 == 50)) {
+	if ((value1 > -1) && (value1 != 50)) {
 		switch (value1) {
 			case 0:	//off
 				gpio_set_value_cansleep(CAM_FLASH_EN, 0);
@@ -3098,7 +3098,11 @@ int isx012_sensor_probe(const struct msm_camera_sensor_info *info,
 	s->s_config	= isx012_sensor_config;
 	s->s_ext_config	= isx012_sensor_ext_config;
 	s->s_camera_type = BACK_CAMERA_2D;
+#ifdef CONFIG_USA_MODEL_SGH_I577
+	s->s_mount_angle = 0;
+#else
 	s->s_mount_angle = 90;
+#endif
 
 probe_done:
 	cam_err("Sensor probe done(%d)", err);
