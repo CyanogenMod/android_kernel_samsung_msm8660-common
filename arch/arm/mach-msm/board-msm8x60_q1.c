@@ -3616,11 +3616,10 @@ static void gsbi7_qup_i2c_gpio_config(int adap_id, int config_type)
 		gpio_tlmm_config(gsbi7_i2c_table[1], GPIO_CFG_ENABLE);
 	}
 }
-#else
+#endif
 static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
 {
 }
-#endif
 
 #if defined (CONFIG_TARGET_LOCALE_USA)
 static struct msm_i2c_platform_data msm_gsbi1_qup_i2c_pdata = {
