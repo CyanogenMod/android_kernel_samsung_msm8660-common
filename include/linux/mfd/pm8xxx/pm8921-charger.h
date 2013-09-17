@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -48,6 +48,13 @@ enum pm8921_usb_debounce_time {
 	PM_USB_DEBOUNCE_80P5MS,
 };
 
+enum pm8921_chg_led_src_config {
+	LED_SRC_GND,
+	LED_SRC_VPH_PWR,
+	LED_SRC_5V,
+	LED_SRC_MIN_VPH_5V,
+	LED_SRC_BYPASS,
+};
 /**
  * struct pm8921_charger_platform_data -
  * @safety_time:	max charging time in minutes incl. fast and trkl
@@ -102,26 +109,33 @@ enum pm8921_usb_debounce_time {
  *			below 25% of VREF_THERM. Hardware defaults to low.
  */
 struct pm8921_charger_platform_data {
-	struct pm8xxx_charger_core_data	charger_cdata;
-	unsigned int			safety_time;
+struct pm8xxx_charger_core_data	charger_cdata;
 	unsigned int			ttrkl_time;
 	unsigned int			update_time;
 	unsigned int			max_voltage;
 	unsigned int			min_voltage;
+	unsigned int			uvd_thresh_voltage;
+	unsigned int			safe_current_ma;
+	unsigned int			alarm_low_mv;
+	unsigned int			alarm_high_mv;
 	unsigned int			resume_voltage_delta;
+	int				resume_charge_percent;
 	unsigned int			term_current;
 	int				cool_temp;
 	int				warm_temp;
 	unsigned int			temp_check_period;
 	unsigned int			max_bat_chg_current;
+	unsigned int			usb_max_current;
 	unsigned int			cool_bat_chg_current;
 	unsigned int			warm_bat_chg_current;
 	unsigned int			cool_bat_voltage;
 	unsigned int			warm_bat_voltage;
+	int				hysteresis_temp;
 	unsigned int			(*get_batt_capacity_percent) (void);
 	int64_t				batt_id_min;
 	int64_t				batt_id_max;
 	bool				keep_btm_on_suspend;
+	bool				has_dc_supply;
 	int				trkl_voltage;
 	int				weak_voltage;
 	int				trkl_current;
@@ -131,6 +145,17 @@ struct pm8921_charger_platform_data {
 	int				thermal_levels;
 	enum pm8921_chg_cold_thr	cold_thr;
 	enum pm8921_chg_hot_thr		hot_thr;
+	int				rconn_mohm;
+	enum pm8921_chg_led_src_config	led_src_config;
+	int				battery_less_hardware;
+	int				btc_override;
+	int				btc_override_cold_degc;
+	int				btc_override_hot_degc;
+	int				btc_delay_ms;
+	int				btc_panic_if_cant_stop_chg;
+	int				stop_chg_upon_expiry;
+	bool				disable_chg_rmvl_wrkarnd;
+	bool				enable_tcxo_warmup_delay;
 };
 
 enum pm8921_charger_source {

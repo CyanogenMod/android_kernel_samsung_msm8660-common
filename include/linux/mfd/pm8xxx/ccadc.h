@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -17,12 +17,19 @@
 
 #define PM8XXX_CCADC_DEV_NAME "pm8xxx-ccadc"
 
+struct pm8xxx_ccadc_core_data {
+	unsigned int	batt_temp_channel;
+};
+
 /**
  * struct pm8xxx_ccadc_platform_data -
  * @r_sense:		sense resistor value in (mOhms)
  */
 struct pm8xxx_ccadc_platform_data {
-	int r_sense;
+	struct pm8xxx_ccadc_core_data	ccadc_cdata;
+	int				r_sense_uohm;
+	unsigned int			calib_delay_ms;
+	bool				periodic_wakeup;
 };
 
 #define CCADC_READING_RESOLUTION_N_V1	1085069
