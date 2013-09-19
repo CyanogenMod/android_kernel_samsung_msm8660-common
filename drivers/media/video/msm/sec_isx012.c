@@ -1109,7 +1109,6 @@ static int isx012_set_flash(int8_t value1, int8_t value2)
 		cam_err("Accessibility torch(%d)", isx012_ctrl->setting.flash_mode);
 		return 0;
 	}
-
 	if ((value1 > -1) && (value2 == 50)) {
 		switch (value1) {
 			case 0:	//off
@@ -1159,8 +1158,17 @@ static int isx012_set_flash(int8_t value1, int8_t value2)
 				err = 0;
 				break;
 		}
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+	} else if (value2 == 0) {
+		if (value1 == 3) {
+			isx012_set_flash(value1,50);
+		} else {
+			isx012_ctrl->setting.flash_mode = value1;
+		}
+#else
 	} else if ((value1 == 50 && value2 > -1)) {
 		isx012_ctrl->setting.flash_mode = value2;
+#endif
 		cam_err("flash value1(%d) value2(%d) isx012_ctrl->setting.flash_mode(%d)", value1, value2, isx012_ctrl->setting.flash_mode);
 		err = 0;
 	}
