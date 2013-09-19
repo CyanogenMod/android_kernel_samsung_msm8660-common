@@ -1774,6 +1774,12 @@ static int isx012_set_focus_mode(int value1, int value2)
 			}
 			break;
 
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+		case 256 :
+			isx012_set_focus_mode(FOCUS_MODE_AUTO, value2);
+			break;
+#endif
+
 		default :
 			printk(KERN_DEBUG "[ISX012][%s:%d] invalid[%d/%d]\n", __func__, __LINE__, value1, value2);
 			break;
