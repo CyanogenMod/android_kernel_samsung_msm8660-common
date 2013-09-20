@@ -1666,17 +1666,20 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 {
 	struct vcd_frame_data vcd_input_buffer;
 	unsigned long kernel_vaddr, phy_addr, user_vaddr;
+	struct buf_addr_table *buf_addr_table;
 	int pmem_fd;
 	struct file *file;
 	s32 buffer_index = -1;
 	u32 vcd_status = VCD_ERR_FAIL;
 	u32 ion_flag = 0;
+	unsigned long buff_len;
 	struct ion_handle *buff_handle = NULL;
 
 	if (!client_ctx || !input_frame_info)
 		return false;
 
 	user_vaddr = (unsigned long)input_frame_info->bufferaddr;
+	buf_addr_table = client_ctx->input_buf_addr_table;
 
 	if (vidc_lookup_addr_table(client_ctx, BUFFER_TYPE_INPUT,
 				      true, &user_vaddr, &kernel_vaddr,
@@ -1686,6 +1689,17 @@ static u32 vid_dec_decode_frame(struct video_client_ctx *client_ctx,
 		/* kernel_vaddr  is found. send the frame to VCD */
 		memset((void *)&vcd_input_buffer, 0,
 		       sizeof(struct vcd_frame_data));
+
+		buff_len = buf_addr_table[buffer_index].buff_len;
+		if ((input_frame_info->datalen > buff_len) ||
+					(input_frame_info->offset > buff_len)) {
+			ERR("%s(): offset(%u) or data length(%u) is greater"\
+				" than buffer length(%lu)\n",\
+			__func__, input_frame_info->offset,
+			input_frame_info->datalen, buff_len);
+			return false;
+		}
+
 		vcd_input_buffer.virtual =
 		    (u8 *) (kernel_vaddr + input_frame_info->pmem_offset);
 		vcd_input_buffer.offset = input_frame_info->offset;
@@ -2137,7 +2151,7 @@ static long vid_dec_ioctl(struct file *file,
 	}
 	case VDEC_IOCTL_GET_PERF_LEVEL:
 	{
-		u32 curr_perf_level;
+		u32 curr_perf_level =;
 		if (copy_from_user(&vdec_msg, arg, sizeof(vdec_msg)))
 			return -EFAULT;
 		result = vid_dec_get_curr_perf_level(client_ctx,
@@ -2348,7 +2362,7 @@ static long vid_dec_ioctl(struct file *file,
 
 	case VDEC_IOCTL_GET_ENABLE_SEC_METADATA:
 	{
-		u32 enable_sec_metadata;
+		u32 enable_sec_metadata = 0;
 		DBG("VDEC_IOCTL_GET_ENABLE_SEC_METADATA\n");
 		if (copy_from_user(&vdec_msg, arg, sizeof(vdec_msg)))
 			return -EFAULT;
@@ -2451,6 +2465,8 @@ static long vid_dec_ioctl(struct file *file,
 	case VDEC_IOCTL_SET_META_BUFFERS:
 	{
 		struct vdec_meta_buffers meta_buffers;
+		memset((void *)&meta_buffers, 0,
+			sizeof(struct vdec_meta_buffers));
 		DBG("VDEC_IOCTL_SET_META_BUFFERS\n");
 		if (copy_from_user(&vdec_msg, arg, sizeof(vdec_msg)))
 			return -EFAULT;
