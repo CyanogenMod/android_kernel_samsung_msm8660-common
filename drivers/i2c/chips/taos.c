@@ -726,7 +726,7 @@ static void taos_work_func_light(struct work_struct *work)
 
 	if(taos->light_buffer == i) {
 		if(taos->light_count++ == LIGHT_BUFFER_NUM) {
-			input_report_rel(taos->light_input_dev, REL_MISC, lux + 1);
+			input_report_abs(taos->light_input_dev, ABS_MISC, lux + 1);
 			input_sync(taos->light_input_dev);
 			taos->light_count = 0;
 			count++;
@@ -1355,9 +1355,14 @@ if(pdata) {
 		}
 		input_set_drvdata(input_dev, taos);
 		input_dev->name = "light_sensor";
+#if defined(CONFIG_USA_MODEL_SGH_T769) || defined(CONFIG_USA_MODEL_SGH_I577)
+		input_set_capability(input_dev, EV_ABS, ABS_MISC);
+		input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
+#else
 		set_bit(EV_REL, input_dev->evbit);
 		input_set_capability(input_dev, EV_REL, REL_MISC);
 		//input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
+#endif
 
 		err = input_register_device(input_dev);
 		if (err) 
