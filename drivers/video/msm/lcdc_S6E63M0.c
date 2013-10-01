@@ -386,13 +386,20 @@ static void s6e63m0_disp_powerup(void)
 	DPRINT("start %s\n", __func__);	
 
 	if (!s6e63m0_state.disp_powered_up && !s6e63m0_state.display_on) {
-		gpio_set_value(lcd_reset, 1);
-		msleep(2);
-		gpio_set_value(lcd_reset, 0);
-		msleep(2);
-		gpio_set_value(lcd_reset, 1);
 
+		LCD_CSX_HIGH
+		LCD_SCL_HIGH
+
+		msleep(50);
+		
+		gpio_set_value(lcd_reset, 1);
 		msleep(20);
+		/*
+		gpio_set_value(lcd_reset, 0);
+		msleep(20);
+		gpio_set_value(lcd_reset, 1);
+		msleep(20);
+		*/
 
 		s6e63m0_state.disp_powered_up = TRUE;
 	}
@@ -1259,7 +1266,6 @@ static DEVICE_ATTR(auto_brightness, 0664,
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s6e63m0_early_suspend(struct early_suspend *h) {
-
 	int i;
 	
 	DPRINT("panel off at early_suspend (%d,%d,%d)\n",
@@ -1281,22 +1287,31 @@ static void s6e63m0_early_suspend(struct early_suspend *h) {
 }
 
 static void s6e63m0_late_resume(struct early_suspend *h) {
+	static struct regulator *l3 = NULL;
+	static struct regulator *l19 = NULL;
+	int l3_enabled, l19_enabled;
 
 	DPRINT("panel on at late_resume (%d,%d,%d)\n",
 			s6e63m0_state.disp_initialized,
 			s6e63m0_state.disp_powered_up,
 			s6e63m0_state.display_on);	
 
-	if (!s6e63m0_state.disp_initialized) {
-		/* Configure reset GPIO that drives DAC */
-		lcdc_s6e63m0_pdata->panel_config_gpio(1);
-		spi_init();	/* LCD needs SPI */
-		s6e63m0_disp_powerup();
-		s6e63m0_disp_on();
-		s6e63m0_state.disp_initialized = TRUE;
-	}
+	l3 = regulator_get(NULL, "8058_l3");
+	l19 = regulator_get(NULL, "8058_l19");
 
-	return;
+	if (l3_enabled && l19_enabled) {
+		if (!s6e63m0_state.disp_initialized) {
+			mutex_lock(&lcd.lock);
+			/* Configure reset GPIO that drives DAC */
+			lcdc_s6e63m0_pdata->panel_config_gpio(1);
+			spi_init();	/* LCD needs SPI */
+			s6e63m0_disp_powerup();
+			s6e63m0_disp_on();
+			s6e63m0_state.disp_initialized = TRUE;
+			mutex_unlock(&lcd.lock);
+		}
+		return;
+	}
 }
 #endif
 
