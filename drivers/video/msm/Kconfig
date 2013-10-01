@@ -744,6 +744,16 @@ config FB_MSM_HDMI_3D
 	bool
 	default n
 
+config S6E63M0_EARLY_SUSPEND
+    depends on FB_MSM_LCDC_S6E63M0_WVGA_PANEL
+    bool "Enable S6E63M0 early_suspend and late_resume logic"
+    default n
+    ---help---
+    Use the S6E63M0 early_suspend and late_resume logic.
+    This is probably handled by the system board, so shouldn't be necessary.
+
+    If unsure, say 'n'.
+
 config FB_MSM_HDMI_ADV7520_PANEL
 	depends on FB_MSM_MDP40 && FB_MSM_OVERLAY
         bool "LCDC HDMI ADV7520 720p Panel"
