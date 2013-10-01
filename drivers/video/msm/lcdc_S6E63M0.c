@@ -1259,7 +1259,7 @@ static DEVICE_ATTR(auto_brightness, 0664,
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void s6e63m0_early_suspend(struct early_suspend *h) {
-
+#if 0
 	int i;
 	
 	DPRINT("panel off at early_suspend (%d,%d,%d)\n",
@@ -1278,10 +1278,11 @@ static void s6e63m0_early_suspend(struct early_suspend *h) {
 	}
 	
 	return;
+#endif
 }
 
 static void s6e63m0_late_resume(struct early_suspend *h) {
-
+#if 0
 	DPRINT("panel on at late_resume (%d,%d,%d)\n",
 			s6e63m0_state.disp_initialized,
 			s6e63m0_state.disp_powered_up,
@@ -1297,6 +1298,7 @@ static void s6e63m0_late_resume(struct early_suspend *h) {
 	}
 
 	return;
+#endif
 }
 #endif
 
