@@ -498,6 +498,9 @@ struct ld9040_state_type{
 	boolean disp_initialized;
 	boolean display_on;
 	boolean disp_powered_up;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	boolean disp_use_earlysuspend;
+#endif
 };
 
 #if defined(SMART_DIMMING) // smartdimming
@@ -1265,61 +1268,71 @@ extern void key_led_control(int on);
 
 static int lcdc_ld9040_panel_on(struct platform_device *pdev)
 {
-	mutex_lock(&lcd.lock);
-	DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
-	
-	if (!ld9040_state.disp_initialized) {
-		/* Configure reset GPIO that drives DAC */
-		lcdc_ld9040_pdata->panel_config_gpio(1);
-		spi_init();	/* LCD needs SPI */
-		ld9040_disp_powerup();
-		ld9040_disp_on();
-		ld9040_state.disp_initialized = TRUE;
-
-		if(lcd.current_brightness != lcd.bl)
-		{
-		        lcdc_ld9040_set_brightness(lcd.current_brightness);
-		}
-//		flag_gammaupdate = 0;
-#if 0
-		if ( get_hw_rev() >= 12 ) // TEMP
-			key_led_control(1);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	if (!ld9040_state.disp_use_earlysuspend) {
 #endif
-	}
+		mutex_lock(&lcd.lock);
+		DPRINT("%s  +  (%d,%d,%d)\n", __func__, ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
 
-	DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
-	mutex_unlock(&lcd.lock);
+		if (!ld9040_state.disp_initialized) {
+			/* Configure reset GPIO that drives DAC */
+			lcdc_ld9040_pdata->panel_config_gpio(1);
+			spi_init();	/* LCD needs SPI */
+			ld9040_disp_powerup();
+			ld9040_disp_on();
+			ld9040_state.disp_initialized = TRUE;
+
+			if(lcd.current_brightness != lcd.bl)
+			{
+				lcdc_ld9040_set_brightness(lcd.current_brightness);
+			}
+//			flag_gammaupdate = 0;
+#if 0
+			if ( get_hw_rev() >= 12 ) // TEMP
+				key_led_control(1);
+#endif
+		}
+
+		DPRINT("%s  -  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
+		mutex_unlock(&lcd.lock);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	}
+#endif
 
 	return 0;
 }
 
 static int lcdc_ld9040_panel_off(struct platform_device *pdev)
 {
-	int i;
-
-	mutex_lock(&lcd.lock);
-	DPRINT("%s +  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);	
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	if (!ld9040_state.disp_use_earlysuspend) {
+#endif
+		int i;
+		mutex_lock(&lcd.lock);
+		DPRINT("%s +  (%d,%d,%d)\n", __func__,ld9040_state.disp_initialized, ld9040_state.disp_powered_up, ld9040_state.display_on);
 
 #if 0
-	if ( get_hw_rev() >= 12 )	// TEMP
-		key_led_control(0);
+		if ( get_hw_rev() >= 12 )	// TEMP
+			key_led_control(0);
 #endif
-	lcd.cur_acl = 0;  // acl set 0 for wakeup set
+		lcd.cur_acl = 0;  // acl set 0 for wakeup set
 
-	if (ld9040_state.disp_powered_up && ld9040_state.display_on) {
-		for (i = 0; i < POWER_OFF_SEQ; i++)
-			setting_table_write(&power_off_sequence[i]);
+		if (ld9040_state.disp_powered_up && ld9040_state.display_on) {
+			for (i = 0; i < POWER_OFF_SEQ; i++)
+				setting_table_write(&power_off_sequence[i]);
 
-		lcdc_ld9040_pdata->panel_config_gpio(0);
-		ld9040_state.display_on = FALSE;
-		ld9040_state.disp_initialized = FALSE;
-		ld9040_disp_powerdown();
-//		flag_gammaupdate = 0;
+			lcdc_ld9040_pdata->panel_config_gpio(0);
+			ld9040_state.display_on = FALSE;
+			ld9040_state.disp_initialized = FALSE;
+			ld9040_disp_powerdown();
+//			flag_gammaupdate = 0;
+		}
+		mutex_unlock(&lcd.lock);
+		DPRINT("%s -\n", __func__);
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	}
-	mutex_unlock(&lcd.lock);
-	
-	DPRINT("%s -\n", __func__);	
-
+#endif
 	return 0;
 }
 
@@ -2125,6 +2138,8 @@ static void ld9040_early_suspend(struct early_suspend *h) {
 			ld9040_state.disp_powered_up,
 			ld9040_state.display_on);
 
+	ld9040_state.disp_use_earlysuspend = TRUE;
+
 	if (ld9040_state.disp_powered_up && ld9040_state.display_on) {
 		for (i = 0; i < POWER_OFF_SEQ; i++)
 			setting_table_write(&power_off_sequence[i]);
@@ -2153,6 +2168,8 @@ static void ld9040_late_resume(struct early_suspend *h) {
 	l3_enabled = regulator_is_enabled(l3);
 	l19_enabled = regulator_is_enabled(l19);
 
+
+	mutex_lock(&lcd.lock);
 	DPRINT("panel on at late_resume (%d,%d,%d)\n",
 		ld9040_state.disp_initialized,
 		ld9040_state.disp_powered_up,
@@ -2162,7 +2179,7 @@ static void ld9040_late_resume(struct early_suspend *h) {
 	// LCD initialization
 	if (l3_enabled && l19_enabled) {
 
-		mutex_lock(&lcd.lock);
+//		mutex_lock(&lcd.lock);
 		if (!ld9040_state.disp_initialized) {
 			/* Configure reset GPIO that drives DAC */
 			lcdc_ld9040_pdata->panel_config_gpio(1);
@@ -2172,8 +2189,10 @@ static void ld9040_late_resume(struct early_suspend *h) {
 			ld9040_state.disp_initialized = TRUE;
 			//flag_gammaupdate = 0;
 		}
-		mutex_unlock(&lcd.lock);
+//		mutex_unlock(&lcd.lock);
 	}
+
+	mutex_unlock(&lcd.lock);
 
 	return;
 }
