@@ -1181,7 +1181,7 @@ static u32 ddl_set_enc_property(struct ddl_client_context *ddl,
 			encoder->codec.codec == VCD_CODEC_H264) {
 			encoder->avc_delimiter_enable =
 			delimiter_enable->avc_delimiter_enable_flag;
-			vcd_status = VCS_S_SUCCESS;
+			vcd_status = VCD_S_SUCCESS;
 		}
 		break;
 	}

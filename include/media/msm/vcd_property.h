@@ -418,10 +418,6 @@ struct vcd_property_meta_buffer {
 	void *client_data_iommu;
 };
 
-struct vcd_property_bitstream_restrict_enable {
-	u32 bitstream_restrict_enable_flag;
-};
-
 struct vcd_property_range_type {
 	u32 min;
 	u32 max;
