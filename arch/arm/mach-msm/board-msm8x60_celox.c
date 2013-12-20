@@ -16030,6 +16030,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
+	.mdp_iommu_split_domain = 0,
 };
 #if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
 int mdp_core_clk_rate_table[] = {

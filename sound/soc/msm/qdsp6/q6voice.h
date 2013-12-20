@@ -13,6 +13,7 @@
 #define __QDSP6VOICE_H__
 
 #include <mach/qdsp6v2/apr.h>
+#include <linux/ion.h>
 
 #define MAX_VOC_PKT_SIZE 642
 #define SESSION_NAME_LEN 20
@@ -872,6 +873,7 @@ struct voice_data {
 };
 
 struct cal_mem {
+	struct ion_handle *handle;
 	uint32_t phy;
 	void *buf;
 };
@@ -892,6 +894,7 @@ struct common_data {
 	/* APR to CVP in the Q6 */
 	void *apr_q6_cvp;
 
+	struct ion_client *client;
 	struct cal_mem cvp_cal;
 	struct cal_mem cvs_cal;
 

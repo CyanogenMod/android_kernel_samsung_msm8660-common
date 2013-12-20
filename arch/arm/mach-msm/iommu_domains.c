@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -13,6 +13,7 @@
 #include <mach/msm_subsystem_map.h>
 #include <linux/memory_alloc.h>
 #include <linux/iommu.h>
+#include <linux/platform_device.h>
 #include <linux/vmalloc.h>
 #include <asm/sizes.h>
 #include <asm/page.h>
@@ -24,166 +25,12 @@
 /* dummy 64K for overmapping */
 char iommu_dummy[2*SZ_64K-4];
 
-struct msm_iommu_domain {
-	/* iommu domain to map in */
-	struct iommu_domain *domain;
-	/* total number of allocations from this domain */
-	atomic_t allocation_cnt;
-	/* number of iova pools */
-	int npools;
-	/*
-	 * array of gen_pools for allocating iovas.
-	 * behavior is undefined if these overlap
-	 */
-	struct mem_pool *iova_pools;
-
+struct msm_iommu_domain_state {
+	struct msm_iommu_domain *domains;
+	int ndomains;
 };
 
-
-struct {
-	char *name;
-	int  domain;
-} msm_iommu_ctx_names[] = {
-	/* Camera */
-	{
-		.name = "vpe_src",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "vpe_dst",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "vfe_imgwr",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "vfe_misc",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "ijpeg_src",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "ijpeg_dst",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "jpegd_src",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Camera */
-	{
-		.name = "jpegd_dst",
-		.domain = CAMERA_DOMAIN,
-	},
-	/* Rotator */
-	{
-		.name = "rot_src",
-		.domain = ROTATOR_DOMAIN,
-	},
-	/* Rotator */
-	{
-		.name = "rot_dst",
-		.domain = ROTATOR_DOMAIN,
-	},
-	/* Video */
-	{
-		.name = "vcodec_a_mm1",
-		.domain = VIDEO_DOMAIN,
-	},
-	/* Video */
-	{
-		.name = "vcodec_b_mm2",
-		.domain = VIDEO_DOMAIN,
-	},
-	/* Video */
-	{
-		.name = "vcodec_a_stream",
-		.domain = VIDEO_DOMAIN,
-	},
-};
-
-static struct mem_pool video_pools[] =  {
-	/*
-	 * Video hardware has the following requirements:
-	 * 1. All video addresses used by the video hardware must be at a higher
-	 *    address than video firmware address.
-	 * 2. Video hardware can only access a range of 256MB from the base of
-	 *    the video firmware.
-	*/
-	[VIDEO_FIRMWARE_POOL] =
-	/* Low addresses, intended for video firmware */
-		{
-			.paddr	= SZ_128K,
-			.size	= SZ_16M - SZ_128K,
-		},
-	[VIDEO_MAIN_POOL] =
-	/* Main video pool */
-		{
-			.paddr	= SZ_16M,
-			.size	= SZ_256M - SZ_16M,
-		},
-	[GEN_POOL] =
-	/* Remaining address space up to 2G */
-		{
-			.paddr	= SZ_256M,
-			.size	= SZ_2G - SZ_256M,
-		},
-};
-
-static struct mem_pool camera_pools[] =  {
-	[GEN_POOL] =
-	/* One address space for camera */
-		{
-			.paddr	= SZ_128K,
-			.size	= SZ_2G - SZ_128K,
-		},
-};
-
-static struct mem_pool display_pools[] =  {
-	[GEN_POOL] =
-	/* One address space for display */
-		{
-			.paddr	= SZ_128K,
-			.size	= SZ_2G - SZ_128K,
-		},
-};
-
-static struct mem_pool rotator_pools[] =  {
-	[GEN_POOL] =
-	/* One address space for rotator */
-		{
-			.paddr	= SZ_128K,
-			.size	= SZ_2G - SZ_128K,
-		},
-};
-
-static struct msm_iommu_domain msm_iommu_domains[] = {
-		[VIDEO_DOMAIN] = {
-			.iova_pools = video_pools,
-			.npools = ARRAY_SIZE(video_pools),
-		},
-		[CAMERA_DOMAIN] = {
-			.iova_pools = camera_pools,
-			.npools = ARRAY_SIZE(camera_pools),
-		},
-		[DISPLAY_DOMAIN] = {
-			.iova_pools = display_pools,
-			.npools = ARRAY_SIZE(display_pools),
-		},
-		[ROTATOR_DOMAIN] = {
-			.iova_pools = rotator_pools,
-			.npools = ARRAY_SIZE(rotator_pools),
-		},
-};
+static struct msm_iommu_domain_state domain_state;
 
 int msm_iommu_map_extra(struct iommu_domain *domain,
 				unsigned long start_iova,
@@ -261,47 +108,83 @@ void msm_iommu_unmap_extra(struct iommu_domain *domain,
 	}
 }
 
+static int msm_iommu_map_iova_phys(struct iommu_domain *domain,
+				unsigned long iova,
+				unsigned long phys,
+				unsigned long size,
+				int cached)
+{
+	int ret;
+	struct scatterlist *sglist;
+
+	sglist = vmalloc(sizeof(*sglist));
+	if (!sglist) {
+		ret = -ENOMEM;
+		goto err1;
+	}
+
+	sg_init_table(sglist, 1);
+	sglist->length = size;
+	sglist->offset = 0;
+	sglist->dma_address = phys;
+
+	ret = iommu_map_range(domain, iova, sglist, size, cached);
+	if (ret) {
+		pr_err("%s: could not map extra %lx in domain %p\n",
+			__func__, iova, domain);
+	}
+
+	vfree(sglist);
+err1:
+	return ret;
+
+}
+
+int msm_iommu_map_contig_buffer(unsigned long phys,
+				unsigned int domain_no,
+				unsigned int partition_no,
+				unsigned long size,
+				unsigned long align,
+				unsigned long cached,
+				unsigned long *iova_val)
+{
+	unsigned long iova;
+	int ret;
+
+	if (size & (align - 1))
+		return -EINVAL;
+
+	iova = msm_allocate_iova_address(domain_no, partition_no, size, align);
+
+	if (!iova)
+		return -ENOMEM;
+
+	ret = msm_iommu_map_iova_phys(msm_get_iommu_domain(domain_no), iova,
+					phys, size, cached);
+
+	if (ret)
+		msm_free_iova_address(iova, domain_no, partition_no, size);
+	else
+		*iova_val = iova;
+
+	return ret;
+}
+
+void msm_iommu_unmap_contig_buffer(unsigned long iova,
+					unsigned int domain_no,
+					unsigned int partition_no,
+					unsigned long size)
+{
+	iommu_unmap_range(msm_get_iommu_domain(domain_no), iova, size);
+	msm_free_iova_address(iova, domain_no, partition_no, size);
+}
 
 struct iommu_domain *msm_get_iommu_domain(int domain_num)
 {
-	if (domain_num >= 0 && domain_num < MAX_DOMAINS)
-		return msm_iommu_domains[domain_num].domain;
+	if (domain_num >= 0 && domain_num < domain_state.ndomains)
+		return domain_state.domains[domain_num].domain;
 	else
 		return NULL;
-}
-
-static unsigned long subsystem_to_domain_tbl[] = {
-	VIDEO_DOMAIN,
-	VIDEO_DOMAIN,
-	CAMERA_DOMAIN,
-	DISPLAY_DOMAIN,
-	ROTATOR_DOMAIN,
-	0xFFFFFFFF
-};
-
-unsigned long msm_subsystem_get_domain_no(int subsys_id)
-{
-	if (subsys_id > INVALID_SUBSYS_ID && subsys_id <= MAX_SUBSYSTEM_ID &&
-	    subsys_id < ARRAY_SIZE(subsystem_to_domain_tbl))
-		return subsystem_to_domain_tbl[subsys_id];
-	else
-		return subsystem_to_domain_tbl[MAX_SUBSYSTEM_ID];
-}
-
-unsigned long msm_subsystem_get_partition_no(int subsys_id)
-{
-	switch (subsys_id) {
-	case MSM_SUBSYSTEM_VIDEO_FWARE:
-		return VIDEO_FIRMWARE_POOL;
-	case MSM_SUBSYSTEM_VIDEO:
-		return VIDEO_MAIN_POOL;
-	case MSM_SUBSYSTEM_CAMERA:
-	case MSM_SUBSYSTEM_DISPLAY:
-	case MSM_SUBSYSTEM_ROTATOR:
-		return GEN_POOL;
-	default:
-		return 0xFFFFFFFF;
-	}
 }
 
 unsigned long msm_allocate_iova_address(unsigned int iommu_domain,
@@ -312,13 +195,13 @@ unsigned long msm_allocate_iova_address(unsigned int iommu_domain,
 	struct mem_pool *pool;
 	unsigned long iova;
 
-	if (iommu_domain >= MAX_DOMAINS)
+	if (iommu_domain >= domain_state.ndomains)
 		return 0;
 
-	if (partition_no >= msm_iommu_domains[iommu_domain].npools)
+	if (partition_no >= domain_state.domains[iommu_domain].npools)
 		return 0;
 
-	pool = &msm_iommu_domains[iommu_domain].iova_pools[partition_no];
+	pool = &domain_state.domains[iommu_domain].iova_pools[partition_no];
 
 	if (!pool->gpool)
 		return 0;
@@ -337,18 +220,18 @@ void msm_free_iova_address(unsigned long iova,
 {
 	struct mem_pool *pool;
 
-	if (iommu_domain >= MAX_DOMAINS) {
+	if (iommu_domain >= domain_state.ndomains) {
 		WARN(1, "Invalid domain %d\n", iommu_domain);
 		return;
 	}
 
-	if (partition_no >= msm_iommu_domains[iommu_domain].npools) {
+	if (partition_no >= domain_state.domains[iommu_domain].npools) {
 		WARN(1, "Invalid partition %d for domain %d\n",
 			partition_no, iommu_domain);
 		return;
 	}
 
-	pool = &msm_iommu_domains[iommu_domain].iova_pools[partition_no];
+	pool = &domain_state.domains[iommu_domain].iova_pools[partition_no];
 
 	if (!pool)
 		return;
@@ -359,20 +242,31 @@ void msm_free_iova_address(unsigned long iova,
 
 int msm_use_iommu()
 {
-	return iommu_found();
+	/*
+	 * If there are no domains, don't bother trying to use the iommu
+	 */
+	return domain_state.ndomains && iommu_found();
 }
 
-static int __init msm_subsystem_iommu_init(void)
+static int __init iommu_domain_probe(struct platform_device *pdev)
 {
+	struct iommu_domains_pdata *p  = pdev->dev.platform_data;
 	int i, j;
 
-	for (i = 0; i < ARRAY_SIZE(msm_iommu_domains); i++) {
-		msm_iommu_domains[i].domain = iommu_domain_alloc(0);
-		if (!msm_iommu_domains[i].domain)
+	if (!p)
+		return -ENODEV;
+
+	domain_state.domains = p->domains;
+	domain_state.ndomains = p->ndomains;
+
+	for (i = 0; i < domain_state.ndomains; i++) {
+		domain_state.domains[i].domain = iommu_domain_alloc(
+							p->domain_alloc_flags);
+		if (!domain_state.domains[i].domain)
 			continue;
 
-		for (j = 0; j < msm_iommu_domains[i].npools; j++) {
-			struct mem_pool *pool = &msm_iommu_domains[i].
+		for (j = 0; j < domain_state.domains[i].npools; j++) {
+			struct mem_pool *pool = &domain_state.domains[i].
 							iova_pools[j];
 			mutex_init(&pool->pool_mutex);
 			if (pool->size) {
@@ -402,29 +296,41 @@ static int __init msm_subsystem_iommu_init(void)
 		}
 	}
 
-	for (i = 0; i < ARRAY_SIZE(msm_iommu_ctx_names); i++) {
+	for (i = 0; i < p->nnames; i++) {
 		int domain_idx;
 		struct device *ctx = msm_iommu_get_ctx(
-						msm_iommu_ctx_names[i].name);
+						p->domain_names[i].name);
 
 		if (!ctx)
 			continue;
 
-		domain_idx = msm_iommu_ctx_names[i].domain;
+		domain_idx = p->domain_names[i].domain;
 
-		if (!msm_iommu_domains[domain_idx].domain)
+		if (!domain_state.domains[domain_idx].domain)
 			continue;
 
-		if (iommu_attach_device(msm_iommu_domains[domain_idx].domain,
+		if (iommu_attach_device(domain_state.domains[domain_idx].domain,
 					ctx)) {
 			WARN(1, "%s: could not attach domain %d to context %s."
 				" iommu programming will not occur.\n",
 				__func__, domain_idx,
-				msm_iommu_ctx_names[i].name);
+				p->domain_names[i].name);
 			continue;
 		}
 	}
 
 	return 0;
+}
+
+static struct platform_driver iommu_domain_driver = {
+	.driver         = {
+		.name = "iommu_domains",
+		.owner = THIS_MODULE
+	},
+};
+
+static int __init msm_subsystem_iommu_init(void)
+{
+	return platform_driver_probe(&iommu_domain_driver, iommu_domain_probe);
 }
 device_initcall(msm_subsystem_iommu_init);

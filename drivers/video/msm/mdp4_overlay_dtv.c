@@ -718,6 +718,8 @@ int mdp4_dtv_off(struct platform_device *pdev)
 			vctrl->base_pipe = NULL;
 		}
 	}
+        mdp4_dtv_tg_off(vctrl);
+        atomic_set(&vctrl->suspend, 1);
 
 	mdp4_dtv_tg_off(vctrl);
 

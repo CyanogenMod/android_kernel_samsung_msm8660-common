@@ -166,6 +166,9 @@ int mdp4_overlay_writeback_on(struct platform_device *pdev)
 		(0x0 & 0xFFF));         /* 12-bit R */
 
 	mdp_clk_ctrl(0);
+
+	atomic_set(&vctrl->suspend, 0);
+
 	return ret;
 }
 
@@ -187,17 +190,23 @@ int mdp4_overlay_writeback_off(struct platform_device *pdev)
 
 	vctrl = &vsync_ctrl_db[cndx];
 	pipe = vctrl->base_pipe;
+
+	atomic_set(&vctrl->suspend, 1);
+
 	if (pipe == NULL) {
 		pr_err("%s: NO base pipe\n", __func__);
 		return ret;
 	}
 
+	complete(&vctrl->ov_comp);
+	msleep(20);
+	mdp_clk_ctrl(1);
 	/* sanity check, free pipes besides base layer */
 	mdp4_overlay_unset_mixer(pipe->mixer_num);
 	mdp4_mixer_stage_down(pipe, 1);
 	mdp4_overlay_pipe_free(pipe, 1);
 	vctrl->base_pipe = NULL;
-
+	mdp_clk_ctrl(0);
 	undx =  vctrl->update_ndx;
 	vp = &vctrl->vlist[undx];
 	if (vp->update_cnt) {
@@ -329,7 +338,20 @@ void mdp4_wfd_pipe_queue(int cndx, struct mdp4_overlay_pipe *pipe)
 	mdp4_stat.overlay_play[pipe->mixer_num]++;
 }
 
-static void mdp4_wfd_wait4ov(int cndx);
+static void mdp4_writeback_pipe_clean(struct vsync_update *vp)
+{
+	struct mdp4_overlay_pipe *pipe;
+	int i;
+
+	pipe = vp->plist;
+	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
+		if (pipe->pipe_used) {
+			mdp4_overlay_iommu_pipe_free(pipe->pipe_ndx, 0);
+			pipe->pipe_used = 0; /* clear */
+		}
+	}
+	vp->update_cnt = 0;     /* empty queue */
+}
 
 static void mdp4_writeback_pipe_clean(struct vsync_update *vp)
 {
@@ -383,6 +405,7 @@ int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 	/* free previous committed iommu back to pool */
 	mdp4_overlay_iommu_unmap_freelist(mixer);
 
+	mdp_clk_ctrl(1);
 	pipe = vp->plist;
 	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
 		if (pipe->pipe_used) {
@@ -451,6 +474,7 @@ void mdp4_wfd_init(int cndx)
 	vctrl->update_ndx = 0;
 	mutex_init(&vctrl->update_lock);
 	init_completion(&vctrl->ov_comp);
+	atomic_set(&vctrl->suspend, 1);
 	spin_lock_init(&vctrl->spin_lock);
 	INIT_WORK(&vctrl->clk_work, clk_ctrl_work);
 }
@@ -534,6 +558,8 @@ static struct msmfb_writeback_data_list *get_if_registered(
 {
 	struct msmfb_writeback_data_list *temp;
 	bool found = false;
+	int domain;
+
 	if (!list_empty(&mfd->writeback_register_queue)) {
 		list_for_each_entry(temp,
 				&mfd->writeback_register_queue,
@@ -564,9 +590,14 @@ static struct msmfb_writeback_data_list *get_if_registered(
 				goto register_ion_fail;
 			}
 
+			if (mdp_iommu_split_domain)
+				domain = DISPLAY_WRITE_DOMAIN;
+			else
+				domain = DISPLAY_READ_DOMAIN;
+
 			if (ion_map_iommu(mfd->iclient,
 					  srcp_ihdl,
-					  DISPLAY_DOMAIN,
+					  domain,
 					  GEN_POOL,
 					  SZ_4K,
 					  0,
@@ -645,7 +676,7 @@ int mdp4_writeback_dequeue_buffer(struct fb_info *info, struct msmfb_data *data)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct msmfb_writeback_data_list *node = NULL;
-	int rc = 0;
+	int rc = 0, domain;
 
 	rc = wait_event_interruptible(mfd->wait_q, is_buffer_ready(mfd));
 	if (rc) {
@@ -667,9 +698,14 @@ int mdp4_writeback_dequeue_buffer(struct fb_info *info, struct msmfb_data *data)
 		memcpy(data, &node->buf_info, sizeof(struct msmfb_data));
 		if (!data->iova)
 			if (mfd->iclient && node->ihdl) {
+				if (mdp_iommu_split_domain)
+					domain = DISPLAY_WRITE_DOMAIN;
+				else
+					domain = DISPLAY_READ_DOMAIN;
+
 				ion_unmap_iommu(mfd->iclient,
 						node->ihdl,
-						DISPLAY_DOMAIN,
+						domain,
 						GEN_POOL);
 				ion_free(mfd->iclient,
 					 node->ihdl);

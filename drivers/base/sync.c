@@ -31,6 +31,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/sync.h>
+#include <asm/current.h>
 
 static void sync_fence_signal_pt(struct sync_pt *pt);
 static int _sync_pt_has_signaled(struct sync_pt *pt);
@@ -271,7 +272,7 @@ static struct sync_fence *sync_fence_alloc(const char *name)
 	INIT_LIST_HEAD(&fence->pt_list_head);
 	INIT_LIST_HEAD(&fence->waiter_list_head);
 	spin_lock_init(&fence->waiter_list_lock);
-
+	trace_sync_alloc(fence,current->pid);
 	init_waitqueue_head(&fence->wq);
 
 	spin_lock_irqsave(&sync_fence_list_lock, flags);
@@ -632,6 +633,8 @@ EXPORT_SYMBOL(sync_fence_wait);
 static void sync_fence_free(struct kref *kref)
 {
 	struct sync_fence *fence = container_of(kref, struct sync_fence, kref);
+
+	trace_sync_free(fence, current->pid);
 
 	sync_fence_free_pts(fence);
 
