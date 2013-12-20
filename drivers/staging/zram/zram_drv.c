@@ -596,17 +596,19 @@ static void zram_reset_device(struct zram *zram, bool reset_capacity)
 
 static void zram_init_device(struct zram *zram, struct zram_meta *meta)
 {
-	if (zram->disksize > 2 * (totalram_pages << PAGE_SHIFT)) {
+	u64 totalram_bytes = ((u64) totalram_pages) << PAGE_SHIFT;
+
+	if (zram->disksize > 2 * totalram_bytes) {
 		pr_info(
 		"There is little point creating a zram of greater than "
 		"twice the size of memory since we expect a 2:1 compression "
 		"ratio. Note that zram uses about 0.1%% of the size of "
 		"the disk when not in use so a huge zram is "
 		"wasteful.\n"
-		"\tMemory Size: %lu kB\n"
+		"\tMemory Size: %llu kB\n"
 		"\tSize you selected: %llu kB\n"
 		"Continuing anyway ...\n",
-		(totalram_pages << PAGE_SHIFT) >> 10, zram->disksize >> 10
+		totalram_bytes >> 10, zram->disksize >> 10
 		);
 	}
 
@@ -736,7 +738,7 @@ out:
 /*
  * Handler function for all zram I/O requests.
  */
-static void zram_make_request(struct request_queue *queue, struct bio *bio)
+static int zram_make_request(struct request_queue *queue, struct bio *bio)
 {
 	struct zram *zram = queue->queuedata;
 
@@ -752,11 +754,12 @@ static void zram_make_request(struct request_queue *queue, struct bio *bio)
 	__zram_make_request(zram, bio, bio_data_dir(bio));
 	up_read(&zram->init_lock);
 
-	return;
+	return 0;
 
 error:
 	up_read(&zram->init_lock);
 	bio_io_error(bio);
+	return -1;
 }
 
 static void zram_slot_free(struct work_struct *work)
