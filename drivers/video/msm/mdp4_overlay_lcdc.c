@@ -232,17 +232,11 @@ int mdp4_lcdc_pipe_commit(int cndx, int wait)
 	}
 
 	pipe = vp->plist;
-	vctrl->mfd->cached_reg_cnt = 0;
 	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
 		if (pipe->pipe_used) {
 			cnt++;
 			real_pipe = mdp4_overlay_ndx2pipe(pipe->pipe_ndx);
 			if (real_pipe && real_pipe->pipe_used) {
-				pipe->mfd = vctrl->mfd;
-				if (!wait || vctrl->base_pipe->ov_blt_addr)
-					pipe->mfd->cache_reg_en = false;
-				else
-					pipe->mfd->cache_reg_en = true;
 				/* pipe not unset */
 				mdp4_overlay_vsync_commit(pipe);
 			}
@@ -897,7 +891,6 @@ void mdp4_dmap_done_lcdc(int cndx)
 		return;
 	}
 	vctrl = &vsync_ctrl_db[cndx];
-	mdp4_overlay_update_cached_reg(vctrl->mfd);
 	pipe = vctrl->base_pipe;
 
 	spin_lock(&vctrl->spin_lock);
