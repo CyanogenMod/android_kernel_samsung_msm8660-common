@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -137,7 +137,6 @@ static struct platform_device android_pmem_adsp_device = {
 	.id = 2,
 	.dev = { .platform_data = &android_pmem_adsp_pdata },
 };
-#endif
 
 static struct android_pmem_platform_data android_pmem_audio_pdata = {
 	.name = "pmem_audio",
@@ -151,7 +150,8 @@ static struct platform_device android_pmem_audio_device = {
 	.id = 4,
 	.dev = { .platform_data = &android_pmem_audio_pdata },
 };
-#endif
+#endif /* CONFIG_MSM_MULTIMEDIA_USE_ION */
+#endif /* CONFIG_ANDROID_PMEM */
 
 static struct memtype_reserve apq8064_reserve_table[] __initdata = {
 	[MEMTYPE_SMI] = {
@@ -170,15 +170,19 @@ static void __init size_pmem_devices(void)
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	android_pmem_adsp_pdata.size = pmem_adsp_size;
 	android_pmem_pdata.size = pmem_size;
-#endif
 	android_pmem_audio_pdata.size = MSM_PMEM_AUDIO_SIZE;
-#endif
+#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
+#endif /*CONFIG_ANDROID_PMEM*/
 }
 
+#ifdef CONFIG_ANDROID_PMEM
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 {
 	apq8064_reserve_table[p->memory_type].size += p->size;
 }
+#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
+#endif /*CONFIG_ANDROID_PMEM*/
 
 static void __init reserve_pmem_memory(void)
 {
@@ -186,10 +190,10 @@ static void __init reserve_pmem_memory(void)
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	reserve_memory_for(&android_pmem_adsp_pdata);
 	reserve_memory_for(&android_pmem_pdata);
-#endif
 	reserve_memory_for(&android_pmem_audio_pdata);
+#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
 	apq8064_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
-#endif
+#endif /*CONFIG_ANDROID_PMEM*/
 }
 
 static int apq8064_paddr_to_memtype(unsigned int paddr)
@@ -626,9 +630,9 @@ static struct platform_device *common_devices[] __initdata = {
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
 	&android_pmem_device,
 	&android_pmem_adsp_device,
-#endif
 	&android_pmem_audio_device,
-#endif
+#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
+#endif /*CONFIG_ANDROID_PMEM*/
 #ifdef CONFIG_ION_MSM
 	&ion_dev,
 #endif
@@ -674,6 +678,7 @@ static struct platform_device *common_devices[] __initdata = {
 	&apq_cpudai_auxpcm_tx,
 	&apq8064_device_cache_erp,
 	&msm_pil_vidc,
+	&apq8064_iommu_domain_device,
 };
 
 static struct platform_device *sim_devices[] __initdata = {
@@ -682,6 +687,11 @@ static struct platform_device *sim_devices[] __initdata = {
 };
 
 static struct platform_device *rumi3_devices[] __initdata = {
+	&apq8064_device_uart_gsbi1,
+	&msm_device_sps_apq8064,
+};
+
+static struct platform_device *cdp_devices[] __initdata = {
 	&apq8064_device_uart_gsbi1,
 	&msm_device_sps_apq8064,
 };
@@ -787,8 +797,22 @@ static void __init apq8064_rumi3_init(void)
 {
 	apq8064_common_init();
 	ethernet_init();
+	msm_rotator_set_split_iommu_domain();
 	platform_add_devices(rumi3_devices, ARRAY_SIZE(rumi3_devices));
 	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+}
+
+static void __init apq8064_cdp_init(void)
+{
+	apq8064_common_init();
+	ethernet_init();
+	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
+	spi_register_board_info(spi_board_info, ARRAY_SIZE(spi_board_info));
+	ethernet_init();
+	msm_rotator_set_split_iommu_domain();
+	platform_add_devices(cdp_devices, ARRAY_SIZE(cdp_devices));
+	spi_register_board_info(spi_board_info,
+						ARRAY_SIZE(spi_board_info));
 }
 
 MACHINE_START(APQ8064_SIM, "QCT APQ8064 SIMULATOR")
@@ -808,4 +832,41 @@ MACHINE_START(APQ8064_RUMI3, "QCT APQ8064 RUMI3")
 	.timer = &msm_timer,
 	.init_machine = apq8064_rumi3_init,
 MACHINE_END
+
+MACHINE_START(APQ8064_CDP, "QCT APQ8064 CDP")
+	.map_io = apq8064_map_io,
+	.reserve = apq8064_reserve,
+	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = apq8064_cdp_init,
+MACHINE_END
+
+MACHINE_START(APQ8064_MTP, "QCT APQ8064 MTP")
+	.map_io = apq8064_map_io,
+	.reserve = apq8064_reserve,
+	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = apq8064_cdp_init,
+MACHINE_END
+
+MACHINE_START(APQ8064_LIQUID, "QCT APQ8064 LIQUID")
+	.map_io = apq8064_map_io,
+	.reserve = apq8064_reserve,
+	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = apq8064_cdp_init,
+MACHINE_END
+
+MACHINE_START(MPQ8064_CDP, "QCT MPQ8064 CDP")
+	.map_io = apq8064_map_io,
+	.reserve = apq8064_reserve,
+	.init_irq = apq8064_init_irq,
+	.handle_irq = gic_handle_irq,
+	.timer = &msm_timer,
+	.init_machine = apq8064_cdp_init,
+MACHINE_END
+
 

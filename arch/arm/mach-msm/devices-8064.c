@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -27,6 +27,7 @@
 #include "clock.h"
 #include "devices.h"
 #include "msm_watchdog.h"
+#include <mach/iommu_domains.h>
 
 /* Address of GSBI blocks */
 #define MSM_GSBI1_PHYS		0x12440000
@@ -942,4 +943,188 @@ struct platform_device apq8064_device_cache_erp = {
 	.id		= -1,
 	.num_resources	= ARRAY_SIZE(msm_cache_erp_resources),
 	.resource	= msm_cache_erp_resources,
+};
+
+struct msm_iommu_domain_name apq8064_iommu_ctx_names[] = {
+	/* Camera */
+	{
+		.name = "vpe_src",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "vpe_dst",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "vfe_imgwr",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "vfe_misc",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "ijpeg_src",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "ijpeg_dst",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "jpegd_src",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Camera */
+	{
+		.name = "jpegd_dst",
+		.domain = CAMERA_DOMAIN,
+	},
+	/* Rotator src*/
+	{
+		.name = "rot_src",
+		.domain = ROTATOR_SRC_DOMAIN,
+	},
+	/* Rotator dst */
+	{
+		.name = "rot_dst",
+		.domain = ROTATOR_DST_DOMAIN,
+	},
+	/* Video */
+	{
+		.name = "vcodec_a_mm1",
+		.domain = VIDEO_DOMAIN,
+	},
+	/* Video */
+	{
+		.name = "vcodec_b_mm2",
+		.domain = VIDEO_DOMAIN,
+	},
+	/* Video */
+	{
+		.name = "vcodec_a_stream",
+		.domain = VIDEO_DOMAIN,
+	},
+};
+
+static struct mem_pool apq8064_video_pools[] =  {
+	/*
+	 * Video hardware has the following requirements:
+	 * 1. All video addresses used by the video hardware must be at a higher
+	 *    address than video firmware address.
+	 * 2. Video hardware can only access a range of 256MB from the base of
+	 *    the video firmware.
+	*/
+	[VIDEO_FIRMWARE_POOL] =
+	/* Low addresses, intended for video firmware */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_16M - SZ_128K,
+		},
+	[VIDEO_MAIN_POOL] =
+	/* Main video pool */
+		{
+			.paddr	= SZ_16M,
+			.size	= SZ_256M - SZ_16M,
+		},
+	[GEN_POOL] =
+	/* Remaining address space up to 2G */
+		{
+			.paddr	= SZ_256M,
+			.size	= SZ_2G - SZ_256M,
+		},
+};
+
+static struct mem_pool apq8064_camera_pools[] =  {
+	[GEN_POOL] =
+	/* One address space for camera */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_2G - SZ_128K,
+		},
+};
+
+static struct mem_pool apq8064_display_read_pools[] =  {
+	[GEN_POOL] =
+	/* One address space for display reads */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_2G - SZ_128K,
+		},
+};
+
+static struct mem_pool apq8064_display_write_pools[] =  {
+	[GEN_POOL] =
+	/* One address space for display writes */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_2G - SZ_128K,
+		},
+};
+
+static struct mem_pool apq8064_rotator_src_pools[] =  {
+	[GEN_POOL] =
+	/* One address space for rotator src */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_2G - SZ_128K,
+		},
+};
+
+static struct mem_pool apq8064_rotator_dst_pools[] =  {
+	[GEN_POOL] =
+	/* One address space for rotator dst */
+		{
+			.paddr	= SZ_128K,
+			.size	= SZ_2G - SZ_128K,
+		},
+};
+
+static struct msm_iommu_domain apq8064_iommu_domains[] = {
+		[VIDEO_DOMAIN] = {
+			.iova_pools = apq8064_video_pools,
+			.npools = ARRAY_SIZE(apq8064_video_pools),
+		},
+		[CAMERA_DOMAIN] = {
+			.iova_pools = apq8064_camera_pools,
+			.npools = ARRAY_SIZE(apq8064_camera_pools),
+		},
+		[DISPLAY_READ_DOMAIN] = {
+			.iova_pools = apq8064_display_read_pools,
+			.npools = ARRAY_SIZE(apq8064_display_read_pools),
+		},
+		[DISPLAY_WRITE_DOMAIN] = {
+			.iova_pools = apq8064_display_write_pools,
+			.npools = ARRAY_SIZE(apq8064_display_write_pools),
+		},
+		[ROTATOR_SRC_DOMAIN] = {
+			.iova_pools = apq8064_rotator_src_pools,
+			.npools = ARRAY_SIZE(apq8064_rotator_src_pools),
+		},
+		[ROTATOR_DST_DOMAIN] = {
+			.iova_pools = apq8064_rotator_dst_pools,
+			.npools = ARRAY_SIZE(apq8064_rotator_dst_pools),
+		},
+};
+
+struct iommu_domains_pdata apq8064_iommu_domain_pdata = {
+	.domains = apq8064_iommu_domains,
+	.ndomains = ARRAY_SIZE(apq8064_iommu_domains),
+	.domain_names = apq8064_iommu_ctx_names,
+	.nnames = ARRAY_SIZE(apq8064_iommu_ctx_names),
+	.domain_alloc_flags = 0,
+};
+
+struct platform_device apq8064_iommu_domain_device = {
+	.name = "iommu_domains",
+	.id = -1,
+	.dev = {
+		.platform_data = &apq8064_iommu_domain_pdata,
+	},
 };

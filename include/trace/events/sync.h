@@ -76,6 +76,49 @@ TRACE_EVENT(sync_pt,
 	    TP_printk("name=%s value=%s", __get_str(timeline), __entry->value)
 	);
 
+
+TRACE_EVENT(sync_alloc,
+	    TP_PROTO(struct sync_fence *fence, int pid),
+
+	    TP_ARGS(fence, pid),
+
+	    TP_STRUCT__entry(
+		    __string(name, fence->name)
+		    __field(s32, status)
+		    __field(u32, pid)
+		    ),
+
+	    TP_fast_assign(
+		    __assign_str(name, fence->name);
+		    __entry->status = fence->status;
+		    __entry->pid = pid;
+		    ),
+
+	    TP_printk("PID:%d Fence=%s status=%d", __entry->pid,
+		      __get_str(name), __entry->status)
+);
+
+TRACE_EVENT(sync_free,
+	    TP_PROTO(struct sync_fence *fence, int pid),
+
+	    TP_ARGS(fence, pid),
+
+	    TP_STRUCT__entry(
+		    __string(name, fence->name)
+		    __field(s32, status)
+		    __field(u32, pid)
+		    ),
+
+	    TP_fast_assign(
+		    __assign_str(name, fence->name);
+		    __entry->status = fence->status;
+		    __entry->pid = pid;
+		    ),
+
+	    TP_printk("PID:%d Fence =%s status=%d", __entry->pid,
+		      __get_str(name), __entry->status)
+);
+
 #endif /* if !defined(_TRACE_SYNC_H) || defined(TRACE_HEADER_MULTI_READ) */
 
 /* This part must be outside protection */

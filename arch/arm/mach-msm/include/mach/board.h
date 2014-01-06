@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/include/mach/board.h
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2008-2013, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -350,6 +350,7 @@ struct msm_panel_common_pdata {
 	u32 ov1_wb_size;  /* overlay1 writeback size */
 	u32 mem_hid;
 	char cont_splash_enabled;
+	char mdp_iommu_split_domain;
 };
 
 
@@ -409,6 +410,10 @@ struct mipi_dsi_panel_platform_data {
 	char dlane_swap;
 };
 
+struct msm_wfd_platform_data {
+	char (*wfd_check_mdp_iommu_split)(void);
+};
+
 #define PANEL_NAME_MAX_LEN 50
 struct msm_fb_platform_data {
 	int (*detect_client)(const char *name);
@@ -459,11 +464,14 @@ struct msm_vidc_platform_data {
 	int disable_dmx;
 	int disable_fullhd;
 	u32 cp_enabled;
+	u32 secure_wb_heap;
+	u32 enable_sec_metadata;
 #ifdef CONFIG_MSM_BUS_SCALING
 	struct msm_bus_scale_pdata *vidc_bus_client_pdata;
 #endif
 	int disable_turbo;
-        int cont_mode_dpb_count;
+    int cont_mode_dpb_count;
+	unsigned long fw_addr;
 };
 
 #if defined(CONFIG_USB_PEHCI_HCD) || defined(CONFIG_USB_PEHCI_HCD_MODULE)

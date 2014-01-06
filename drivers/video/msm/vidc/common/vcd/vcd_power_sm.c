@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -15,6 +15,7 @@
 #include "vcd_power_sm.h"
 #include "vcd_core.h"
 #include "vcd.h"
+#include "vcd_res_tracker.h"
 
 u32 vcd_power_event(
 	struct vcd_dev_ctxt *dev_ctxt,
@@ -187,14 +188,28 @@ u32 vcd_client_power_event(
 			if (cctxt) {
 				rc = VCD_S_SUCCESS;
 				if (cctxt->status.req_perf_lvl) {
+					VCD_MSG_HIGH("%s: reduce client(0x%x) "\
+					"perf level(%u) from device "\
+					"perf level(%u)", __func__,
+					(u32)cctxt, cctxt->reqd_perf_lvl,
+					dev_ctxt->reqd_perf_lvl);
+
 					dev_ctxt->reqd_perf_lvl -=
 						cctxt->reqd_perf_lvl;
 					cctxt->status.req_perf_lvl = false;
 					rc = vcd_set_perf_level(dev_ctxt,
 						dev_ctxt->reqd_perf_lvl);
+
+					if ((cctxt->perf_set_by_client) &&
+						(event ==
+						VCD_EVT_PWR_CLNT_LAST_FRAME)) {
+						VCD_MSG_HIGH("%s: disable "\
+							"perf_set_by_client (0x%x)",
+							__func__, (u32)cctxt);
+						cctxt->perf_set_by_client = 0;
+					}
 				}
 			}
-
 			break;
 		}
 
@@ -204,6 +219,12 @@ u32 vcd_client_power_event(
 			if (cctxt) {
 				rc = VCD_S_SUCCESS;
 				if (!cctxt->status.req_perf_lvl) {
+					VCD_MSG_HIGH("%s: add client(0x%x) "\
+					"perf level(%u) to device "\
+					"perf level(%u)", __func__,
+					(u32)cctxt, cctxt->reqd_perf_lvl,
+					dev_ctxt->reqd_perf_lvl);
+
 					dev_ctxt->reqd_perf_lvl +=
 						cctxt->reqd_perf_lvl;
 					cctxt->status.req_perf_lvl = true;
@@ -278,6 +299,11 @@ u32 vcd_disable_clock(struct vcd_dev_ctxt *dev_ctxt)
 	return rc;
 }
 
+u32 vcd_get_curr_perf_level(struct vcd_dev_ctxt *dev_ctxt)
+{
+	return dev_ctxt->reqd_perf_lvl;
+}
+
 u32 vcd_set_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_lvl)
 {
 	u32 rc = VCD_S_SUCCESS;
@@ -297,6 +323,39 @@ u32 vcd_set_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_lvl)
 	return rc;
 }
 
+u32 vcd_set_perf_turbo_level(struct vcd_clnt_ctxt *cctxt)
+{
+	u32 rc = VCD_S_SUCCESS;
+#ifdef CONFIG_MSM_BUS_SCALING
+	struct vcd_dev_ctxt *dev_ctxt = cctxt->dev_ctxt;
+	pr_err("\n Setting Turbo mode !!");
+
+	if (res_trk_update_bus_perf_level(dev_ctxt,
+			RESTRK_1080P_TURBO_PERF_LEVEL) < 0) {
+		pr_err("\n %s(): update buf perf level failed\n",
+			__func__);
+		return false;
+	}
+	dev_ctxt->curr_perf_lvl = RESTRK_1080P_TURBO_PERF_LEVEL;
+#endif
+	return rc;
+}
+
+u32 vcd_update_decoder_perf_level(struct vcd_dev_ctxt *dev_ctxt, u32 perf_lvl)
+{
+	u32 rc = VCD_S_SUCCESS;
+
+	if (res_trk_set_perf_level(perf_lvl,
+		&dev_ctxt->curr_perf_lvl, dev_ctxt)) {
+		dev_ctxt->set_perf_lvl_pending = false;
+	} else {
+		rc = VCD_ERR_FAIL;
+		dev_ctxt->set_perf_lvl_pending = true;
+	}
+
+	return rc;
+}
+
 u32 vcd_update_clnt_perf_lvl(
 	struct vcd_clnt_ctxt *cctxt,
      struct vcd_property_frame_rate *fps, u32 frm_p_units)
@@ -306,6 +365,23 @@ u32 vcd_update_clnt_perf_lvl(
 	u32 new_perf_lvl;
 	new_perf_lvl = frm_p_units *\
 		(fps->fps_numerator / fps->fps_denominator);
+	if (cctxt->perf_set_by_client) {
+		new_perf_lvl = cctxt->reqd_perf_lvl;
+		VCD_MSG_HIGH("%s: perf_set_by_client (0x%x), "\
+			"perf level = %u\n", __func__,
+			(u32)cctxt, new_perf_lvl);
+	}
+	if ((fps->fps_numerator * 1000) / fps->fps_denominator
+		 > VCD_MAXPERF_FPS_THRESHOLD_X_1000) {
+		u32 max_perf_level = 0;
+		if (res_trk_get_max_perf_level(&max_perf_level)) {
+			new_perf_lvl = max_perf_level;
+			VCD_MSG_HIGH("Using max perf level(%d) for >60fps\n",
+						 new_perf_lvl);
+		} else {
+			VCD_MSG_ERROR("Failed to get max perf level\n");
+		}
+	}
 	if (cctxt->status.req_perf_lvl) {
 		dev_ctxt->reqd_perf_lvl =
 		    dev_ctxt->reqd_perf_lvl - cctxt->reqd_perf_lvl +
@@ -313,7 +389,11 @@ u32 vcd_update_clnt_perf_lvl(
 		rc = vcd_set_perf_level(cctxt->dev_ctxt,
 			dev_ctxt->reqd_perf_lvl);
 	}
-	cctxt->reqd_perf_lvl = new_perf_lvl;
+	if (!cctxt->perf_set_by_client)
+		cctxt->reqd_perf_lvl = new_perf_lvl;
+	VCD_MSG_HIGH("%s: updated client perf level = %u, "\
+		"device perf level = %u", __func__,
+		cctxt->reqd_perf_lvl, dev_ctxt->reqd_perf_lvl);
 	return rc;
 }
 

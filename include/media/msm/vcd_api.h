@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -55,8 +55,8 @@ enum vcd_power_state {
 
 struct vcd_aspect_ratio {
 	u32 aspect_ratio;
-	u32 extended_par_width;
-	u32 extended_par_height;
+	u32 par_width;
+	u32 par_height;
 };
 
 struct vcd_frame_data {
@@ -78,6 +78,9 @@ struct vcd_frame_data {
 	u32 desc_size;
 	struct ion_handle *buff_ion_handle;
 	struct vcd_aspect_ratio aspect_ratio_info;
+	u32 metadata_len;
+	u32 metadata_offset;
+	u32 curr_ltr_id;
 };
 
 struct vcd_sequence_hdr {
@@ -100,6 +103,7 @@ struct vcd_buffer_requirement {
 	size_t sz;
 	u32 align;
 	u32 buf_pool_id;
+	size_t meta_buffer_size;
 };
 
 struct vcd_init_config {

@@ -244,12 +244,11 @@ struct cfg80211_event {
 			u16 status;
 		} cr;
 		struct {
-			struct ieee80211_channel *channel;
-			u8 bssid[ETH_ALEN];
 			const u8 *req_ie;
 			const u8 *resp_ie;
 			size_t req_ie_len;
 			size_t resp_ie_len;
+			struct cfg80211_bss *bss;
 		} rm;
 		struct {
 			const u8 *ie;
@@ -276,8 +275,6 @@ extern int cfg80211_dev_rename(struct cfg80211_registered_device *rdev,
 			       char *newname);
 
 void ieee80211_set_bitrate_flags(struct wiphy *wiphy);
-void wiphy_update_regulatory(struct wiphy *wiphy,
-			     enum nl80211_reg_initiator setby);
 
 void cfg80211_bss_expire(struct cfg80211_registered_device *dev);
 void cfg80211_bss_age(struct cfg80211_registered_device *dev,
@@ -398,8 +395,7 @@ int cfg80211_disconnect(struct cfg80211_registered_device *rdev,
 			struct net_device *dev, u16 reason,
 			bool wextev);
 void __cfg80211_roamed(struct wireless_dev *wdev,
-		       struct ieee80211_channel *channel,
-		       const u8 *bssid,
+		       struct cfg80211_bss *bss,
 		       const u8 *req_ie, size_t req_ie_len,
 		       const u8 *resp_ie, size_t resp_ie_len);
 int cfg80211_mgd_wext_connect(struct cfg80211_registered_device *rdev,
@@ -451,6 +447,10 @@ int cfg80211_set_freq(struct cfg80211_registered_device *rdev,
 		      enum nl80211_channel_type channel_type);
 
 u16 cfg80211_calculate_bitrate(struct rate_info *rate);
+int ieee80211_get_ratemask(struct ieee80211_supported_band *sband,
+			   const u8 *rates, unsigned int n_rates,
+			   u32 *mask);
+
 int ieee80211_get_ratemask(struct ieee80211_supported_band *sband,
 			   const u8 *rates, unsigned int n_rates,
 			   u32 *mask);

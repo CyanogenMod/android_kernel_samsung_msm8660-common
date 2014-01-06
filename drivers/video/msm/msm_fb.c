@@ -31,6 +31,7 @@
 #include <linux/dma-mapping.h>
 #include <mach/board.h>
 #include <linux/uaccess.h>
+#include <mach/iommu_domains.h>
 
 #include <linux/workqueue.h>
 #include <linux/string.h>
@@ -946,7 +947,6 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	struct msm_fb_panel_data *pdata = NULL;
 	int ret = 0;
-
 	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 	if ((!pdata) || (!pdata->on) || (!pdata->off)) {
 		printk(KERN_ERR "msm_fb_blank_sub: no panel operation detected!\n");
@@ -1236,9 +1236,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	int *id;
 	int fbram_offset;
 	int remainder, remainder_mode2;
-	static int subsys_id[2] = {MSM_SUBSYSTEM_DISPLAY,
-		MSM_SUBSYSTEM_ROTATOR};
-	unsigned int flags = MSM_SUBSYSTEM_MAP_IOVA;
 
 	/*
 	 * fb info initialization
@@ -1524,15 +1521,29 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	fbi->fix.smem_start = (unsigned long)fbram_phys;
 
 	if (fbi->fix.smem_start) {
-		mfd->map_buffer = msm_subsystem_map_buffer(
-			fbi->fix.smem_start, fbi->fix.smem_len,
-			flags, subsys_id, 2);
-		if (mfd->map_buffer) {
-			pr_debug("%s(): buf 0x%lx, mfd->map_buffer->iova[0] 0x%lx\n"
-				"mfd->map_buffer->iova[1] 0x%lx", __func__,
-				fbi->fix.smem_start, mfd->map_buffer->iova[0],
-				mfd->map_buffer->iova[1]);
-		}
+		msm_iommu_map_contig_buffer(fbi->fix.smem_start,
+					    DISPLAY_WRITE_DOMAIN,
+					    GEN_POOL,
+					    fbi->fix.smem_len,
+					    SZ_4K,
+					    0,
+					    &(mfd->display_iova));
+
+		msm_iommu_map_contig_buffer(fbi->fix.smem_start,
+					    DISPLAY_READ_DOMAIN,
+					    GEN_POOL,
+					    fbi->fix.smem_len,
+					    SZ_4K,
+					    0,
+					    &(mfd->display_iova));
+
+		msm_iommu_map_contig_buffer(fbi->fix.smem_start,
+					    ROTATOR_SRC_DOMAIN,
+					    GEN_POOL,
+					    fbi->fix.smem_len,
+					    SZ_4K,
+					    0,
+					    &(mfd->rotator_iova));
 	}
 
 	if ((!bf_supported || mfd->index == 0) && fbi->screen_base)
@@ -3569,12 +3580,13 @@ static void msmfb_set_color_conv(struct mdp_csc *p)
 }
 #endif
 
-static int msmfb_notify_update(struct fb_info *info, unsigned long *argp)
+static int msmfb_notify_update(struct fb_info *info, void __user *argp)
 {
-	int ret, notify;
+	int ret;
+	unsigned int notify;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 
-	ret = copy_from_user(&notify, argp, sizeof(int));
+	ret = copy_from_user(&notify, argp, sizeof(unsigned int));
 	if (ret) {
 		pr_err("%s:ioctl failed\n", __func__);
 		return ret;
@@ -3812,7 +3824,7 @@ static int msmfb_get_metadata(struct msm_fb_data_type *mfd,
 static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 			unsigned long arg)
 {
-	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	struct msm_fb_data_type *mfd;
 	void __user *argp = (void __user *)arg;
 	struct fb_cursor cursor;
 	struct fb_cmap cmap;
@@ -3829,6 +3841,10 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 	struct msmfb_metadata mdp_metadata;
 	struct mdp_buf_sync buf_sync;
 	int ret = 0;
+
+	if (!info || !info->par)
+		return -EINVAL;
+	mfd = (struct msm_fb_data_type *)info->par;
 	msm_fb_pan_idle(mfd);
 
 	switch (cmd) {
@@ -4328,10 +4344,19 @@ int get_fb_phys_info(unsigned long *start, unsigned long *len, int fb_num,
 	}
 
 	mfd = (struct msm_fb_data_type *)info->par;
-	if (mfd->map_buffer)
-		*start = mfd->map_buffer->iova[subsys_id];
-	else
-		*start = info->fix.smem_start;
+
+	if (subsys_id == DISPLAY_SUBSYSTEM_ID) {
+		if (mfd->display_iova)
+			*start = mfd->display_iova;
+		else
+			*start = info->fix.smem_start;
+	} else {
+		if (mfd->rotator_iova)
+			*start = mfd->rotator_iova;
+		else
+			*start = info->fix.smem_start;
+	}
+
 	*len = info->fix.smem_len;
 
 	return 0;

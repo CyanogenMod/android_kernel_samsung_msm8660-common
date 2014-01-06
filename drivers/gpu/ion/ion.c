@@ -30,6 +30,7 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
+#include <trace/events/kmem.h>
 
 #include <mach/iommu_domains.h>
 #include "ion_priv.h"
@@ -406,9 +407,16 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		/* Do not allow un-secure heap if secure is specified */
 		if (secure_allocation && (heap->type != ION_HEAP_TYPE_CP))
 			continue;
+		trace_ion_alloc_buffer_start(client->name, heap->name, len,
+					     client->heap_mask, flags);
 		buffer = ion_buffer_create(heap, dev, len, align, flags);
+		trace_ion_alloc_buffer_end(client->name, heap->name, len,
+					   client->heap_mask, flags);
 		if (!IS_ERR_OR_NULL(buffer))
 			break;
+
+		trace_ion_alloc_buffer_fallback(client->name, heap->name, len,
+					    client->heap_mask, flags, PTR_ERR(buffer));
 		if (dbg_str_idx < MAX_DBG_STR_LEN) {
 			unsigned int len_left = MAX_DBG_STR_LEN-dbg_str_idx-1;
 			int ret_value = snprintf(&dbg_str[dbg_str_idx],
@@ -427,7 +435,15 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	}
 	mutex_unlock(&dev->lock);
 
-	if (IS_ERR_OR_NULL(buffer)) {
+	if (buffer == NULL) {
+		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
+					    client->heap_mask, flags, -ENODEV);
+		return ERR_PTR(-ENODEV);
+	}
+
+	if (IS_ERR(buffer)) {
+		trace_ion_alloc_buffer_fail(client->name, dbg_str, len,
+					    client->heap_mask, flags, PTR_ERR(buffer));
 		pr_debug("ION is unable to allocate 0x%x bytes (alignment: "
 			 "0x%x) from heap(s) %sfor client %s with heap "
 			 "mask 0x%x\n",

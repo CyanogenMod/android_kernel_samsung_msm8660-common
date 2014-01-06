@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,7 @@ void vcd_do_device_state_transition(struct vcd_drv_ctxt *drv_ctxt,
 	if (!drv_ctxt || to_state >= VCD_DEVICE_STATE_MAX) {
 		VCD_MSG_ERROR("Bad parameters. drv_ctxt=%p, to_state=%d",
 				  drv_ctxt, to_state);
+		return;
 	}
 
 	state_ctxt = &drv_ctxt->dev_state;
@@ -219,6 +220,7 @@ u32 vcd_init_device_context(struct vcd_drv_ctxt *drv_ctxt,
 						   VCD_DEVICE_STATE_INITING,
 						   ev_code);
 	}
+	dev_ctxt->turbo_mode_set = 0;
 
 	return rc;
 }
@@ -856,7 +858,7 @@ static u32 vcd_close_in_ready
 	} else {
 		VCD_MSG_ERROR("Unsupported API in client state %d",
 				  cctxt->clnt_state.state);
-
+		vcd_destroy_client_context(cctxt);
 		rc = VCD_ERR_BAD_STATE;
 	}
 

@@ -19,6 +19,7 @@
 #include <linux/vmalloc.h>
 #include <linux/iommu.h>
 #include <linux/pfn.h>
+#include <linux/dma-mapping.h>
 #include "ion_priv.h"
 
 #include <asm/mach/map.h>
@@ -270,15 +271,26 @@ static int ion_iommu_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 
 	switch (cmd) {
 	case ION_IOC_CLEAN_CACHES:
-		dmac_clean_range(vaddr, vaddr + length);
+		if (!vaddr)
+			dma_sync_sg_for_device(NULL, buffer->sglist, 1, DMA_TO_DEVICE);
+		else
+			dmac_clean_range(vaddr, vaddr + length);
 		outer_cache_op = outer_clean_range;
 		break;
 	case ION_IOC_INV_CACHES:
-		dmac_inv_range(vaddr, vaddr + length);
+		if (!vaddr)
+			dma_sync_sg_for_cpu(NULL, buffer->sglist, 1, DMA_FROM_DEVICE);
+		else
+			dmac_inv_range(vaddr, vaddr + length);
 		outer_cache_op = outer_inv_range;
 		break;
 	case ION_IOC_CLEAN_INV_CACHES:
-		dmac_flush_range(vaddr, vaddr + length);
+		if (!vaddr) {
+			dma_sync_sg_for_device(NULL, buffer->sglist, 1, DMA_TO_DEVICE);
+			dma_sync_sg_for_cpu(NULL, buffer->sglist, 1, DMA_FROM_DEVICE);
+		} else {
+			dmac_flush_range(vaddr, vaddr + length);
+		}
 		outer_cache_op = outer_flush_range;
 		break;
 	default:
