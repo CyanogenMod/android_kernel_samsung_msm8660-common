@@ -41,55 +41,44 @@
 #include <linux/i2c/isa1200.h>
 #include <linux/dma-mapping.h>
 #include <linux/i2c/bq27520.h>
-
 #ifdef CONFIG_TOUCHSCREEN_MELFAS
-#define TOUCHSCREEN_IRQ 		125  
-#define TSP_SDA					43
-#define TSP_SCL					44
 #include <linux/melfas_ts.h>
 #endif
-
 #if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
 #include <linux/i2c/qt602240_ts.h>
 #include <linux/i2c/mxt224_celox.h>
 #endif
-
 #ifdef CONFIG_SENSORS_YDA165
-#ifdef CONFIG_USA_MODEL_SGH_I577 || defined(CONFIG_USA_MODEL_SGH_T769)
+#if defined(CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_USA_MODEL_SGH_T769)
 #include <linux/i2c/yda165_integ.h>
 #else
 #include <linux/i2c/yda165.h>
 #endif
 #endif
-
-//#undef CONFIG_SAMSUNG_JACK
 #ifdef CONFIG_SAMSUNG_JACK
 #include <linux/sec_jack.h>
 #endif
 #ifdef CONFIG_SAMSUNG_EARJACK
 #include <linux/sec_earjack.h>
 #endif
-
 #ifdef CONFIG_SENSORS_K3DH
 #include <linux/i2c/k3dh.h>
 #endif
-
 #ifdef CONFIG_SENSORS_AK8975
 #include <linux/i2c/ak8975.h>
 #endif
-
 #ifdef CONFIG_GYRO_K3G
 #include <linux/i2c/k3g.h>
-#endif
-
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
 #endif
 #ifdef CONFIG_BATTERY_MAX17040
 #include <linux/max17040_battery.h>
 #endif
 #ifdef CONFIG_CHARGER_SMB328A
 #include <linux/smb328a_charger.h>
+#endif
+
+#ifdef CONFIG_ANDROID_PMEM
+#include <linux/android_pmem.h>
 #endif
 
 #if defined(CONFIG_SMB137B_CHARGER) || defined(CONFIG_SMB137B_CHARGER_MODULE)
@@ -179,7 +168,6 @@
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
 #include <mach/tdmb_pdata.h>
 #endif
-#define MSM_SHARED_RAM_PHYS 0x40000000
 
 #ifdef CONFIG_OPTICAL_GP2A
 #define PMIC_GPIO_PS_VOUT		PM8058_GPIO(14) 	/* PMIC GPIO Number 14 */
@@ -213,7 +201,8 @@
 #define GPIO_MHL_SEL PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(16))
 #endif
 #endif
-/* Common PMIC GPIO ***************************/
+
+/* Common PMIC GPIO */
 #ifdef CONFIG_OPTICAL_GP2A
 #define PMIC_GPIO_PS_VOUT		PM8058_GPIO(14) 	/* PMIC GPIO Number 14 */
 #endif
@@ -242,36 +231,11 @@
 #define PMIC_GPIO_CHG_EN		PM8058_GPIO(23)
 #define PMIC_GPIO_CHG_STAT		PM8058_GPIO(24)
 #endif
-#define MDM2AP_SYNC 129
-
-#define GPIO_ETHERNET_RESET_N_DRAGON	30
-#define LCDC_SPI_GPIO_CLK				73
-#define LCDC_SPI_GPIO_CS				72
-#define LCDC_SPI_GPIO_MOSI				70
-#define LCDC_AUO_PANEL_NAME				"lcdc_auo_wvga"
-#define LCDC_SAMSUNG_OLED_PANEL_NAME	"lcdc_samsung_oled"
-#define LCDC_SAMSUNG_WSVGA_PANEL_NAME	"lcdc_samsung_wsvga"
-#define LCDC_SAMSUNG_SPI_DEVICE_NAME	"lcdc_samsung_ams367pe02"
-#define LCDC_AUO_SPI_DEVICE_NAME		"lcdc_auo_nt35582"
-#define LCDC_NT35582_PANEL_NAME			"lcdc_nt35582_wvga"
-
-#define MIPI_CMD_NOVATEK_QHD_PANEL_NAME	"mipi_cmd_novatek_qhd"
-#define MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME	"mipi_video_novatek_qhd"
-#define MIPI_VIDEO_TOSHIBA_WVGA_PANEL_NAME	"mipi_video_toshiba_wvga"
-#define HDMI_PANEL_NAME	"hdmi_msm"
-#define TVOUT_PANEL_NAME	"tvout_msm"
-
-#define DSPS_PIL_GENERIC_NAME		"dsps"
-#define DSPS_PIL_FLUID_NAME		"dsps_fluid"
 
 #if defined(CONFIG_PN544_NFC)
-#define PMIC_GPIO_NFC_IRQ		PM8058_GPIO_PM_TO_SYS(7) //8
-#define PMIC_GPIO_NFC_EN 		PM8058_GPIO_PM_TO_SYS(29) //30
+#define PMIC_GPIO_NFC_IRQ	PM8058_GPIO_PM_TO_SYS(7) //8
+#define PMIC_GPIO_NFC_EN 	PM8058_GPIO_PM_TO_SYS(29) //30
 #define GPIO_NFC_FIRM		71 
-#endif
-
-#ifdef CONFIG_ION_MSM
-static struct platform_device ion_dev;
 #endif
 
 #if defined (CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
@@ -298,6 +262,24 @@ enum {
 	TDMB_PMIC_CLK_ON,
 	TDMB_PMIC_CLK_OFF,
 };
+#endif
+
+#define MSM_SHARED_RAM_PHYS 0x40000000
+#define MDM2AP_SYNC 129
+
+#define GPIO_ETHERNET_RESET_N_DRAGON	30
+#define LCDC_SPI_GPIO_CLK				73
+#define LCDC_SPI_GPIO_CS				72
+#define LCDC_SPI_GPIO_MOSI				70
+
+#define HDMI_PANEL_NAME		"hdmi_msm"
+#define TVOUT_PANEL_NAME	"tvout_msm"
+
+#define DSPS_PIL_GENERIC_NAME	"dsps"
+#define DSPS_PIL_FLUID_NAME	"dsps_fluid"
+
+#ifdef CONFIG_ION_MSM
+static struct platform_device ion_dev;
 #endif
 
 enum {
@@ -446,10 +428,11 @@ struct pm8xxx_mpp_init_info {
 }
 
 
-#if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
-#define TOUCHSCREEN_IRQ 		125  
-#define TSP_SDA					43
-#define TSP_SCL					44
+#if defined(CONFIG_TOUCHSCREEN_QT602240) \
+	|| defined(CONFIG_TOUCHSCREEN_MXT768E) || defined(CONFIG_TOUCHSCREEN_MELFAS)
+#define TOUCHSCREEN_IRQ 	125  
+#define TSP_SDA			43
+#define TSP_SCL			44
 #endif
 
 #ifdef CONFIG_MSM_CAMERA
@@ -473,7 +456,6 @@ As the index starts from 0 in the PMIC driver, and hence 17
 corresponds to GPIO 18 on PMIC 8058.
 */
 #define FM_GPIO 17
-#define REV_GPIO_BASE 34 // 1 based numbering
 
 static void sensor_power_on(void);
 static void sensor_power_off(void);
@@ -521,6 +503,8 @@ static int __init hw_rev_setup(char *str)
 }
 __setup("hw_rev=", hw_rev_setup);
 
+#define REV_GPIO_BASE 34
+
 unsigned int get_hw_rev(void)
 {
 	int i = 0;                
@@ -528,13 +512,10 @@ unsigned int get_hw_rev(void)
 	int return_value;
 	unsigned int temp_rev = 0;
 
-	if(!is_checked_hwrev)
-	{
+	if(!is_checked_hwrev) {
 		printk("%s : HW rev value is intialized first\n", __func__);
-
 #if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
-		for(i = 0; i < 3; i++)
-		{
+		for(i = 0; i < 3; i++) {
 			sprintf(str_rev, "HW_REV_%d",i);
 			return_value = gpio_request(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(REV_GPIO_BASE+i)), str_rev);       
 			return_value = gpio_direction_input(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(REV_GPIO_BASE+i)));
@@ -545,13 +526,11 @@ unsigned int get_hw_rev(void)
 		sprintf(str_rev, "HW_REV_%d", 3);
 		return_value = gpio_request(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(26)), str_rev);
 		return_value = gpio_direction_input(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(26)));
-
 		temp_rev = temp_rev | (gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(26)))<<3);
 #else
 		sprintf(str_rev, "HW_REV_%d", 3);
 		return_value = gpio_request(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(32)), str_rev);
 		return_value = gpio_direction_input(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(32)));
-
 		temp_rev = temp_rev | (gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(32)))<<3);
 #endif
 #else
@@ -871,7 +850,6 @@ static struct resource qcedev_resources[] = {
 
 #if defined(CONFIG_CRYPTO_DEV_QCRYPTO) || \
 		defined(CONFIG_CRYPTO_DEV_QCRYPTO_MODULE)
-
 static struct msm_ce_hw_support qcrypto_ce_hw_suppport = {
 	.ce_shared = QCE_CE_SHARED,
 	.shared_ce_resource = QCE_SHARE_CE_RESOURCE,
@@ -894,7 +872,6 @@ static struct platform_device qcrypto_device = {
 
 #if defined(CONFIG_CRYPTO_DEV_QCEDEV) || \
 		defined(CONFIG_CRYPTO_DEV_QCEDEV_MODULE)
-
 static struct msm_ce_hw_support qcedev_ce_hw_suppport = {
 	.ce_shared = QCE_CE_SHARED,
 	.shared_ce_resource = QCE_SHARE_CE_RESOURCE,
@@ -917,7 +894,6 @@ static struct platform_device qcedev_device = {
 
 #if defined(CONFIG_HAPTIC_ISA1200) || \
 		defined(CONFIG_HAPTIC_ISA1200_MODULE)
-
 static const char *vregs_isa1200_name[] = {
 	"8058_s3",
 	"8901_l4",
@@ -1492,8 +1468,8 @@ static int msm_hsusb_config_vddcx(int high)
 	return ret;
 }
 
-#define USB_PHY_3P3_VOL_MIN	3600000 // 11.06.25 QC recommended for stability test //3050000 /* uV */
-#define USB_PHY_3P3_VOL_MAX	3600000 // 11.06.25 QC recommended for stability test //3050000 /* uV */
+#define USB_PHY_3P3_VOL_MIN	3600000 /* uV */
+#define USB_PHY_3P3_VOL_MAX	3600000 /* uV */
 #define USB_PHY_3P3_HPM_LOAD	50000	/* uA */
 #define USB_PHY_3P3_LPM_LOAD	4000	/* uA */
 
@@ -1620,6 +1596,7 @@ static int msm_hsusb_ldo_set_voltage(int mV)
 	return regulator_set_voltage(ldo6_3p3, mV,mV);
 }
 #endif
+
 #ifdef CONFIG_USB_EHCI_MSM_72K
 #if defined(CONFIG_SMB137B_CHARGER) || defined(CONFIG_SMB137B_CHARGER_MODULE)
 static void msm_hsusb_smb137b_vbus_power(unsigned phy_info, int on)
@@ -1634,111 +1611,7 @@ static void msm_hsusb_smb137b_vbus_power(unsigned phy_info, int on)
 }
 #endif
 
-#if 0
 static void msm_hsusb_vbus_power(unsigned phy_info, int on)
-{
-	static struct regulator *votg_5v_switch;
-	static struct regulator *ext_5v_reg;
-	static int vbus_is_on;
-
-	/* If VBUS is already on (or off), do nothing. */
-	if (on == vbus_is_on)
-		return;
-
-	if (!votg_5v_switch) {
-		votg_5v_switch = regulator_get(NULL, "8901_usb_otg");
-		if (IS_ERR(votg_5v_switch)) {
-			pr_err("%s: unable to get votg_5v_switch\n", __func__);
-			return;
-		}
-	}
-	if (!ext_5v_reg) {
-		ext_5v_reg = regulator_get(NULL, "8901_mpp0");
-		if (IS_ERR(ext_5v_reg)) {
-			pr_err("%s: unable to get ext_5v_reg\n", __func__);
-			return;
-		}
-	}
-	if (on) {
-		if (regulator_enable(ext_5v_reg)) {
-			pr_err("%s: Unable to enable the regulator:"
-					" ext_5v_reg\n", __func__);
-			return;
-		}
-		if (regulator_enable(votg_5v_switch)) {
-			pr_err("%s: Unable to enable the regulator:"
-					" votg_5v_switch\n", __func__);
-			return;
-		}
-	} else {
-		if (regulator_disable(votg_5v_switch))
-			pr_err("%s: Unable to enable the regulator:"
-				" votg_5v_switch\n", __func__);
-		if (regulator_disable(ext_5v_reg))
-			pr_err("%s: Unable to enable the regulator:"
-				" ext_5v_reg\n", __func__);
-	}
-
-	vbus_is_on = on;
-}
-#endif
-
-static struct msm_usb_host_platform_data msm_usb_host_pdata = {
-	.phy_info	= (USB_PHY_INTEGRATED | USB_PHY_MODEL_45NM),
-	.power_budget	= 500,  // for samsung otg 390 -> 500
-#ifdef CONFIG_USB_HOST_NOTIFY
-	.host_notify = 1,
-#endif
-#ifdef CONFIG_USB_SEC_WHITELIST
-	.sec_whlist_table_num = 1,
-#endif	
-};
-#endif
-
-#ifdef CONFIG_BATTERY_MSM8X60
-static int msm_hsusb_pmic_vbus_notif_init(void (*callback)(int online),
-								int init)
-{
-	int ret = -ENOTSUPP;
-
-#if defined(CONFIG_SMB137B_CHARGER) || defined(CONFIG_SMB137B_CHARGER_MODULE)
-	if (machine_is_msm8x60_fluid()) {
-		if (init)
-			msm_charger_register_vbus_sn(callback);
-		else
-			msm_charger_unregister_vbus_sn(callback);
-		return  0;
-	}
-#endif
-	/* ID and VBUS lines are connected to pmic on 8660.V2.SURF,
-	 * hence, irrespective of either peripheral only mode or
-	 * OTG (host and peripheral) modes, can depend on pmic for
-	 * vbus notifications
-	 */
-	if ((SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 2)
-			&& (machine_is_msm8x60_surf() ||
-				pmic_id_notif_supported)) {
-		if (init)
-			ret = msm_charger_register_vbus_sn(callback);
-		else {
-			msm_charger_unregister_vbus_sn(callback);
-			ret = 0;
-		}
-	} else {
-#if !defined(CONFIG_USB_EHCI_MSM_72K)
-	if (init)
-		ret = msm_charger_register_vbus_sn(callback);
-	else {
-		msm_charger_unregister_vbus_sn(callback);
-		ret = 0;
-	}
-#endif
-	}
-	return ret;
-}
-#endif
-
-static void msm_hsusb_smb328a_vbus_power(unsigned phy_info,int attached)
 {
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	union power_supply_propval value;
@@ -1746,12 +1619,13 @@ static void msm_hsusb_smb328a_vbus_power(unsigned phy_info,int attached)
 
 	static int vbus_is_on;
 	
-	printk(KERN_ERR "msm_hsusb_smb328a_vbus_power attached %d\n", attached);
+	printk(KERN_ERR "msm_hsusb_vbus_power on %d\n", on);
+
 	/* If VBUS is already on (or off), do nothing. */
-	if (attached == vbus_is_on)
+	if (on == vbus_is_on)
 		return;
 
-	if (attached)
+	if (on)
 		value.intval = POWER_SUPPLY_CAPACITY_OTG_ENABLE;
 	else
 		value.intval = POWER_SUPPLY_CAPACITY_OTG_DISABLE;
@@ -1767,44 +1641,54 @@ static void msm_hsusb_smb328a_vbus_power(unsigned phy_info,int attached)
 		pr_err("%s : psy is null!\n", __func__);
 		goto fail;
 	}
-	vbus_is_on = attached;
-	return;
+
+	vbus_is_on = on;
+
 fail:
 	vbus_is_on = false;
-	return;
 }
+
+static struct msm_usb_host_platform_data msm_usb_host_pdata = {
+	.phy_info	= (USB_PHY_INTEGRATED | USB_PHY_MODEL_45NM),
+	.power_budget	= 500,
+#ifdef CONFIG_USB_HOST_NOTIFY
+	.host_notify = 1,
+#endif
+#ifdef CONFIG_USB_SEC_WHITELIST
+	.sec_whlist_table_num = 1,
+#endif
+};
+#endif
+
 #if defined(CONFIG_USB_GADGET_MSM_72K) || defined(CONFIG_USB_EHCI_MSM_72K)
 static struct msm_otg_platform_data msm_otg_pdata = {
 	/* if usb link is in sps there is no need for
 	 * usb pclk as dayatona fabric clock will be
 	 * used instead
 	 */
-	.pemp_level		 = PRE_EMPHASIS_WITH_20_PERCENT,
-	.cdr_autoreset		 = CDR_AUTO_RESET_DISABLE,
-	.drv_ampl			 = HS_DRV_AMPLITUDE_75_PERCENT, // for voltage driving
-	.se1_gating		 = SE1_GATING_DISABLE,
-	.bam_disable		 = 1,
+	.pemp_level		= PRE_EMPHASIS_WITH_20_PERCENT,
+	.cdr_autoreset		= CDR_AUTO_RESET_DISABLE,
+	.drv_ampl		= HS_DRV_AMPLITUDE_75_PERCENT,
+	.se1_gating		= SE1_GATING_DISABLE,
+	.bam_disable		= 1,
 #ifdef CONFIG_USB_EHCI_MSM_72K
-	.pmic_id_notif_init = msm_hsusb_pmic_id_notif_init,
-	.phy_id_setup_init = msm_hsusb_phy_id_setup_init,
+	.pmic_id_notif_init	= msm_hsusb_pmic_id_notif_init,
+	.phy_id_setup_init	= msm_hsusb_phy_id_setup_init,
 #endif
 #ifdef CONFIG_USB_EHCI_MSM_72K
-//	.vbus_power = msm_hsusb_vbus_power,
-	.vbus_power = msm_hsusb_smb328a_vbus_power,
+	.vbus_power		= msm_hsusb_vbus_power,
 #endif
 #ifdef CONFIG_BATTERY_MSM8X60
-//	.pmic_vbus_notif_init	= msm_hsusb_pmic_vbus_notif_init,
 	.pmic_vbus_notif_init	= NULL,
 #endif
-	.ldo_init		 = msm_hsusb_ldo_init,
-	.ldo_enable		 = msm_hsusb_ldo_enable,
-	.config_vddcx            = msm_hsusb_config_vddcx,
-	.init_vddcx              = msm_hsusb_init_vddcx,
+	.ldo_init		= msm_hsusb_ldo_init,
+	.ldo_enable		= msm_hsusb_ldo_enable,
+	.config_vddcx           = msm_hsusb_config_vddcx,
+	.init_vddcx             = msm_hsusb_init_vddcx,
 #ifdef CONFIG_BATTERY_MSM8X60
-//	.chg_vbus_draw = msm_charger_vbus_draw,
-	.chg_vbus_draw = NULL,
+	.chg_vbus_draw		= NULL,
 #endif
-	.ldo_set_voltage=msm_hsusb_ldo_set_voltage,
+	.ldo_set_voltage	= msm_hsusb_ldo_set_voltage,
 };
 #endif
 
@@ -1883,8 +1767,6 @@ static struct platform_device android_usb_device = {
 		.platform_data = &android_usb_pdata,
 	},
 };
-
-
 #endif
 
 #ifdef CONFIG_MSM_VPE
@@ -1977,7 +1859,6 @@ static struct msm_camera_sensor_platform_info sensor_board_info = {
 #endif
 
 #ifdef CONFIG_QS_S5K4E1
-
 /*external regulator VREG_5V*/
 static struct regulator *reg_flash_5V;
 
@@ -2003,6 +1884,7 @@ static int config_camera_on_gpios_fluid(void)
 #ifdef CONFIG_IMX074
 	sensor_board_info.mount_angle = 90;
 #endif
+
 	rc = config_gpio_table(MSM_CAM_ON);
 	if (rc < 0) {
 		printk(KERN_ERR "%s: CAMSENSOR gpio table request"
@@ -2018,10 +1900,10 @@ static int config_camera_on_gpios_fluid(void)
 		regulator_put(reg_flash_5V);
 		return rc;
 	}
+
 	gpio_direction_output(GPIO_EXT_CAMIF_PWR_EN, 0);
 	msleep(20);
 	gpio_set_value_cansleep(GPIO_EXT_CAMIF_PWR_EN, 1);
-
 
 	/*Enable LED_FLASH_EN*/
 	rc = gpio_request(GPIO_LED_FLASH_EN, "LED_FLASH_EN");
@@ -2085,8 +1967,8 @@ static void config_gpio_tables(uint32_t *table, int len)
 				__func__, table[n], rc);
 			break;
 		}
-		}
 	}
+}
 
 static int config_camera_on_gpios(void)
 {
@@ -2102,9 +1984,7 @@ static void config_camera_off_gpios(void)
 
 }
 
-
 #ifdef CONFIG_QS_S5K4E1
-
 #define QS_CAM_HC37_CAM_PD PM8058_GPIO_PM_TO_SYS(26)
 
 static int config_camera_on_gpios_qs_cam_fluid(void)
@@ -2230,8 +2110,6 @@ static int camera_power_maincam(int onoff)
 	int ret = 0;
 	printk("%s :%s\n", __func__, onoff ? "ON" : "OFF");
 
-	//gpio_set_value_cansleep(GPIO_CAM_IO_EN, LOW);  //HOST 1.8V
-	//mdelay(5);
 	if (onoff) {
 		//ISP CORE 1.2V		
 		i_core12 = regulator_get(NULL, "8901_s2"); //CORE 1.2V
@@ -2247,7 +2125,6 @@ static int camera_power_maincam(int onoff)
 			printk("%s:i_core12 error enabling regulator\n", __func__);
 		}
 		usleep(1*1000);
-
 
 		//SENSOR CORE 1.2V
 		s_core12 = regulator_get(NULL, "8901_lvs1"); 
@@ -2266,7 +2143,7 @@ static int camera_power_maincam(int onoff)
 
 #if defined (CONFIG_SENSOR_SR200PC20M)
 		//AF 2.8V
-		af28 = regulator_get(NULL, "8058_l15"); //AF 2.8V
+		af28 = regulator_get(NULL, "8058_l15");
 
 		if (IS_ERR(af28))
 			goto cam_power_fail;
@@ -2279,23 +2156,23 @@ static int camera_power_maincam(int onoff)
 		if (ret) {
 			printk("%s:af28 error enabling regulator\n", __func__);
 		}
-		mdelay(5);  // min 5ms~max 10ms, 
+		mdelay(5);
 #endif
 
 		//DVDD 1.5V (sub)
-#if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_JPN_MODEL_SC_03D) // Celox KOR, JPN
-		if (get_hw_rev() >= 0x05) //celox_REV05
+#if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_JPN_MODEL_SC_03D)
+		if (get_hw_rev() >= 0x05)
 			vt_core15 = regulator_get(NULL, "8058_l24"); 
 		else
-#elif defined (CONFIG_USA_MODEL_SGH_I727)	//Celox ATT
+#elif defined (CONFIG_USA_MODEL_SGH_I727)
 		if (get_hw_rev() >= 0x08)
 			vt_core15 = regulator_get(NULL, "8058_l24"); 
 		else
-#elif defined (CONFIG_USA_MODEL_SGH_I757)	//CeloxHD ATT
+#elif defined (CONFIG_USA_MODEL_SGH_I757)
 		if (get_hw_rev() >= 0x02)
-			vt_core15 = regulator_get(NULL, "8058_l20"); //siliconfile sr200pc20m needs 1.8v.
+			vt_core15 = regulator_get(NULL, "8058_l20");
 		else
-#elif defined (CONFIG_USA_MODEL_SGH_T989) //Celox TMO
+#elif defined (CONFIG_USA_MODEL_SGH_T989)
 		if (get_hw_rev() >= 0x09)
 			vt_core15 = regulator_get(NULL, "8058_l24"); 
 		else
@@ -2309,7 +2186,7 @@ static int camera_power_maincam(int onoff)
 
 #if defined (CONFIG_USA_MODEL_SGH_I757)
 		if (get_hw_rev() >= 0x02)
-			ret = regulator_set_voltage(vt_core15, 1800000, 1800000); //siliconfile sr200pc20m needs 1.8v.
+			ret = regulator_set_voltage(vt_core15, 1800000, 1800000);
 #else
 		ret = regulator_set_voltage(vt_core15, 1500000, 1500000);
 #endif
@@ -2325,7 +2202,7 @@ static int camera_power_maincam(int onoff)
 #if !defined (CONFIG_SENSOR_SR200PC20M)
 		//AF 2.8V
 		printk("AF 2.8V\n");
-		af28 = regulator_get(NULL, "8058_l15"); //AF 2.8V
+		af28 = regulator_get(NULL, "8058_l15");
 
 		if (IS_ERR(af28))
 			goto cam_power_fail;
@@ -2338,28 +2215,28 @@ static int camera_power_maincam(int onoff)
 		if (ret) {
 			printk("%s:af28 error enabling regulator\n", __func__);
 		}
-		mdelay(5);  // min 5ms~max 10ms, 
+		mdelay(5);
 #endif
 		
 		//HOST 1.8V
-#if defined (CONFIG_KOR_MODEL_SHV_E110S) // Celox KOR
+#if defined (CONFIG_KOR_MODEL_SHV_E110S)
 		if (get_hw_rev() >= 0x04)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
-#elif  defined (CONFIG_JPN_MODEL_SC_03D) // Celox  JPN
+#elif  defined (CONFIG_JPN_MODEL_SC_03D)
 		if (get_hw_rev() >= 0x02)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
-#elif defined (CONFIG_USA_MODEL_SGH_I727)        //Celox ATT
-		if (get_hw_rev()>=0x06) //celox_REV06
+#elif defined (CONFIG_USA_MODEL_SGH_I727)
+		if (get_hw_rev()>=0x06)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
-#elif defined (CONFIG_USA_MODEL_SGH_I757)	//CeloxHD ATT
-		if (get_hw_rev()>=0x01) //Celox HD REV01
+#elif defined (CONFIG_USA_MODEL_SGH_I757)
+		if (get_hw_rev()>=0x01)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_T989)
-		if (get_hw_rev()>=0x0D) //Hercules_rev06
+		if (get_hw_rev()>=0x0D)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #endif
@@ -2382,9 +2259,8 @@ static int camera_power_maincam(int onoff)
 		if (ret) {
 			printk("%s:i_host18 error enabling regulator\n", __func__);
 		}
-		usleep(1*1000); 
-			
-			
+		usleep(1*1000);
+
 		//SENSOR IO 1.8V  - ISP
 		printk("SENSOR IO 1.8V\n");
 		s_io18 = regulator_get(NULL, "8058_lvs0");
@@ -2403,8 +2279,7 @@ static int camera_power_maincam(int onoff)
 		gpio_set_value_cansleep(GPIO_CAM_SUB_EN, 1);
 		mdelay(1);
 #endif
-	}
-	else {
+	} else {
 
 		usleep(1*1000); 
 
@@ -2468,21 +2343,16 @@ static int camera_power_maincam(int onoff)
 	
 	return 0;
 
-	cam_power_fail:
-		printk("main cam fail :%s \n", onoff ? "ON" : "OFF");
-		return -1;
-
-
+cam_power_fail:
+	printk("main cam fail :%s \n", onoff ? "ON" : "OFF");
+	return -1;
 }
-
-
 
 static int camera_power_vtcam(int onoff)
 {
 	int ret = 0;
 	int enable_io18 = 0; // i2c pullup (0;sensorIO 1.8V  -> 1;host 1.8V)
 	printk("%s :%s\n", __func__, onoff ? "ON" : "OFF");
-
 	
 #if defined (CONFIG_KOR_MODEL_SHV_E110S) 
 	if (get_hw_rev()< 0x5) //celoxS_REV03
@@ -2514,15 +2384,13 @@ static int camera_power_vtcam(int onoff)
 		}
 		usleep(1*1000);
 
-
 		//SENSOR A2.8V
 		gpio_set_value_cansleep(GPIO_CAM_IO_EN, 1);  
 		usleep(1*1000);  //min 20us
 
-
 		//DVDD 1.5V (sub)
 #if defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_JPN_MODEL_SC_03D)
-		if (get_hw_rev() >= 0x05) //celox_REV05
+		if (get_hw_rev() >= 0x05)
 			vt_core15 = regulator_get(NULL, "8058_l24"); 
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
@@ -2535,7 +2403,7 @@ static int camera_power_vtcam(int onoff)
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_I757)
 		if (get_hw_rev() >= 0x02) {
-			vt_core15 = regulator_get(NULL, "8058_l20");	//siliconfile sr200pc20m needs 1.8v.
+			vt_core15 = regulator_get(NULL, "8058_l20");
 		} else
 #endif
 		{
@@ -2546,7 +2414,7 @@ static int camera_power_vtcam(int onoff)
 			goto cam_power_fail;
 #if defined (CONFIG_USA_MODEL_SGH_I757)
 		if (get_hw_rev() >= 0x02) {
-			ret = regulator_set_voltage(vt_core15, 1800000, 1800000); //siliconfile sr200pc20m needs 1.8v.
+			ret = regulator_set_voltage(vt_core15, 1800000, 1800000);
 		}
 #else
 		ret = regulator_set_voltage(vt_core15, 1500000, 1500000);
@@ -2558,7 +2426,7 @@ static int camera_power_vtcam(int onoff)
 		if (ret) {
 			printk("%s:vt_core15 error enabling regulator\n", __func__);
 		}
-		usleep(1*1000);   //min 15us
+		usleep(1*1000);
 
 		
 		//HOST 1.8V
@@ -2567,15 +2435,15 @@ static int camera_power_vtcam(int onoff)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #elif defined (CONFIG_JPN_MODEL_SC_03D)
-		if (get_hw_rev() >= 0x02)//dali LGT REV02
+		if (get_hw_rev() >= 0x02)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
-		if (get_hw_rev()>=0x06) //celox_REV06
+		if (get_hw_rev()>=0x06)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_T989)
-		if (get_hw_rev()>=0x0D) //Hercules_rev06
+		if (get_hw_rev()>=0x0D)
 			i_host18 = regulator_get(NULL, "8901_usb_otg");
 		else
 #elif defined (CONFIG_USA_MODEL_SGH_I757)
@@ -2602,11 +2470,9 @@ static int camera_power_vtcam(int onoff)
 		if (ret) {
 			printk("%s:i_host18 error enabling regulator\n", __func__);
 		}
-		usleep(1*1000); 
-			
-			
+		usleep(1*1000);
+
 		//SENSOR IO 1.8V  - ISP
-		// i2c pullup (1;sensorIO 1.8V  -> 0;host 1.8V)
 		if (enable_io18) {
 			printk("SENSOR IO 1.8V\n");
 			s_io18 = regulator_get(NULL, "8058_lvs0");
@@ -2628,8 +2494,7 @@ static int camera_power_vtcam(int onoff)
 		gpio_set_value_cansleep(GPIO_CAM_SUB_EN, 1); // STBY		
 		usleep(1*1000); 
 
-	}
-	else {
+	} else {
 		gpio_set_value_cansleep(GPIO_CAM_SUB_EN, 0); // STBY		
 		usleep(1*1000); 
 		
@@ -2664,9 +2529,8 @@ static int camera_power_vtcam(int onoff)
 		
 		//SENSOR A2.8V
 		gpio_set_value_cansleep(GPIO_CAM_IO_EN, 0);  //HOST 1.8V
-		usleep(1*1000); 
-		
-		
+		usleep(1*1000);
+
 		//ISP CORE 1.2V
 		if (regulator_is_enabled(i_core12)) {
 			ret=regulator_disable(i_core12);
@@ -2676,19 +2540,15 @@ static int camera_power_vtcam(int onoff)
 		}
 		mdelay(5);
 	}
+
 	return 0;
 	
-	cam_power_fail:
-		printk("vt cam fail :%s \n", onoff ? "ON" : "OFF");
-		return -1;
+cam_power_fail:
+	printk("vt cam fail :%s \n", onoff ? "ON" : "OFF");
+	return -1;
 
 
 }
-
-
-
-
-
 
 #ifdef CONFIG_MSM_BUS_SCALING
 static struct msm_bus_vectors cam_init_vectors[] = {
@@ -3111,6 +2971,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_imx074_data = {
 	.sensor_platform_info = &imx074_sensor_board_info,
 	.csi_if			= 1
 };
+
 struct platform_device msm_camera_sensor_imx074 = {
 	.name	= "msm_camera_imx074",
 	.dev	= {
@@ -3118,8 +2979,8 @@ struct platform_device msm_camera_sensor_imx074 = {
 	},
 };
 #endif
-#ifdef CONFIG_WEBCAM_OV9726
 
+#ifdef CONFIG_WEBCAM_OV9726
 static struct msm_camera_sensor_platform_info ov9726_sensor_8660_info = {
 	.mount_angle = 0
 };
@@ -3128,6 +2989,7 @@ static struct msm_camera_sensor_flash_data flash_ov9726 = {
 	.flash_type	= MSM_CAMERA_FLASH_LED,
 	.flash_src	= &msm_flash_src
 };
+
 static struct msm_camera_sensor_info msm_camera_sensor_ov9726_data = {
 	.sensor_name	= "ov9726",
 	.sensor_reset_enable = 1,
@@ -3142,6 +3004,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_ov9726_data = {
 	.sensor_platform_info = &ov9726_sensor_8660_info,
 	.csi_if		= 1
 };
+
 struct platform_device msm_camera_sensor_webcam_ov9726 = {
 	.name	= "msm_camera_ov9726",
 	.dev	= {
@@ -3149,11 +3012,13 @@ struct platform_device msm_camera_sensor_webcam_ov9726 = {
 	},
 };
 #endif
+
 #ifdef CONFIG_WEBCAM_OV7692
 static struct msm_camera_sensor_flash_data flash_ov7692 = {
 	.flash_type		= MSM_CAMERA_FLASH_LED,
 	.flash_src		= &msm_flash_src
 };
+
 static struct msm_camera_sensor_info msm_camera_sensor_ov7692_data = {
 	.sensor_name	= "ov7692",
 	.sensor_reset	= GPIO_WEB_CAMIF_RESET_N,
@@ -3174,6 +3039,7 @@ static struct platform_device msm_camera_sensor_webcam_ov7692 = {
 	},
 };
 #endif
+
 #ifdef CONFIG_VX6953
 static struct msm_camera_sensor_platform_info vx6953_sensor_8660_info = {
 	.mount_angle = 270
@@ -3197,6 +3063,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_vx6953_data = {
 	.sensor_platform_info = &vx6953_sensor_8660_info,
 	.csi_if			= 1
 };
+
 struct platform_device msm_camera_sensor_vx6953 = {
 	.name	= "msm_camera_vx6953",
 	.dev	= {
@@ -3204,8 +3071,8 @@ struct platform_device msm_camera_sensor_vx6953 = {
 	},
 };
 #endif
-#ifdef CONFIG_QS_S5K4E1
 
+#ifdef CONFIG_QS_S5K4E1
 static struct msm_camera_sensor_platform_info qs_s5k4e1_sensor_8660_info = {
 #ifdef CONFIG_FB_MSM_MIPI_NOVATEK_CMD_QHD_PT
 	.mount_angle = 90
@@ -3235,6 +3102,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_qs_s5k4e1_data = {
 	.csi_if			= 1,
 	.eeprom_data	= eeprom_data,
 };
+
 struct platform_device msm_camera_sensor_qs_s5k4e1 = {
 	.name	= "msm_camera_qs_s5k4e1",
 	.dev	= {
@@ -3253,12 +3121,8 @@ static struct msm_camera_sensor_platform_info m5mo_sensor_8660_info = {
 	.sensor_power_control = camera_power_maincam,
 };
 
-
-
-
 static struct msm_camera_sensor_flash_data flash_m5mo = {
 	.flash_type = MSM_CAMERA_FLASH_LED,
-//	.flash_type = MSM_CAMERA_FLASH_NONE,
 	.flash_src  = &msm_flash_src
 };
 
@@ -3277,6 +3141,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_m5mo_data = {
 	.csi_if         = 1,
 	.irq 		= MSM_GPIO_TO_INT(GPIO_ISP_INT),
 };
+
 static struct platform_device msm_camera_sensor_m5mo = {
 	.name  	= "msm_camera_m5mo",
 	.dev   	= {
@@ -3284,7 +3149,6 @@ static struct platform_device msm_camera_sensor_m5mo = {
 	},
 };
 #endif
-
 
 #ifdef CONFIG_SENSOR_ISX012
 static struct msm_camera_sensor_platform_info isx012_sensor_8660_info = {
@@ -3335,11 +3199,9 @@ static struct msm_camera_sensor_platform_info s5k6aafx_sensor_8660_info = {
 };
 
 static struct msm_camera_sensor_flash_data flash_s5k6aafx = {
-//	.flash_type = MSM_CAMERA_FLASH_LED,
 	.flash_type = MSM_CAMERA_FLASH_NONE,
 	.flash_src  = &msm_flash_src
 };
-
 
 struct msm_camera_device_platform_data msm_camera_device_data_sub_cam = {
 	.camera_gpio_on  = config_camera_on_gpios,
@@ -3352,9 +3214,7 @@ struct msm_camera_device_platform_data msm_camera_device_data_sub_cam = {
 #ifdef CONFIG_MSM_BUS_SCALING
 	.cam_bus_scale_table = &cam_bus_client_pdata,
 #endif
-
 };
-
 
 static struct msm_camera_sensor_info msm_camera_sensor_s5k6aafx_data = {
 	.sensor_name    = "s5k6aafx",
@@ -3370,6 +3230,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_s5k6aafx_data = {
 	.sensor_platform_info = &s5k6aafx_sensor_8660_info,
 	.csi_if         = 1
 };
+
 static struct platform_device msm_camera_sensor_s5k6aafx = {
 	.name  	= "msm_camera_s5k6aafx",
 	.dev   	= {
@@ -3388,13 +3249,10 @@ static struct msm_camera_sensor_platform_info s5k5bafx_sensor_8660_info = {
 	.sensor_power_control = camera_power_vtcam,
 };
 
-
 static struct msm_camera_sensor_flash_data flash_s5k5bafx = {
-//	.flash_type = MSM_CAMERA_FLASH_LED,
 	.flash_type = MSM_CAMERA_FLASH_NONE,
 	.flash_src  = &msm_flash_src
 };
-
 
 struct msm_camera_device_platform_data msm_camera_device_data_sub_cam = {
 	.camera_gpio_on  = config_camera_on_gpios,
@@ -3408,7 +3266,6 @@ struct msm_camera_device_platform_data msm_camera_device_data_sub_cam = {
 	.cam_bus_scale_table = &cam_bus_client_pdata,
 #endif
 };
-
 
 static struct msm_camera_sensor_info msm_camera_sensor_s5k5bafx_data = {
 	.sensor_name    = "s5k5bafx",
@@ -3443,7 +3300,6 @@ static struct msm_camera_sensor_platform_info sr200pc20m_sensor_8660_info = {
 };
 
 static struct msm_camera_sensor_flash_data flash_sr200pc20m = {
-//	.flash_type = MSM_CAMERA_FLASH_LED,
 	.flash_type = MSM_CAMERA_FLASH_NONE,
 	.flash_src  = &msm_flash_src
 };
@@ -3484,45 +3340,45 @@ static struct platform_device msm_camera_sensor_sr200pc20m = {
 #endif
 
 static struct i2c_board_info msm_camera_boardinfo[] __initdata = {
-	#ifdef CONFIG_SENSOR_M5MO
+#ifdef CONFIG_SENSOR_M5MO
 	{
 			I2C_BOARD_INFO("m5mo_i2c", 0x3F>>1),
 	},
-	#endif
-	#ifdef CONFIG_SENSOR_ISX012
+#endif
+#ifdef CONFIG_SENSOR_ISX012
 	{
 			I2C_BOARD_INFO("isx012_i2c", 0x3D), 
 	},
-	#endif
-	#ifdef CONFIG_SENSOR_S5K6AAFX
+#endif
+#ifdef CONFIG_SENSOR_S5K6AAFX
 	{
 			I2C_BOARD_INFO("s5k6aafx_i2c", 0x78>>1),
 	},
-	#endif
-	#ifdef CONFIG_SENSOR_S5K5BAFX
+#endif
+#ifdef CONFIG_SENSOR_S5K5BAFX
 	{
 			I2C_BOARD_INFO("s5k5bafx_i2c", 0x5A>>1),
 	},
-	#endif
-	#ifdef CONFIG_SENSOR_SR200PC20M
+#endif
+#ifdef CONFIG_SENSOR_SR200PC20M
 	{
 			I2C_BOARD_INFO("sr200pc20m_i2c", 0x40>>1),
 	},
-	#endif
+#endif
 };
 
 
 static struct i2c_board_info msm_camera_dragon_boardinfo[] __initdata = {
-	#ifdef CONFIG_WEBCAM_OV9726
+#ifdef CONFIG_WEBCAM_OV9726
 	{
 		I2C_BOARD_INFO("ov9726", 0x10),
 	},
-	#endif
-	#ifdef CONFIG_VX6953
+#endif
+#ifdef CONFIG_VX6953
 	{
 		I2C_BOARD_INFO("vx6953", 0x20),
 	},
-	#endif
+#endif
 };
 #endif
 #endif
@@ -3568,6 +3424,7 @@ static struct msm_spi_platform_data msm_gsbi1_qup_spi_pdata = {
 };
 #endif
 #endif
+
 static struct msm_i2c_platform_data msm_gsbi3_qup_i2c_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
@@ -3575,7 +3432,7 @@ static struct msm_i2c_platform_data msm_gsbi3_qup_i2c_pdata = {
 };
 
 static struct msm_i2c_platform_data msm_gsbi4_qup_i2c_pdata = {
-	.clk_freq = 400000,//100000,
+	.clk_freq = 400000,
 	.src_clk_rate = 24000000,
 	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
 };
@@ -3598,21 +3455,20 @@ static struct msm_i2c_platform_data msm_gsbi9_qup_i2c_pdata = {
 	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
 };
 
+#if defined(CONFIG_PN544_NFC)
+static struct msm_i2c_platform_data msm_gsbi10_qup_i2c_pdata = {
+	.clk_freq =100000,
+	.src_clk_rate = 24000000,
+	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
+};
+#endif
+
 static struct msm_i2c_platform_data msm_gsbi12_qup_i2c_pdata = {
 	.clk_freq = 100000,
 	.src_clk_rate = 24000000,
 	.use_gsbi_shared_mode = 1,
 	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
 };
-#if defined(CONFIG_PN544_NFC)
-static struct msm_i2c_platform_data msm_gsbi10_qup_i2c_pdata = {
-	.clk_freq =100000,
-	.src_clk_rate = 24000000,
-//	.clk = "gsbi_qup_clk",
-//	.pclk = "gsbi_pclk",
-	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
-};
-#endif
 #endif
 
 #if !defined(CONFIG_PN544_NFC)
@@ -3674,7 +3530,7 @@ static void tdmb_config_lcd_data_drive_strength(bool enable)
 	}
 }
 
-static struct regulator *vreg_l2a = NULL; // pmic8058 xo out d0 internal power
+static struct regulator *vreg_l2a = NULL;
 static struct msm_xo_voter *tdmb_clock = NULL;
 
 static int tdmb_pmic_clk_on(void)
@@ -3749,6 +3605,7 @@ static int tdmb_pmic_clk_init(void)
 	}
 	return 0;
 }
+
 static int tdmb_pmic_clk_select(char select)
 {
 	int ret = 0;
@@ -3764,7 +3621,7 @@ static int tdmb_pmic_clk_select(char select)
 }
 
 static void tdmb_gpio_on(void)
-	{
+{
 	int n, rc;
 	printk(KERN_DEBUG "tdmb_gpio_on\n");
 
@@ -3790,8 +3647,9 @@ static void tdmb_gpio_on(void)
 
 	return;
 }
+
 static void tdmb_gpio_off(void)
-	{
+{
 	int n, rc;
 	printk(KERN_DEBUG "tdmb_gpio_off\n");
 
@@ -3817,21 +3675,21 @@ static struct tdmb_platform_data tdmb_pdata = {
 };
 
 static struct platform_device tdmb_device = {
-	.name			= "tdmb",
-	.id 			= -1,
-	.dev			= {
+	.name	= "tdmb",
+	.id	= -1,
+	.dev	= {
 		.platform_data = &tdmb_pdata,
 	},
 };
 
 static struct spi_board_info tdmb_spi_info[] __initdata = {	
-    {	
-        .modalias       = "tdmbspi",
-        .mode           = SPI_MODE_0,
-        .bus_num        = 0,
-        .chip_select    = 0,
-        .max_speed_hz   = 5400000,
-    }
+	{	
+		.modalias       = "tdmbspi",
+		.mode           = SPI_MODE_0,
+		.bus_num        = 0,
+		.chip_select    = 0,
+		.max_speed_hz   = 5400000,
+	}
 };
 
 static int __init tdmb_dev_init(void)
@@ -4235,66 +4093,17 @@ static struct resource msm_fb_resources[] = {
 static void set_mdp_clocks_for_wuxga(void);
 
 static int msm_fb_detect_panel(const char *name)
-{
-// kmj_ea25.lcd		
+{	
 #if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL)
 	if (!strcmp(name, "lcdc_ld9040_wvga"))
 		return 0;
-#elif defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)	
+#endif
+
+#if defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)	
 	if (!strcmp(name, "lcdc_S6E63M0_wvga"))
 		return 0;
-#else
-	if (machine_is_msm8x60_fluid()) {
-		uint32_t soc_platform_version = socinfo_get_platform_version();
-		if (SOCINFO_VERSION_MAJOR(soc_platform_version) < 3) {
-#ifdef CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT
-			if (!strncmp(name, LCDC_SAMSUNG_OLED_PANEL_NAME,
-					strnlen(LCDC_SAMSUNG_OLED_PANEL_NAME,
-						PANEL_NAME_MAX_LEN)))
-				return 0;
 #endif
-		} else { /*P3 and up use AUO panel */
-#ifdef CONFIG_FB_MSM_LCDC_AUO_WVGA
-			if (!strncmp(name, LCDC_AUO_PANEL_NAME,
-					strnlen(LCDC_AUO_PANEL_NAME,
-						PANEL_NAME_MAX_LEN)))
-				return 0;
-#endif
-		}
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-	} else if machine_is_msm8x60_dragon() {
-	    if (!strncmp(name, LCDC_NT35582_PANEL_NAME,
-				strnlen(LCDC_NT35582_PANEL_NAME,
-					PANEL_NAME_MAX_LEN)))
-			return 0;
-#endif
-	} else {
-		if (!strncmp(name, LCDC_SAMSUNG_WSVGA_PANEL_NAME,
-				strnlen(LCDC_SAMSUNG_WSVGA_PANEL_NAME,
-					PANEL_NAME_MAX_LEN)))
-			return 0;
 
-#if !defined(CONFIG_FB_MSM_LCDC_AUTO_DETECT) && \
-	!defined(CONFIG_FB_MSM_MIPI_PANEL_AUTO_DETECT) && \
-	!defined(CONFIG_FB_MSM_LCDC_MIPI_PANEL_AUTO_DETECT)
-		if (!strncmp(name, MIPI_VIDEO_TOSHIBA_WVGA_PANEL_NAME,
-				strnlen(MIPI_VIDEO_TOSHIBA_WVGA_PANEL_NAME,
-					PANEL_NAME_MAX_LEN)))
-			return 0;
-
-		if (!strncmp(name, MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME,
-				strnlen(MIPI_VIDEO_NOVATEK_QHD_PANEL_NAME,
-					  PANEL_NAME_MAX_LEN)))
-			return 0;
-
-		if (!strncmp(name, MIPI_CMD_NOVATEK_QHD_PANEL_NAME,
-				strnlen(MIPI_CMD_NOVATEK_QHD_PANEL_NAME,
-					PANEL_NAME_MAX_LEN)))
-			return 0;
-#endif
-	}
-
-#endif
 	if (!strncmp(name, HDMI_PANEL_NAME,
 			strnlen(HDMI_PANEL_NAME,
 				PANEL_NAME_MAX_LEN))) {
@@ -4446,133 +4255,15 @@ static struct platform_device ram_console_device = {
 #endif
 
 #define GPIO_DONGLE_PWR_EN 258
-#if !defined(CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) \
-	&& !defined(CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)\
-	&& !defined(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PANEL) \
-	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) \
-	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
-	
-static void setup_display_power(void);
-static int lcdc_vga_enabled;
-static int vga_enable_request(int enable)
-{
-	if (enable)
-		lcdc_vga_enabled = 1;
-	else
-		lcdc_vga_enabled = 0;
-	setup_display_power();
-
-	return 0;
-}
-
-#define GPIO_BACKLIGHT_PWM0 0
-#define GPIO_BACKLIGHT_PWM1 1
-
-static int pmic_backlight_gpio[2]
-	= { GPIO_BACKLIGHT_PWM0, GPIO_BACKLIGHT_PWM1 };
-static struct msm_panel_common_pdata lcdc_samsung_panel_data = {
-	.gpio_num = pmic_backlight_gpio, /* two LPG CHANNELS for backlight */
-	.vga_switch = vga_enable_request,
-};
-
-static struct platform_device lcdc_samsung_panel_device = {
-	.name = LCDC_SAMSUNG_WSVGA_PANEL_NAME,
-	.id = 0,
-	.dev = {
-		.platform_data = &lcdc_samsung_panel_data,
-	}
-};
-#endif
 struct class *sec_class;
 EXPORT_SYMBOL(sec_class);
-#if (!defined(CONFIG_SPI_QUP)) && \
-	(defined(CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT) || \
-	defined(CONFIG_FB_MSM_LCDC_AUO_WVGA))
-
-static int lcdc_spi_gpio_array_num[] = {
-	LCDC_SPI_GPIO_CLK,
-	LCDC_SPI_GPIO_CS,
-	LCDC_SPI_GPIO_MOSI,
-};
-
-static uint32_t lcdc_spi_gpio_config_data[] = {
-	GPIO_CFG(LCDC_SPI_GPIO_CLK, 0,
-			GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	GPIO_CFG(LCDC_SPI_GPIO_CS, 0,
-			GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	GPIO_CFG(LCDC_SPI_GPIO_MOSI, 0,
-			GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-};
-
-static void lcdc_config_spi_gpios(int enable)
-{
-	int n;
-	for (n = 0; n < ARRAY_SIZE(lcdc_spi_gpio_config_data); ++n)
-		gpio_tlmm_config(lcdc_spi_gpio_config_data[n], 0);
-}
-#endif
-
-#ifdef CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT
-#ifdef CONFIG_SPI_QUP
-static struct spi_board_info lcdc_samsung_spi_board_info[] __initdata = {
-	{
-		.modalias       = LCDC_SAMSUNG_SPI_DEVICE_NAME,
-		.mode           = SPI_MODE_3,
-		.bus_num        = 1,
-		.chip_select    = 0,
-		.max_speed_hz   = 10800000,
-	}
-};
-#endif /* CONFIG_SPI_QUP */
-
-static struct msm_panel_common_pdata lcdc_samsung_oled_panel_data = {
-#ifndef CONFIG_SPI_QUP
-	.panel_config_gpio = lcdc_config_spi_gpios,
-	.gpio_num          = lcdc_spi_gpio_array_num,
-#endif
-};
-
-static struct platform_device lcdc_samsung_oled_panel_device = {
-	.name   = LCDC_SAMSUNG_OLED_PANEL_NAME,
-	.id     = 0,
-	.dev.platform_data = &lcdc_samsung_oled_panel_data,
-};
-#endif /*CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT */
-
-#ifdef CONFIG_FB_MSM_LCDC_AUO_WVGA
-#ifdef CONFIG_SPI_QUP
-static struct spi_board_info lcdc_auo_spi_board_info[] __initdata = {
-	{
-		.modalias       = LCDC_AUO_SPI_DEVICE_NAME,
-		.mode           = SPI_MODE_3,
-		.bus_num        = 1,
-		.chip_select    = 0,
-		.max_speed_hz   = 10800000,
-	}
-};
-#endif
-
-static struct msm_panel_common_pdata lcdc_auo_wvga_panel_data = {
-#ifndef CONFIG_SPI_QUP
-	.panel_config_gpio = lcdc_config_spi_gpios,
-	.gpio_num          = lcdc_spi_gpio_array_num,
-#endif
-};
-
-static struct platform_device lcdc_auo_wvga_panel_device = {
-	.name   = LCDC_AUO_PANEL_NAME,
-	.id     = 0,
-	.dev.platform_data = &lcdc_auo_wvga_panel_data,
-};
-#endif /*CONFIG_FB_MSM_LCDC_AUO_WVGA*/
 
 #if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) || defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
-
 static int lcdc_gpio_array_num[] = {
-				103, /* spi_clk */
-				104, /* spi_cs  */
-				106, /* spi_mosi */
-				28, /* lcd_reset */
+	103, /* spi_clk */
+	104, /* spi_cs  */
+	106, /* spi_mosi */
+	28, /* lcd_reset */
 };
 
 static struct msm_gpio lcdc_gpio_config_data[] = {
@@ -4587,40 +4278,26 @@ static struct msm_gpio lcdc_gpio_off_config_data[] = {
 	{ GPIO_CFG(106, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), "spi_mosi" },
 	{ GPIO_CFG(28, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA), "lcd_reset" },
 };
+
 extern int msm_gpios_request_enable(const struct msm_gpio *table, int size);
 extern void msm_gpios_disable_free(const struct msm_gpio *table, int size);
+
 static void lcdc_config_gpios(int enable)
 {
-		printk("ld9040 : lcdc_config_gpios [%d]\n", enable);
-	if (enable) 
-	{
-			int i;
-			int loop_count= ARRAY_SIZE(lcdc_gpio_config_data);
-			for( i=0; i<loop_count; i++)
-			{
-					gpio_tlmm_config(lcdc_gpio_config_data[i].gpio_cfg, 1);
-			}
-#if 0	
-		msm_gpios_request_enable(lcdc_gpio_config_data,
-						  ARRAY_SIZE(
-							  lcdc_gpio_config_data));
-#endif						      
-	} 
-	else
-	{
-			int i;
-			int loop_count= ARRAY_SIZE(lcdc_gpio_off_config_data);
-			for( i=0; i<loop_count; i++)
-			{
-					gpio_tlmm_config(lcdc_gpio_off_config_data[i].gpio_cfg, 1);
-			}
-	
-#if 0	
-		msm_gpios_disable_free(lcdc_gpio_config_data,
-						ARRAY_SIZE(
-							lcdc_gpio_config_data));
-#endif						    
-		}
+	printk("ld9040 : lcdc_config_gpios [%d]\n", enable);
+	if (enable) {
+		int i;
+		int loop_count= ARRAY_SIZE(lcdc_gpio_config_data);
+		for( i=0; i<loop_count; i++) {
+			gpio_tlmm_config(lcdc_gpio_config_data[i].gpio_cfg, 1);
+		}				      
+	} else {
+		int i;
+		int loop_count= ARRAY_SIZE(lcdc_gpio_off_config_data);
+		for( i=0; i<loop_count; i++) {
+			gpio_tlmm_config(lcdc_gpio_off_config_data[i].gpio_cfg, 1);
+		}			    
+	}
 }
 
 static struct msm_panel_common_pdata lcdc_panel_data = {
@@ -4629,36 +4306,37 @@ static struct msm_panel_common_pdata lcdc_panel_data = {
 	.gpio_num          = lcdc_gpio_array_num,
 #endif
 };
+#endif
 
 #if defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
-static struct platform_device lcdc_ld9040_panel_device = {
+static struct platform_device lcdc_S6E63M0_panel_device = {
 	.name   = "lcdc_S6E63M0_wvga",
 	.id     = 0,
 	.dev    = {
 		.platform_data = &lcdc_panel_data,
 	}
-#else
+};
+#endif
+
+#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL)
 static struct platform_device lcdc_ld9040_panel_device = {
 	.name   = "lcdc_ld9040_wvga",
 	.id     = 0,
 	.dev    = {
 		.platform_data = &lcdc_panel_data,
 	}
-#endif
 };
 #endif
+
 #ifdef CONFIG_USB_SWITCH_FSA9480
 static int fsa9480_init_flag = 0;
 static enum cable_type_t set_cable_status;
 static int device_attached;
-//struct class *sec_class;
-//EXPORT_SYMBOL(sec_class);
 struct device *switch_dev;
 EXPORT_SYMBOL(switch_dev);
 int usb_access_lock = 0;
 EXPORT_SYMBOL(usb_access_lock);
 
-#if 1
 static unsigned fsa9480_gpio_on[] = {
 	GPIO_CFG(58, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA), // uart_sel
 };
@@ -4675,9 +4353,8 @@ static void __init fsa9480_gpio_init(void)
 		
 	}
 }
-#endif
 
- static void fsa9480_otg_cb(bool attached)
+static void fsa9480_otg_cb(bool attached)
 {
 #ifdef CONFIG_BATTERY_SEC
 	union power_supply_propval value;
@@ -4702,13 +4379,11 @@ static void __init fsa9480_gpio_init(void)
 #endif
 }
 
-/*-----------------------MXT224  TOUCH DRIVER by Xtopher-----------------------*/
 static struct c1_charging_status_callbacks {
 	void	(*tsp_set_charging_cable) (int type);
 } charging_cbs;
 
 static bool is_cable_attached;
-/*-----------------------MXT224  TOUCH DRIVER by Xtopher-----------------------*/
 
 static void fsa9480_usb_cb(bool attached)
 {
@@ -4716,15 +4391,14 @@ static void fsa9480_usb_cb(bool attached)
 	union power_supply_propval value;
 	int ret = 0;
 #endif
-
-	struct power_supply *psy = power_supply_get_by_name("battery");
 	struct usb_gadget *gadget = platform_get_drvdata(&msm_device_gadget_peripheral);
-	printk(KERN_ERR "fsa9480_usb_cb attached %d\n", attached);
-
+	struct power_supply *psy = power_supply_get_by_name("battery");
 	if(!psy) {
 		pr_err("%s: fail to get battery ps\n", __func__);
 		return;
 	}
+
+	printk(KERN_ERR "fsa9480_usb_cb attached %d\n", attached);
 
 	if (gadget) {
 		if (!usb_access_lock) {
@@ -4732,9 +4406,7 @@ static void fsa9480_usb_cb(bool attached)
 				usb_gadget_vbus_connect(gadget);
 			else
 				usb_gadget_vbus_disconnect(gadget);
-		}
-		else  // for usb lock
-		{
+		} else { // for usb lock
 			usb_gadget_vbus_disconnect(gadget);
 		}
 	}
@@ -4842,10 +4514,9 @@ static void fsa9480_jig_cb(bool attached)
 	union power_supply_propval value;
 	int ret = 0;
 #endif
-	struct power_supply *psy = power_supply_get_by_name("battery");
-
 	int jig_status = 0;
 
+	struct power_supply *psy = power_supply_get_by_name("battery");
 	if(!psy) {
 		pr_err("%s: fail to get battery ps\n", __func__);
 		return;
@@ -4950,8 +4621,6 @@ static void fsa9480_deskdock_cb(bool attached)
 	union power_supply_propval value;
 	int ret = 0;
 #endif
-	// static struct regulator *ldo1_1p2;
-	// int rc = 0;
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	if(!psy) {
 		pr_err("%s: fail to get battery ps\n", __func__);
@@ -5006,15 +4675,12 @@ static void fsa9480_deskdock_cb(bool attached)
 #endif
 }
 
-
 static void fsa9480_cardock_cb(bool attached)
 {
 #ifdef CONFIG_BATTERY_SEC	
 	union power_supply_propval value;
 	int ret = 0;
 #endif
-	// static struct regulator *ldo1_1p2;
-	// int rc = 0;
 	struct power_supply *psy = power_supply_get_by_name("battery");
 	if(!psy) {
 		pr_err("%s: fail to get battery ps\n", __func__);
@@ -5152,7 +4818,6 @@ struct platform_device sec_device_switch = {
 	}
 };
 
-#if 1
 static void LTE_switch_init(void)
 {
 	sec_class = class_create(THIS_MODULE, "sec");
@@ -5169,38 +4834,6 @@ static void LTE_switch_init(void)
 		pr_err("LTE_switch_init end!\n");
 
 	
-};
-#endif
-#endif
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-
-#define GPIO_NT35582_RESET			94
-#define GPIO_NT35582_BL_EN_HW_PIN	24
-#define GPIO_NT35582_BL_EN	\
-	PM8058_GPIO_PM_TO_SYS(GPIO_NT35582_BL_EN_HW_PIN - 1)
-
-static int lcdc_nt35582_pmic_gpio[] = {GPIO_NT35582_BL_EN };
-
-static struct msm_panel_common_pdata lcdc_nt35582_panel_data = {
-	.gpio_num = lcdc_nt35582_pmic_gpio,
-};
-
-static struct platform_device lcdc_nt35582_panel_device = {
-	.name = LCDC_NT35582_PANEL_NAME,
-	.id = 0,
-	.dev = {
-		.platform_data = &lcdc_nt35582_panel_data,
-	}
-};
-
-static struct spi_board_info lcdc_nt35582_spi_board_info[] __initdata = {
-	{
-		.modalias     = "lcdc_nt35582_spi",
-		.mode         = SPI_MODE_0,
-		.bus_num      = 0,
-		.chip_select  = 0,
-		.max_speed_hz = 1100000,
-	}
 };
 #endif
 
@@ -5250,57 +4883,25 @@ static struct platform_device hdmi_msm_device = {
 };
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL */
 
-#ifdef CONFIG_FB_MSM_MIPI_DSI
-static struct platform_device mipi_dsi_toshiba_panel_device = {
-	.name = "mipi_toshiba",
-	.id = 0,
-};
-
-#define FPGA_3D_GPIO_CONFIG_ADDR	0x1D00017A
-
-static struct mipi_dsi_panel_platform_data novatek_pdata = {
-	.fpga_3d_config_addr  = FPGA_3D_GPIO_CONFIG_ADDR,
-	.fpga_ctrl_mode = FPGA_EBI2_INTF,
-};
-
-static struct platform_device mipi_dsi_novatek_panel_device = {
-	.name = "mipi_novatek",
-	.id = 0,
-	.dev = {
-		.platform_data = &novatek_pdata,
-	}
-};
 #ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
 static struct platform_device mipi_dsi_s6e8aa0_hd720_panel_device = {
 	.name = "mipi_s6e8aa0_hd720",
 	.id = 0,
-	/*.dev = {
-		.platform_data = &,	//Need to check
-	}*/
 };
 #endif
-#endif
-
-#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION /* onlyjazz.ub02 : workaournd for kernel memory crash by TZBSP XPU */
-
-#define TZBSP_EXEC_BASE 0x42E20000
-#define TZBSP_EXEC_SIZE 0x000E0000
-
-#endif /* onlyjazz.ub02 : end */
 
 static void __init msm8x60_allocate_memory_regions(void)
 {
 	void *addr;
-	unsigned long size;
-	
-#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION /* onlyjazz.ub02 : workaournd for kernel memory crash by TZBSP XPU */
-    int ret;
-	 ret = reserve_bootmem(TZBSP_EXEC_BASE, TZBSP_EXEC_SIZE, BOOTMEM_EXCLUSIVE);
-	 if (ret < 0) {
-		  printk(KERN_ERR "reserve_bootmem for TZBSP EXEC BASE failed\n");
-	 }
+	unsigned long size;	
+#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
+	int ret;
 
-#endif /* onlyjazz.ub02 : end */
+	ret = reserve_bootmem(0x42E20000, 0x000E0000, BOOTMEM_EXCLUSIVE);
+	if (ret < 0) {
+		printk(KERN_ERR "reserve_bootmem for TZBSP EXEC BASE failed\n");
+	}
+#endif
 
 	if (hdmi_is_primary)
 		size = roundup((1920 * 1088 * 4 * 2), 4096);
@@ -5312,7 +4913,6 @@ static void __init msm8x60_allocate_memory_regions(void)
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
-
 }
 
 void __init msm8x60_set_display_params(char *prim_panel, char *ext_panel)
@@ -5393,8 +4993,6 @@ static struct attribute_group tma300_properties_attr_group = {
 };
 
 static struct kobject *properties_kobj;
-
-
 
 #define CYTTSP_TS_GPIO_IRQ	61
 static int cyttsp_platform_init(struct i2c_client *client)
@@ -5599,7 +5197,6 @@ static void cyttsp_set_params(void)
 		cyttsp_fluid_pdata.disp_maxy = 869;
 		cyttsp_fluid_pdata.correct_fw_ver = 5;
 	}
-
 }
 
 static struct i2c_board_info cyttsp_fluid_info[] __initdata = {
@@ -5623,113 +5220,103 @@ static struct i2c_board_info cyttsp_ffa_info[] __initdata = {
 };
 #endif
 
-
-/*-----------------------MXT224  TOUCH DRIVER by Xtopher-----------------------*/
 #if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
 #define TSP_IRQ_READY_DELAY 45
 
 static void mxt224_power_on(void)
 {
-	// int ret;
 	int rc;
 	struct regulator *L1;
 	struct regulator *L4;
-	// static struct regulator *tsp_pannel_pwr_reg;
 
 	printk("%s: enter\n", __func__);
-	{
-				L1 = regulator_get(NULL, "8901_l1");
-				if (IS_ERR(L1)) {
-					rc = PTR_ERR(L1);
-					pr_err("%s: L1 get failed (%d)\n",
-						   __func__, rc);
-					return;
-				}
 
-				rc = regulator_set_voltage(L1,3300000, 3300000);
-				if (rc) {
-					printk("%s: debug p1\n", __func__);
-					return;
-				}
+	L1 = regulator_get(NULL, "8901_l1");
+	if (IS_ERR(L1)) {
+		rc = PTR_ERR(L1);
+		pr_err("%s: L1 get failed (%d)\n",
+			   __func__, rc);
+		return;
+	}
+
+	rc = regulator_set_voltage(L1,3300000, 3300000);
+	if (rc) {
+		printk("%s: debug p1\n", __func__);
+		return;
+	}
 #if defined(CONFIG_EUR_MODEL_GT_I9210)
-				if (get_hw_rev()>=0x08) {
-					L4 = regulator_get(NULL, "8901_l4");
-					printk("mxt224_power_on : I9210 Rev02 8901_l4 \n");
-				}
-				else if (get_hw_rev()>=0x06) {
-					L4 = regulator_get(NULL, "8058_l4");
-					//printk("mxt224_power_on : I9210 Rev02 8058_l4 \n");
-				}
-				else {
-					L4 = regulator_get(NULL, "8058_l17");
-					//printk("mxt224_power_on : I9210 Rev01 8058_l17 \n");
-				}
+	if (get_hw_rev()>=0x08) {
+		L4 = regulator_get(NULL, "8901_l4");
+		printk("mxt224_power_on : I9210 Rev02 8901_l4 \n");
+	} else if (get_hw_rev()>=0x06) {
+		L4 = regulator_get(NULL, "8058_l4");
+	} else {
+		L4 = regulator_get(NULL, "8058_l17");
+	}
 #else
 #if defined (CONFIG_USA_MODEL_SGH_I727)  || defined(CONFIG_USA_MODEL_SGH_I577)
-				if (get_hw_rev()>=0x06)
+	if (get_hw_rev()>=0x06)
 #elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-				if (get_hw_rev()>=0x09)
+	if (get_hw_rev()>=0x09)
 #else
-				if (get_hw_rev()>=0x04)
+	if (get_hw_rev()>=0x04)
 #endif
-				{
-					L4 = regulator_get(NULL, "8901_l4");
-				} else {
-        				L4 = regulator_get(NULL, "8058_l17");
-				}
+	{
+		L4 = regulator_get(NULL, "8901_l4");
+	} else {
+		L4 = regulator_get(NULL, "8058_l17");
+	}
 #endif
-				if (IS_ERR(L4)) {
-					rc = PTR_ERR(L4);
-					pr_err("%s: L4 get failed (%d)\n",
-						   __func__, rc);
-					return;
-				}
+	if (IS_ERR(L4)) {
+		rc = PTR_ERR(L4);
+		pr_err("%s: L4 get failed (%d)\n",
+			   __func__, rc);
+		return;
+	}
 
 #if defined(CONFIG_EUR_MODEL_GT_I9210)
-				if (get_hw_rev()>=0x08) {
-					rc = regulator_set_voltage(L4, 1800000, 1800000);
-				}
-				else if (get_hw_rev()>=0x06) {
-					rc = regulator_set_voltage(L4, 2850000, 2850000);
-				}
-				else {
-					rc = regulator_set_voltage(L4, 1800000, 1800000);
-				}
+	if (get_hw_rev()>=0x08) {
+		rc = regulator_set_voltage(L4, 1800000, 1800000);
+	} else if (get_hw_rev()>=0x06) {
+		rc = regulator_set_voltage(L4, 2850000, 2850000);
+	} else {
+		rc = regulator_set_voltage(L4, 1800000, 1800000);
+	}
 #else
-				rc = regulator_set_voltage(L4, 1800000, 1800000);
+	rc = regulator_set_voltage(L4, 1800000, 1800000);
 #endif
-				if (rc) {
-					pr_err("%s: L4 set level failed (%d)\n",
-						   __func__, rc);
-					return;
+	if (rc) {
+		pr_err("%s: L4 set level failed (%d)\n",
+			   __func__, rc);
+		return;
 	}
 
-				if(regulator_is_enabled(L1)){
-					printk(KERN_ERR "[TSP POWER ON	L1 3.3 was already enabled\n");
-				} else {
-					rc = regulator_enable(L1);
-					printk(KERN_ERR "[TSP POWER ON	L1 3.3 enable\n");
-					if (rc) {
+	if(regulator_is_enabled(L1)){
+		printk(KERN_ERR "[TSP POWER ON	L1 3.3 was already enabled\n");
+	} else {
+		rc = regulator_enable(L1);
+		printk(KERN_ERR "[TSP POWER ON	L1 3.3 enable\n");
+		if (rc) {
                         pr_err("%s: l1 vreg enable failed (%d)\n", __func__, rc);
-						return;
-					}
+			return;
+		}
 	}
 
-				if(regulator_is_enabled(L4)){
-					printk(KERN_ERR "[TSP POWER ON   L4 1.8 was already enabled\n");
-				} else {
-					rc = regulator_enable(L4);
-						printk(KERN_ERR "[TSP POWER ON  L4 1.8 enable\n");
-					if (rc) {
-                        pr_err("%s: L4 vreg enable failed (%d)\n",  __func__, rc);
-						return;
-					}
-				}
-				regulator_put(L4);
-				regulator_put(L1);
-
-				printk("%s: exit\n", __func__);
+	if(regulator_is_enabled(L4)){
+		printk(KERN_ERR "[TSP POWER ON   L4 1.8 was already enabled\n");
+	} else {
+		rc = regulator_enable(L4);
+			printk(KERN_ERR "[TSP POWER ON  L4 1.8 enable\n");
+		if (rc) {
+		pr_err("%s: L4 vreg enable failed (%d)\n",  __func__, rc);
+			return;
+		}
 	}
+	regulator_put(L4);
+	regulator_put(L1);
+
+	printk("%s: exit\n", __func__);
+
 	msleep(TSP_IRQ_READY_DELAY);
 
 	rc = gpio_request(TOUCHSCREEN_IRQ, "tsp_irq");
@@ -5744,7 +5331,6 @@ static void mxt224_power_on(void)
 
 static void mxt224_power_off(void)
 {
-	// int ret;
 	int rc;
 	struct regulator *L1;
 	struct regulator *L4;
@@ -5770,93 +5356,91 @@ static void mxt224_power_off(void)
 	}
 	gpio_free(TOUCHSCREEN_IRQ);
 
-	{
 #if defined(CONFIG_EUR_MODEL_GT_I9210)
-		if (get_hw_rev()>=0x08) {
-			L4 = regulator_get(NULL, "8901_l4");
-			printk("mxt224_power_off : I9210 Rev02 8901_l4 \n");
-		}
-		else if (get_hw_rev()>=0x06) {
-			L4 = regulator_get(NULL, "8058_l4");
-			//printk("mxt224_power_off : I9210 Rev02 8058_l4 \n");
-		}
-		else {
-			L4 = regulator_get(NULL, "8058_l17");
-			//printk("mxt224_power_off : I9210 Rev02 8058_l17 \n");
-		}
+	if (get_hw_rev()>=0x08) {
+		L4 = regulator_get(NULL, "8901_l4");
+		printk("mxt224_power_off : I9210 Rev02 8901_l4 \n");
+	}
+	else if (get_hw_rev()>=0x06) {
+		L4 = regulator_get(NULL, "8058_l4");
+		//printk("mxt224_power_off : I9210 Rev02 8058_l4 \n");
+	}
+	else {
+		L4 = regulator_get(NULL, "8058_l17");
+		//printk("mxt224_power_off : I9210 Rev02 8058_l17 \n");
+	}
 #else
 #if defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I577)
-		if (get_hw_rev()>=0x06)
+	if (get_hw_rev()>=0x06)
 #elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-		if (get_hw_rev()>=0x09)
+	if (get_hw_rev()>=0x09)
 #else
-		if (get_hw_rev()>=0x04)
+	if (get_hw_rev()>=0x04)
 #endif
-		{
-			L4 = regulator_get(NULL, "8901_l4");
-		} else {
-			L4 = regulator_get(NULL, "8058_l17");
-		}
+	{
+		L4 = regulator_get(NULL, "8901_l4");
+	} else {
+		L4 = regulator_get(NULL, "8058_l17");
+	}
 #endif
-		if (IS_ERR(L4)) {
-			rc = PTR_ERR(L4);
-			pr_err("%s: L4 get failed (%d)\n",
-				   __func__, rc);
-			return;
-		}
+	if (IS_ERR(L4)) {
+		rc = PTR_ERR(L4);
+		pr_err("%s: L4 get failed (%d)\n",
+			   __func__, rc);
+		return;
+	}
 
 #if defined(CONFIG_EUR_MODEL_GT_I9210)
-		if (get_hw_rev()>=0x08) {
-			rc = regulator_set_voltage(L4, 1800000, 1800000);
-		}
-		else if (get_hw_rev()>=0x06) {
-			rc = regulator_set_voltage(L4, 2850000, 2850000);
-		}
-		else {
-			rc = regulator_set_voltage(L4, 1800000, 1800000);
-		}
-#else
+	if (get_hw_rev()>=0x08) {
 		rc = regulator_set_voltage(L4, 1800000, 1800000);
+	}
+	else if (get_hw_rev()>=0x06) {
+		rc = regulator_set_voltage(L4, 2850000, 2850000);
+	}
+	else {
+		rc = regulator_set_voltage(L4, 1800000, 1800000);
+	}
+#else
+	rc = regulator_set_voltage(L4, 1800000, 1800000);
 #endif
+	if (rc) {
+		pr_err("%s: L4 set level failed (%d)\n",
+			   __func__, rc);
+		return;
+	}
+	if(regulator_is_enabled(L4)){
+		rc = regulator_disable(L4);
+		printk(KERN_ERR "[TSP POWER OFF	 L4 1.8 disable\n");
 		if (rc) {
-			pr_err("%s: L4 set level failed (%d)\n",
-				   __func__, rc);
-			return;
-	}
-		if(regulator_is_enabled(L4)){
-			rc = regulator_disable(L4);
-			printk(KERN_ERR "[TSP POWER OFF	 L4 1.8 disable\n");
-			if (rc) {
-				pr_err("%s: L4 vreg enable failed (%d)\n",
-					   __func__, rc);
-				return;
-			}
-	}
-		regulator_put(L4);
-
-		L1 = regulator_get(NULL, "8901_l1");
-		if (IS_ERR(L1)) {
-			rc = PTR_ERR(L1);
-			pr_err("%s: L1 get failed (%d)\n",
+			pr_err("%s: L4 vreg enable failed (%d)\n",
 				   __func__, rc);
 			return;
 		}
-		rc = regulator_set_voltage(L1,3300000, 3300000);
-		if (rc){
-			printk("%s: debug p1\n", __func__);
+	}
+	regulator_put(L4);
+
+	L1 = regulator_get(NULL, "8901_l1");
+	if (IS_ERR(L1)) {
+		rc = PTR_ERR(L1);
+		pr_err("%s: L1 get failed (%d)\n",
+			   __func__, rc);
+		return;
+	}
+	rc = regulator_set_voltage(L1,3300000, 3300000);
+	if (rc){
+		printk("%s: debug p1\n", __func__);
+		return;
+	}
+	if(regulator_is_enabled(L1)){
+		rc = regulator_disable(L1);
+		printk(KERN_ERR "[TSP POWER OFF	 L1 3.3 disable\n");
+		if (rc) {
+			pr_err("%s: L1 vreg enable failed (%d)\n",
+				   __func__, rc);
 			return;
 		}
-		if(regulator_is_enabled(L1)){
-			rc = regulator_disable(L1);
-			printk(KERN_ERR "[TSP POWER OFF	 L1 3.3 disable\n");
-			if (rc) {
-				pr_err("%s: L1 vreg enable failed (%d)\n",
-					   __func__, rc);
-				return;
-			}
 	}
 
-	}
 	printk("mxt224_power_off is finished\n");
 }
 
@@ -5866,15 +5450,15 @@ static void mxt224_power_off(void)
 	Configuration for MXT224
 */
 static u8 t7_config[] = {GEN_POWERCONFIG_T7,
-				48,		/* IDLEACQINT */
-				255,	/* ACTVACQINT */
-				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,	/* IDLEACQINT */
+	255,	/* ACTVACQINT */
+	25 	/* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config[] = {GEN_ACQUISITIONCONFIG_T8, 10, 0, 5, 1, 0, 0, 9, 30};/*byte 3: 0*/
 static u8 t9_config[] = {TOUCH_MULTITOUCHSCREEN_T9,
-				131, 0, 0, 19, 11, 0, 32, MXT224_THRESHOLD, 2, 1, 0,
-				15,		/* MOVHYSTI */
-				1, 11, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-				223, 1, 0, 0, 0, 0, 143, 55, 143, 90, 18};
+	131, 0, 0, 19, 11, 0, 32, MXT224_THRESHOLD, 2, 1, 0,
+	15, /* MOVHYSTI */
+	1, 11, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+	223, 1, 0, 0, 0, 0, 143, 55, 143, 90, 18};
 static u8 t15_config[] = {TOUCH_KEYARRAY_T15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config[] = {SPT_COMCONFIG_T18, 0, 1};
 static u8 t20_config[] = {PROCI_GRIPFACESUPPRESSION_T20, 7, 0, 0, 0, 0, 0, 0, 30, 20, 4, 15, 10};
@@ -5901,21 +5485,20 @@ static const u8 *mxt224_config[] = {
 */
 #if defined (CONFIG_USA_MODEL_SGH_I577) || defined(CONFIG_CAN_MODEL_SGH_I577R)
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
-				48,		/* IDLEACQINT */
-				255,	/* ACTVACQINT */
-				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,	/* IDLEACQINT */
+	255,	/* ACTVACQINT */
+	25 	/* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
-				22, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+	22, 0, 5, 1, 0, 0, 5, 35, 40, 55};
 
 /* NEXTTCHDI added */
 static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
-				139, 0, 0, 19, 11, 0, 32/*16*/, 50/*45*/, 2, 1,
-				10,
-				15,		/* MOVHYSTI */
-				1, 81/*80*/, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-				18, 15, 50, 50, 0/*1*/};
-
+	139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
+	10,
+	15, /* MOVHYSTI */
+	1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+	18, 15, 50, 50, 0/*1*/};
 
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
@@ -5923,34 +5506,30 @@ static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
 static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
-//static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 35,/* to improve typing speed 48->40 */ 0, 0, 1, 0, 0};
-static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 26/*56*/,0, 0, 1, 0, 0};//110927 gumi noise
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 26, 0, 0, 1, 0, 0};
 static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//static u8 t38_config_e[] = {SPT_USERDATA_T38, 0, 1, 12, 19, 38, 0, 0, 0};//110927 gumi noise
-
-static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};  // from yang
-
+static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
 
 static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
-   				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
-				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-				10, 0, 15/*20120228 9*/, 5, 0, 20/*20120228 15*/, 0, 20, 0, 0,//110927 gumi noise
-				0, 0, 0, 0, 0, 32, 2,/*blen=0,threshold=50*/
-				15,		/* MOVHYSTI */
-				1, 47,  // MoveFilter 46->47, for chargeing
-				10, 5, 40, 235,/*20120209 240,*/ 235,/*20120209 245,*/ 10, 10,
-				160,/*20120209 148,*/ 60,/*20120209 50,*/ 143,
-				80, 18, 15, 0};
+	3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+	10, 0, 15, 5, 0, 20, 0, 20, 0, 0,
+	0, 0, 0, 0, 0, 32, 2,
+	15,
+	1, 47,
+	10, 5, 40, 235, 235, 10, 10,
+	160, 60, 143,
+	80, 18, 15, 0};
 
 static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
-    				3, 132, 98, 20, 0, 0, 0, 0, 1, 2,
-   				0, 0, 0, 6, 6, 0, 0, 64/* 20120209 48*//*64*/, 4, 64/* 20120209 48*//*64*/,
-				10, 0, 15/*20*/, 5, 0, 30/*38*/, 0, 1,/*20120209 5,*/ 0, 0,  /*byte 27 original value 20*/
-				0, 0, 0, 0, 32, 50, 2,
-				15,
-				1, 50,
-				MXT224_MAX_MT_FINGERS, 5, 40, 10, 10, 10, 10, 143, 40, 143,
-				80, 18, 15, 0};
+	3, 132, 98, 20, 0, 0, 0, 0, 1, 2,
+	0, 0, 0, 6, 6, 0, 0, 64/* 20120209 48*//*64*/, 4, 64/* 20120209 48*//*64*/,
+	10, 0, 15/*20*/, 5, 0, 30/*38*/, 0, 1,/*20120209 5,*/ 0, 0,  /*byte 27 original value 20*/
+	0, 0, 0, 0, 32, 50, 2,
+	15,
+	1, 50,
+	MXT224_MAX_MT_FINGERS, 5, 40, 10, 10, 10, 10, 143, 40, 143,
+	80, 18, 15, 0};
 
 static u8 end_config_e[] = {RESERVED_T255};
 
@@ -5971,20 +5550,20 @@ static const u8 *mxt224e_config[] = {
 	end_config_e,
 };
 #else
-#if defined (CONFIG_USA_MODEL_SGH_I727)//20120418
+#if defined (CONFIG_USA_MODEL_SGH_I727)
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
-				48,		/* IDLEACQINT */
-				255,	/* ACTVACQINT */
-				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,	/* IDLEACQINT */
+	255,	/* ACTVACQINT */
+	25 	/* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
-				27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+	27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
 
 /* NEXTTCHDI added */
 static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
-				139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
-				10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-				18, 15, 50, 50, 0};
+	139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
+	10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+	18, 15, 50, 50, 0};
 
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
@@ -5999,20 +5578,20 @@ static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
 
 
 static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
-   				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
-				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
-				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
-				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-				80, 18, 15, 0};
+	3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+	10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+	0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
+	MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+	80, 18, 15, 0};
 
 static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
-    				3, 132, 0x72, 20, 0, 0, 0, 0, 1, 2,
-   				0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
-				10, 0, 9, 5, 0, 15, 0, 1, 0, 0,
-				0, 0, 0, 0, 0, 28, 2, 15,	1, 81,
-				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-				80, 18, 15, 0};
+	3, 132, 0x72, 20, 0, 0, 0, 0, 1, 2,
+	0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
+	10, 0, 9, 5, 0, 15, 0, 1, 0, 0,
+	0, 0, 0, 0, 0, 28, 2, 15,	1, 81,
+	MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+	80, 18, 15, 0};
 
 static u8 end_config_e[] = {RESERVED_T255};
 
@@ -6029,25 +5608,23 @@ static const u8 *mxt224e_config[] = {
 	t46_config_e,
 	t47_config_e,
 	t48_config_e,
-	t38_config_e,//110927 gumi noise
+	t38_config_e,
 	end_config_e,
 };
-
-#elif defined(CONFIG_USA_MODEL_SGH_T989) //20120531
+#elif defined(CONFIG_USA_MODEL_SGH_T989)
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
-				48,		/* IDLEACQINT */
-				255,	/* ACTVACQINT */
-				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,	/* IDLEACQINT */
+	255,	/* ACTVACQINT */
+	25 	/* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
-				27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+	27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
 
 /* NEXTTCHDI added */
 static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
-				139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
-				10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-				18, 15, 50, 50, 0};
-	
+	139, 0, 0, 19, 11, 0, 32, 50, 2, 1,
+	10, 15, 1, 81, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+	18, 15, 50, 50, 0};	
 
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
@@ -6055,31 +5632,25 @@ static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
 static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
-/*static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 26, 0, 0, 1, 0, 0};*/
-static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 24, 0, 0, 1, 0, 0};//20120530
-
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 24, 0, 0, 1, 0, 0};
 static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
 
-
 static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
-   				3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
-				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
-				0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
-				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-				80, 18, 15, 0};
+	3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+	10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+	0, 0, 0, 0, 0, 40, 2,	15, 1, 47,  
+	MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+	80, 18, 15, 0};
 
 static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
-    			3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2, //20120530
-   				0, 0, 0, 6, 6, 0, 0, 48, 4, 48, 
-/*				10, 0, 9, 5, 0, 15, 0, 1, 0, 0,*/
-				10, 0, 100, 5, 0, 100, 0, 5, 0, 0, //20120530
-
-				0, 0, 0, 0, 0, 30, 2, 15,	1, 81,
-				MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-				80, 18, 15, 0};
+	3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2,
+	0, 0, 0, 6, 6, 0, 0, 48, 4, 48, 
+	10, 0, 100, 5, 0, 100, 0, 5, 0, 0,
+	0, 0, 0, 0, 0, 30, 2, 15,	1, 81,
+	MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+	80, 18, 15, 0};
 
 static u8 end_config_e[] = {RESERVED_T255};
 
@@ -6096,17 +5667,16 @@ static const u8 *mxt224e_config[] = {
 	t46_config_e,
 	t47_config_e,
 	t48_config_e,
-	t38_config_e,//110927 gumi noise
+	t38_config_e,
 	end_config_e,
 };
-
-#elif defined(CONFIG_USA_MODEL_SGH_T769) //20120704
+#elif defined(CONFIG_USA_MODEL_SGH_T769)
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
-                48,     /* IDLEACQINT */
-                255,    /* ACTVACQINT */
-                25      /* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,     /* IDLEACQINT */
+	255,    /* ACTVACQINT */
+	25      /* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
-                22, 0, 5, 1, 0, 0, 4, 35, 40, 55};
+	22, 0, 5, 1, 0, 0, 4, 35, 40, 55};
 
 /* NEXTTCHDI added */
 static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
@@ -6115,71 +5685,66 @@ static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
                 223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
                 18, 15, 50, 50, 0};
 
-
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
 static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
 static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
-static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 20, 20, 0, 0, 1, 0, 0};//20120704
-
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 20, 20, 0, 0, 1, 0, 0};
 static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
 static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
 
-
 static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
-                3, 132, 0x72, 0, 0, 0, 0, 0, 10, 15,
-                0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-                10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
-                0, 0, 0, 0, 0, 40, 2,   15, 1, 47,
-                MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-                80, 18, 15, 0};
+        3, 132, 0x72, 0, 0, 0, 0, 0, 10, 15,
+        0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+        10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+        0, 0, 0, 0, 0, 40, 2,   15, 1, 47,
+        MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+        80, 18, 15, 0};
 
 static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
-                3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2,
-                0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
-                10, 0, 100, 5, 0, 100, 0, 5, 0, 0,
-                0, 0, 0, 0, 0, 30, 2, 15,   1, 81,
-                MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
-                80, 18, 15, 0};
+        3, 132, 0x72, 24, 0, 0, 0, 0, 1, 2,
+        0, 0, 0, 6, 6, 0, 0, 48, 4, 48,
+        10, 0, 100, 5, 0, 100, 0, 5, 0, 0,
+        0, 0, 0, 0, 0, 30, 2, 15,   1, 81,
+        MXT224_MAX_MT_FINGERS, 5, 40, 235, 235, 10, 10, 160, 60, 143,
+        80, 18, 15, 0};
 
 static u8 end_config_e[] = {RESERVED_T255};
 
 static const u8 *mxt224e_config[] = {
-    t7_config_e,
-    t8_config_e,
-    t9_config_e,
-    t15_config_e,
-    t18_config_e,
-    t23_config_e,
-    t25_config_e,
-    t40_config_e,
-    t42_config_e,
-    t46_config_e,
-    t47_config_e,
-    t48_config_e,
-    t38_config_e,//110927 gumi noise
-    end_config_e,
+	t7_config_e,
+	t8_config_e,
+	t9_config_e,
+	t15_config_e,
+	t18_config_e,
+	t23_config_e,
+	t25_config_e,
+	t40_config_e,
+	t42_config_e,
+	t46_config_e,
+	t47_config_e,
+	t48_config_e,
+	t38_config_e,
+	end_config_e,
 };
-
 #else
 static u8 t7_config_e[] = {GEN_POWERCONFIG_T7,
-				48,		/* IDLEACQINT */
-				255,	/* ACTVACQINT */
-				25 		/* ACTV2IDLETO: 25 * 200ms = 5s */};
+	48,	/* IDLEACQINT */
+	255,	/* ACTVACQINT */
+	25 	/* ACTV2IDLETO: 25 * 200ms = 5s */};
 static u8 t8_config_e[] = {GEN_ACQUISITIONCONFIG_T8,
-				27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
+	27, 0, 5, 1, 0, 0, 5, 35, 40, 55};
 
 /* NEXTTCHDI added */
 static u8 t9_config_e[] = {TOUCH_MULTITOUCHSCREEN_T9,
-				139, 0, 0, 19, 11, 0, 32, MXT224E_THRESHOLD, 2, 1,
-				10,
-				15,		/* MOVHYSTI */
-				1, 46, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
-				223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
-				18, 15, 50, 50, 1};
+	139, 0, 0, 19, 11, 0, 32, MXT224E_THRESHOLD, 2, 1,
+	10,
+	15,	/* MOVHYSTI */
+	1, 46, MXT224_MAX_MT_FINGERS, 5, 40, 10, 31, 3,
+	223, 1, 10, 10, 10, 10, 143, 40, 143, 80,
+	18, 15, 50, 50, 1};
 
 static u8 t15_config_e[] = {TOUCH_KEYARRAY_T15,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t18_config_e[] = {SPT_COMCONFIG_T18, 0, 0};
@@ -6187,33 +5752,29 @@ static u8 t23_config_e[] = {TOUCH_PROXIMITY_T23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 static u8 t25_config_e[] = {SPT_SELFTEST_T25, 0, 0, 0, 0, 0, 0, 0, 0};
 static u8 t40_config_e[] = {PROCI_GRIPSUPPRESSION_T40, 0, 0, 0, 0, 0};
 static u8 t42_config_e[] = {PROCI_TOUCHSUPPRESSION_T42, 0, 0, 0, 0, 0, 0, 0, 0};
-//static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 35,/* to improve typing speed 48->40 */ 0, 0, 1, 0, 0};
-static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 56,0, 0, 1, 0, 0};//110927 gumi noise
+static u8 t46_config_e[] = {SPT_CTECONFIG_T46, 0, 3, 24, 56,0, 0, 1, 0, 0};
 static u8 t47_config_e[] = {PROCI_STYLUS_T47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-//static u8 t38_config_e[] = {SPT_USERDATA_T38, 0, 1, 12, 19, 38, 0, 0, 0};//110927 gumi noise
-
-static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};  // from yang
-
+static u8 t38_config_e[] = {SPT_USERDATA_T38, 0,1,15,19,45,40,0,0};
 
 static u8 t48_config_e_ta[] = {PROCG_NOISESUPPRESSION_T48,
-    3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
-				0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-				10, 0, 9, 5, 0, 15, 0, 20, 0, 0,//110927 gumi noise
-				0, 0, 0, 0, 0, 40, 2,/*blen=0,threshold=50*/
-				15,		/* MOVHYSTI */
-				1, 47,  // MoveFilter 46->47, for chargeing
-				10, 5, 40, 240, 245, 10, 10, 148, 50, 143,
-				80, 18, 15, 0};
+	3, 132, 0x52, 0, 0, 0, 0, 0, 10, 15,
+	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+	10, 0, 9, 5, 0, 15, 0, 20, 0, 0,
+	0, 0, 0, 0, 0, 40, 2,
+	15,
+	1, 47,
+	10, 5, 40, 240, 245, 10, 10, 148, 50, 143,
+	80, 18, 15, 0};
 
 static u8 t48_config_e[] = {PROCG_NOISESUPPRESSION_T48,
-    3, 132, 0x40, 0, 0, 0, 0, 0, 10, 15,
-    0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
-				10, 0, 20, 5, 0, 38, 0, 5, 0, 0,  /*byte 27 original value 20*/
-				0, 0, 0, 0, 32, MXT224E_THRESHOLD, 2,
-				15,
-				1, 46,
-				MXT224_MAX_MT_FINGERS, 5, 40, 10, 10, 10, 10, 143, 40, 143,
-				80, 18, 15, 0};
+	3, 132, 0x40, 0, 0, 0, 0, 0, 10, 15,
+	0, 0, 0, 6, 6, 0, 0, 64, 4, 64,
+	10, 0, 20, 5, 0, 38, 0, 5, 0, 0,
+	0, 0, 0, 0, 32, MXT224E_THRESHOLD, 2,
+	15,
+	1, 46,
+	MXT224_MAX_MT_FINGERS, 5, 40, 10, 10, 10, 10, 143, 40, 143,
+	80, 18, 15, 0};
 
 static u8 end_config_e[] = {RESERVED_T255};
 
@@ -6241,8 +5802,7 @@ void mxt224_orient_branch(int orient_swap)
 	if (orient_swap == MXT224_ORIENT_SWAP_NN ){
 		t9_config[MXT_OREINT]= MXT224_ORIENT_SWAP_NN;
 		t9_config_e[MXT_OREINT]= MXT224_ORIENT_SWAP_NN;
-	}else if(orient_swap == MXT224_ORIENT_SWAP_XY ){
-		// default
+	} else if(orient_swap == MXT224_ORIENT_SWAP_XY ) {
 		t9_config[MXT_OREINT]= MXT224_ORIENT_SWAP_XY;
 		t9_config_e[MXT_OREINT]= MXT224_ORIENT_SWAP_XY;
 	}
@@ -6258,11 +5818,9 @@ static void mxt224_read_ta_status(void *ta_status)
 	*(bool *)ta_status = is_cable_attached;
 }
 
-
 void tsp_set_unknown_charging_cable(bool set)
 {
-	if (charging_cbs.tsp_set_charging_cable)
-	{
+	if (charging_cbs.tsp_set_charging_cable) {
 		printk("tsp_set_unknown_charging_cable %d\n", set);
 		if (set)
 			charging_cbs.tsp_set_charging_cable(1);
@@ -6285,13 +5843,11 @@ static struct mxt224_platform_data mxt224_data = {
 	.max_x = 480,
 #endif
 	.min_y = 0,
-
 #if defined(CONFIG_TOUCHSCREEN_MXT768E)
 	.max_y = 1023,
 #else
 	.max_y = 800,
 #endif
-
 	.min_z = 0,
 	.max_z = 255,
 	.min_w = 0,
@@ -6303,212 +5859,11 @@ static struct mxt224_platform_data mxt224_data = {
 	.orient_barnch = mxt224_orient_branch,
 };
 
-#if 0
-static struct qt602240_platform_data qt602240_pdata = {
-	.x_line                 = 19,
-	.y_line                 = 11,
-	.x_size                 = 480,
-	.y_size                 = 800,
-	.blen                   = 16,
-	//.threshold            = 0x28,
-	//.threshold            =0x20,
-	.threshold              =0x1C,
-	.voltage                = 2800000,              /* 2.8V */
-	.orient                 = QT602240_DIAGONAL,
-};
-#endif
-
 static struct i2c_board_info qt602240_board_info[] = {
 	{
 		I2C_BOARD_INFO("qt602240_ts", 0x4a),
 		.irq           =  MSM_GPIO_TO_INT(TOUCHSCREEN_IRQ),
 		.platform_data = &mxt224_data
-	}
-};
-#endif
-/*-----------------------MXT224  TOUCH DRIVER by Xtopher-----------------------*/
-
-
-#if 0
-static struct regulator *vreg_tmg200;
-
-#define TS_PEN_IRQ_GPIO 61
-static int tmg200_power(int vreg_on)
-{
-	int rc = -EINVAL;
-
-	if (!vreg_tmg200) {
-		printk(KERN_ERR "%s: regulator 8058_s3 not found (%d)\n",
-			__func__, rc);
-		return rc;
-	}
-
-	rc = vreg_on ? regulator_enable(vreg_tmg200) :
-		  regulator_disable(vreg_tmg200);
-	if (rc < 0)
-		printk(KERN_ERR "%s: vreg 8058_s3 %s failed (%d)\n",
-				__func__, vreg_on ? "enable" : "disable", rc);
-
-	/* wait for vregs to stabilize */
-	msleep(20);
-
-	return rc;
-}
-
-static int tmg200_dev_setup(bool enable)
-{
-	int rc;
-
-	if (enable) {
-		vreg_tmg200 = regulator_get(NULL, "8058_s3");
-		if (IS_ERR(vreg_tmg200)) {
-			pr_err("%s: regulator get of 8058_s3 failed (%ld)\n",
-				__func__, PTR_ERR(vreg_tmg200));
-			rc = PTR_ERR(vreg_tmg200);
-			return rc;
-		}
-
-		rc = regulator_set_voltage(vreg_tmg200, 1800000, 1800000);
-		if (rc) {
-			pr_err("%s: regulator_set_voltage() = %d\n",
-				__func__, rc);
-			goto reg_put;
-		}
-	} else {
-		/* put voltage sources */
-		regulator_put(vreg_tmg200);
-	}
-	return 0;
-reg_put:
-	regulator_put(vreg_tmg200);
-	return rc;
-}
-
-static struct cy8c_ts_platform_data cy8ctmg200_pdata = {
-	.ts_name = "msm_tmg200_ts",
-	.dis_min_x = 0,
-	.dis_max_x = 1023,
-	.dis_min_y = 0,
-	.dis_max_y = 599,
-	.min_tid = 0,
-	.max_tid = 255,
-	.min_touch = 0,
-	.max_touch = 255,
-	.min_width = 0,
-	.max_width = 255,
-	.power_on = tmg200_power,
-	.dev_setup = tmg200_dev_setup,
-	.nfingers = 2,
-	.irq_gpio = TS_PEN_IRQ_GPIO,
-	.resout_gpio = GPIO_CAP_TS_RESOUT_N,
-};
-
-static struct i2c_board_info cy8ctmg200_board_info[] = {
-	{
-		I2C_BOARD_INFO("cy8ctmg200", 0x2),
-		.platform_data = &cy8ctmg200_pdata,
-	}
-};
-
-static struct regulator *vreg_tma340;
-
-static int tma340_power(int vreg_on)
-{
-	int rc = -EINVAL;
-
-	if (!vreg_tma340) {
-		pr_err("%s: regulator 8901_l2 not found (%d)\n",
-			__func__, rc);
-		return rc;
-	}
-
-	rc = vreg_on ? regulator_enable(vreg_tma340) :
-			regulator_disable(vreg_tma340);
-	if (rc < 0)
-		pr_err("%s: vreg 8901_l2 %s failed (%d)\n",
-				__func__, vreg_on ? "enable" : "disable", rc);
-
-	/* wait for vregs to stabilize */
-	msleep(100);
-
-	return rc;
-}
-
-static struct kobject *tma340_prop_kobj;
-
-static int tma340_dragon_dev_setup(bool enable)
-{
-	int rc;
-
-	if (enable) {
-		vreg_tma340 = regulator_get(NULL, "8901_l2");
-		if (IS_ERR(vreg_tma340)) {
-			pr_err("%s: regulator get of 8901_l2 failed (%ld)\n",
-				__func__, PTR_ERR(vreg_tma340));
-			rc = PTR_ERR(vreg_tma340);
-			return rc;
-		}
-
-		rc = regulator_set_voltage(vreg_tma340, 3300000, 3300000);
-		if (rc) {
-			pr_err("%s: regulator_set_voltage() = %d\n",
-				__func__, rc);
-			goto reg_put;
-		}
-		tma300_vkeys_attr.attr.name = "virtualkeys.cy8ctma340";
-		tma340_prop_kobj = kobject_create_and_add("board_properties",
-					NULL);
-		if (tma340_prop_kobj) {
-			rc = sysfs_create_group(tma340_prop_kobj,
-				&tma300_properties_attr_group);
-			if (rc) {
-				kobject_put(tma340_prop_kobj);
-				pr_err("%s: failed to create board_properties\n",
-					__func__);
-				goto reg_put;
-			}
-		}
-
-	} else {
-		/* put voltage sources */
-		regulator_put(vreg_tma340);
-		/* destroy virtual keys */
-		if (tma340_prop_kobj) {
-			sysfs_remove_group(tma340_prop_kobj,
-				&tma300_properties_attr_group);
-			kobject_put(tma340_prop_kobj);
-		}
-	}
-	return 0;
-reg_put:
-	regulator_put(vreg_tma340);
-	return rc;
-}
-
-
-static struct cy8c_ts_platform_data cy8ctma340_dragon_pdata = {
-	.ts_name = "cy8ctma340",
-	.dis_min_x = 0,
-	.dis_max_x = 479,
-	.dis_min_y = 0,
-	.dis_max_y = 799,
-	.min_tid = 0,
-	.max_tid = 255,
-	.min_touch = 0,
-	.max_touch = 255,
-	.min_width = 0,
-	.max_width = 255,
-	.power_on = tma340_power,
-	.dev_setup = tma340_dragon_dev_setup,
-	.nfingers = 2,
-	.irq_gpio = TS_PEN_IRQ_GPIO,
-	.resout_gpio = -1,
-};
-
-static struct i2c_board_info cy8ctma340_dragon_board_info[] = {
-	{
-		I2C_BOARD_INFO("cy8ctma340", 0x24),
-		.platform_data = &cy8ctma340_dragon_pdata,
 	}
 };
 #endif
@@ -6575,7 +5930,7 @@ static struct sec_jack_buttons_zone jack_buttons_zones[] = {
 int get_sec_det_jack_state(void)
 {
 #if defined (CONFIG_KOR_MODEL_SHV_E110S)
-	if(get_hw_rev()==0x05) //only for celox_REV05
+	if(get_hw_rev()==0x05)
 		return(gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET)));
 	else		
 #endif
@@ -6586,8 +5941,6 @@ EXPORT_SYMBOL(get_sec_det_jack_state);
 
 static int get_sec_send_key_state(void)
 {
-	// int state;
-
 	struct pm_gpio ear_micbiase = {
 		.direction      = PM_GPIO_DIR_OUT,
 		.pull           = PM_GPIO_PULL_NO,
@@ -6599,41 +5952,24 @@ static int get_sec_send_key_state(void)
 		.output_value   = 0,
 	};	
 
-	if(get_sec_det_jack_state())
-	{
-//		pm8058_gpio_config(PMIC_GPIO_EAR_MICBIAS_EN, &ear_micbiase);
+	if(get_sec_det_jack_state()) {
 		pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN), &ear_micbiase);
-
 		gpio_set_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN),1);	
 	}
 
 #if defined(CONFIG_KOR_MODEL_SHV_E110S)
-	if(get_hw_rev()==0x05) //only for celox_REV05
+	if(get_hw_rev()==0x05)
 	{
 		return(gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SHORT_SENDEND)));
 	}else		
 #endif
 		return(gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SHORT_SENDEND))) ^ 1;
-
-/*
-#if defined (CONFIG_KOR_MODEL_SHV_E110S)
-	if(get_hw_rev()==0x05) //only for celox_REV05
-		state = (gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SHORT_SENDEND)));
-	else
-#endif
-	state = (gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SHORT_SENDEND))) ^ 1;
-	pr_info("sec_jack: send key state %d\n", state);
-	return state;*/
 }
 
 static void set_sec_micbias_state(bool state)
 {
-	/* split MICBIAS and EAR_MICBIAS from Rev05 */
-    //if(get_hw_rev()==0x1)
-	{
-		pr_info("sec_jack: ear micbias %s\n", state?"on":"off");
-		gpio_set_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN), state);	
-	}
+	pr_info("sec_jack: ear micbias %s\n", state?"on":"off");
+	gpio_set_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_MICBIAS_EN), state);
 }
 
 static int sec_jack_read_adc(int channel, int *adc_data)
@@ -6657,7 +5993,7 @@ static int sec_jack_read_adc(int channel, int *adc_data)
 						__func__, channel, ret);
 		goto out;
 	}
-//	wait_for_completion(&conv_complete_evt);
+
 	ret = wait_for_completion_timeout(&conv_complete_evt, 10*HZ);
 	if (!ret) {
 		pr_err("%s: wait interrupted channel %d ret=%d\n",
@@ -6685,7 +6021,7 @@ static int sec_jack_read_adc(int channel, int *adc_data)
 	return adc_chan_result.physical;
 out:
 	pr_err("%s: Failure for %d\n", __func__, channel);
-	return 0;//to prevent infinite loop in determine_jack_type()		-EINVAL;
+	return 0;
 }
 
 static int sec_jack_get_adc_value(void)
@@ -6693,7 +6029,6 @@ static int sec_jack_get_adc_value(void)
 	int temp_adc = 0;
 	int adc_data = 0;
 
-	//return(gpio_get_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_SHORT_SENDEND))) ^ 1;
 	temp_adc = sec_jack_read_adc(CHANNEL_ADC_HDSET, &adc_data);
 	
 	return temp_adc;
@@ -6701,14 +6036,6 @@ static int sec_jack_get_adc_value(void)
 
 void sec_jack_gpio_init(void)
 {
-	/* TODO : EAR_MICBIAS_EN initialization */
-	/* if (gpio_is_valid(GPIO_MICBIAS_EN1)) {
-		 * if (gpio_request(GPIO_MICBIAS_EN1, "EAR_MICBIAS_EN"))
-			 * pr_err("[JACK] Failed to GPIO_EAR_MICBIAS_EN!\n");
-		 * gpio_direction_output(GPIO_MICBIAS_EN1, 0);
-	 * }
-	 * s3c_gpio_slp_cfgpin(GPIO_MICBIAS_EN1, S3C_GPIO_SLP_PREV); */
-
 }
 
 static struct sec_jack_platform_data sec_jack_data = {
@@ -6769,6 +6096,7 @@ static struct smb328a_platform_data smb328a_pdata = {
 	.chg_intr_trigger = smb328a_intr_trigger,
 };
 #endif
+
 #ifdef CONFIG_CHARGER_SMB136
 void smb136_hw_init(void)
 {
@@ -6792,6 +6120,7 @@ static int smb136_intr_trigger(int status)
 		value.intval = POWER_SUPPLY_STATUS_CHARGING;
 	else
 		value.intval = POWER_SUPPLY_STATUS_DISCHARGING;
+
 	return psy->set_property(psy, POWER_SUPPLY_PROP_STATUS, &value);
 }
 
@@ -6806,7 +6135,6 @@ void max17040_hw_init(void)
 {
 	gpio_tlmm_config(GPIO_CFG(GPIO_FG_SMB_I2C_SCL,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),1);
 	gpio_tlmm_config(GPIO_CFG(GPIO_FG_SMB_I2C_SDA,  0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),1);
-	//gpio_tlmm_config(GPIO_CFG(61,  0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
 	gpio_set_value(GPIO_FG_SMB_I2C_SCL,1);
 	gpio_set_value(GPIO_FG_SMB_I2C_SDA,1);
 }
@@ -6908,6 +6236,7 @@ int get_mhl_int_irq(void)
 	return PM8058_GPIO_IRQ(PM8058_IRQ_BASE, PMIC_GPIO_MHL_INT_9);
 #endif
 }
+
 struct sii9234_platform_data sii9234_pdata = {
 	.get_irq = get_mhl_int_irq,
 #ifdef CONFIG_USA_MODEL_SGH_I757
@@ -6916,6 +6245,7 @@ struct sii9234_platform_data sii9234_pdata = {
 		.swing_level = 0xEB,
 #endif
 };
+
 static struct i2c_board_info mhl_i2c_borad_info[] = {
 	{
 		I2C_BOARD_INFO("SII9234", 0x72>>1),
@@ -6932,20 +6262,14 @@ static struct i2c_board_info mhl_i2c_borad_info[] = {
 	},
 };
 #elif defined(CONFIG_VIDEO_MHL_V2)
-/*static void msm8x60_mhl_gpio_init(void)
-{
-	return;//gpio init done
-}*/
-
 static void cfg_mhl_sel(bool onoff)
 {
 	gpio_set_value_cansleep(GPIO_MHL_SEL, onoff);
 }
 
-
 static void mhl_gpio_config(void)
 {
-	return;/*gpio config done*/
+	return;
 }
 
 /*
@@ -7011,12 +6335,12 @@ int get_mhl_int_irq(void)
 #endif
 }
 
-#define TEST_L18		//jgk.20120620
-static struct regulator *l25;		/*VSIL_1.2A & VSIL_1.2C Connected to PM8058*/
-static struct regulator *l2;		/*VCC_3.3V_MHL Connected to PM8901*/
-static struct regulator *mvs0;	/*VCC_1.8V_MHL Connected to PM8901*/
+#define TEST_L18
+static struct regulator *l25;	/* VSIL_1.2A & VSIL_1.2C Connected to PM8058 */
+static struct regulator *l2;	/* VCC_3.3V_MHL Connected to PM8901 */
+static struct regulator *mvs0;	/* VCC_1.8V_MHL Connected to PM8901 */
 #ifdef TEST_L18
-static struct regulator *l18_xoadc; 	// L18 is power source of xoadc in PM8058
+static struct regulator *l18_xoadc; /* L18 is power source of xoadc in PM8058 */
 #endif
 
 static void sii9234_hw_onoff(bool onoff)
@@ -7024,7 +6348,6 @@ static void sii9234_hw_onoff(bool onoff)
 	int rc;
 
 	l25 = regulator_get(NULL, "8058_l25");
-
 	if (IS_ERR(l25)) {
 		rc = PTR_ERR(l25);
 		pr_err("%s: l25 get failed (%d)\n", __func__, rc);
@@ -7037,7 +6360,6 @@ static void sii9234_hw_onoff(bool onoff)
 	}
 
 	l2 = regulator_get(NULL, "8901_l2");
-
 	if (IS_ERR(l2)) {
 		rc = PTR_ERR(l2);
 		pr_err("%s: l2 get failed (%d)\n", __func__, rc);
@@ -7050,7 +6372,6 @@ static void sii9234_hw_onoff(bool onoff)
 	}
 
 	mvs0 = regulator_get(NULL, "8901_mvs0");
-
 	if (IS_ERR(mvs0)) {
 		rc = PTR_ERR(mvs0);
 		pr_err("%s: mvs0 get failed (%d)\n", __func__, rc);
@@ -7071,8 +6392,7 @@ static void sii9234_hw_onoff(bool onoff)
 	pr_info("%s: [jgk] success - set l18_xoadc voltage to 2.2V\n", __func__);
 #endif
 
-	if (onoff)
-	{
+	if (onoff) {
 		rc = regulator_enable(l25);		/*VSIL_1.2A & VSIL_1.2C*/
 		if (rc) {
 			pr_err("%s: l25 vreg enable failed (%d)\n", __func__, rc);
@@ -7098,11 +6418,6 @@ static void sii9234_hw_onoff(bool onoff)
 		}
 		pr_info("%s: [jgk] success - l18_xoadc vreg enable\n", __func__);
 #endif
-
-		/*gpio_set_value_cansleep(PMIC_GPIO_MHL_RST, 0);
-		msleep(10);
-		gpio_set_value_cansleep(PMIC_GPIO_MHL_RST, 1);*/
-
 		printk("sii9234_cfg_power on\n");
 	} else {
 		rc = regulator_disable(l25);		/*VSIL_1.2A & VSIL_1.2C*/
@@ -7153,10 +6468,8 @@ struct sii9234_platform_data sii9234_pdata = {
 	.hw_reset = sii9234_hw_reset,
 	.gpio =  GPIO_MHL_SEL,
 	.gpio_cfg = mhl_gpio_config,
-#if defined(CONFIG_VIDEO_MHL_V2)
 	.mhl_sel = cfg_mhl_sel,
 	.vbus_present = fsa9480_mhl_cb,
-#endif
 #ifdef CONFIG_USA_MODEL_SGH_I757
 	.swing_level = 0xFD,
 #else
@@ -7183,10 +6496,11 @@ static struct i2c_board_info mhl_i2c_borad_info[] = {
 	},
 };
 #endif/*CONFIG_VIDEO_MHL_V2*/
+
 #ifdef CONFIG_GYRO_K3G
+
 #define SENSOR_GYRO_SCL 39
 #define SENSOR_GYRO_SDA 38
-#define SENSOR_GYRO_INT	PM8058_GPIO_IRQ(PM8058_IRQ_BASE, (PM8058_GPIO(11)))		/* PMIC GPIO Number 32 */
 
 static struct i2c_gpio_platform_data gyro_i2c_gpio_data = {
 	.sda_pin    = SENSOR_GYRO_SDA,
@@ -7211,16 +6525,15 @@ static struct i2c_board_info gyro_i2c_borad_info[] = {
 	{
 		I2C_BOARD_INFO("k3g", 0x69),
 		.platform_data	= &k3g_pdata,
-      	.irq = /*SENSOR_GYRO_INT*/ -1,
+      		.irq = -1,
 	},
 };
 #endif
 
 #ifdef CONFIG_SENSORS_AK8975
-#define SENSOR_ACCEL_INT	PM8058_GPIO_IRQ(PM8058_IRQ_BASE, (PM8058_GPIO(10)))		/* PMIC GPIO Number 32 */
+
 #define SENSOR_AKM_SDA 51
 #define SENSOR_AKM_SCL 52
-
 static struct i2c_gpio_platform_data akm_i2c_gpio_data = {
 	.sda_pin    = SENSOR_AKM_SDA,
 	.scl_pin    = SENSOR_AKM_SCL,
@@ -7237,7 +6550,7 @@ static struct platform_device akm_i2c_gpio_device = {
 
 static struct akm8975_platform_data akm8975_pdata = {
 	.gpio_data_ready_gpio = PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MSENSE_RST),
-    .gpio_data_ready_int = PM8058_GPIO_IRQ(PM8058_IRQ_BASE, PMIC_GPIO_MSENSE_RST),
+	.gpio_data_ready_int = PM8058_GPIO_IRQ(PM8058_IRQ_BASE, PMIC_GPIO_MSENSE_RST),
 	.power_on = sensor_power_on,
 	.power_off = sensor_power_off,
 	.power_on_mag = sensor_power_on_mag,
@@ -7245,7 +6558,7 @@ static struct akm8975_platform_data akm8975_pdata = {
 };
 
 static struct k3dh_platform_data k3dh_data = {
-	.gpio_acc_int = SENSOR_ACCEL_INT,
+	.gpio_acc_int = PM8058_GPIO_IRQ(PM8058_IRQ_BASE, (PM8058_GPIO(10))),
 	.power_on = sensor_power_on,
 	.power_off = sensor_power_off,
 };
@@ -7257,7 +6570,7 @@ static struct i2c_board_info akm_i2c_borad_info[] = {
 	},
 	{
 		I2C_BOARD_INFO("k3dh", 0x19),
-      	.platform_data  = &k3dh_data,
+		.platform_data  = &k3dh_data,
 	},
 #if defined (CONFIG_INPUT_BMP180)
 	{
@@ -7289,9 +6602,8 @@ static struct platform_device amp_i2c_gpio_device = {
 };
 
 static struct snd_set_ampgain init_ampgain[] = {
-
 #if defined (CONFIG_KOR_MODEL_SHV_E110S)
-    // SPK
+	// SPK
 	[0] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7300,7 +6612,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 26,
 		.sp_gainup = 1,
 	},
-    // HEADSET
+	// HEADSET
 	[1] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7309,7 +6621,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 0,
 		.sp_gainup = 0,
 	},
-    // SPK + HEADSET
+	// SPK + HEADSET
 	[2] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7319,7 +6631,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_gainup = 1,
 	},
 #elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-    // SPK
+	// SPK
 	[0] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7328,7 +6640,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 25,
 		.sp_gainup = 1,
 	},
-    // HEADSET
+	// HEADSET
 	[1] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7337,7 +6649,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 0,
 		.sp_gainup = 0,
 	},
-    // SPK + HEADSET
+	// SPK + HEADSET
 	[2] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7420,7 +6732,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_gainup = 0,
 	},
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
-    // SPK
+	// SPK
 	[0] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7429,7 +6741,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 31,
 		.sp_gainup = 0,
 	},
-    // HEADSET
+	// HEADSET
 	[1] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7438,7 +6750,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 0,
 		.sp_gainup = 0,
 	},
-    // SPK + HEADSET
+	// SPK + HEADSET
 	[2] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7557,7 +6869,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.bSpNcpl_ReleaseTime = 1,
 	},
 #elif defined(CONFIG_USA_MODEL_SGH_I757)
-    // SPK
+	// SPK
 	[0] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7566,7 +6878,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 30,
 		.sp_gainup = 0,
 	},
-    // HEADSET
+	// HEADSET
 	[1] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7575,7 +6887,7 @@ static struct snd_set_ampgain init_ampgain[] = {
 		.sp_att = 0,
 		.sp_gainup = 0,
 	},
-    // SPK + HEADSET
+	// SPK + HEADSET
 	[2] = {
 		.in1_gain = 2,
 		.in2_gain = 2,
@@ -7633,8 +6945,108 @@ static struct snd_set_ampgain init_ampgain[] = {
 #endif
 };
 
-void yda165_avdd_power_on(void);
-void yda165_avdd_power_off(void);
+#if  defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
+/* YDA165 AVDD regulator */
+static struct regulator *amp_reg = NULL;
+static int amp_reg_ref_cnt = 0;
+
+void yda165_avdd_power_on(void)
+{
+	int ret;
+
+#ifdef CONFIG_BATTERY_SEC
+	if(is_lpm_boot)
+		return;
+#endif
+
+	amp_reg_ref_cnt++;
+	pr_info("%s : amp_reg_ref_cnt = %d\n", __func__, amp_reg_ref_cnt);
+	
+#if defined (CONFIG_KOR_MODEL_SHV_E110S)
+	if(get_hw_rev()>=0x04)
+#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
+	if(get_hw_rev()>=0x05) 
+#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I577)
+	if(get_hw_rev()>=0x06)
+#endif
+	{
+		if(!amp_reg) {
+#if defined (CONFIG_KOR_MODEL_SHV_E110S)
+			if(get_hw_rev()>=0x06)
+				amp_reg = regulator_get(NULL, "8901_l3");
+			else
+#endif
+#if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
+#if defined(CONFIG_KOR_MODEL_SHV_E110S)
+			amp_reg = vreg_l2a;
+#else
+			amp_reg = regulator_get(NULL, "8058_l2");
+#endif
+#else
+			amp_reg = regulator_get(NULL, "8058_l2");
+#endif
+			if (IS_ERR(amp_reg)) {
+				pr_err("%s: regulator get failed (%ld)\n", __func__, PTR_ERR(amp_reg));
+				return;
+			}
+		}
+
+		ret = regulator_set_voltage(amp_reg, 2600000, 2600000);
+		if (ret) {
+			pr_err("%s: error setting voltage\n", __func__);
+		}
+		
+		ret = regulator_enable(amp_reg);
+		if (ret) {
+			pr_err("%s: error enabling regulator\n", __func__);
+		}
+
+		pr_info("YDA165 AVDD set to 2.6V for %d revison.\n", get_hw_rev());
+	}
+
+}
+
+void yda165_avdd_power_off(void)
+{
+	int ret;
+
+	amp_reg_ref_cnt--;
+	pr_info("%s : amp_reg_ref_cnt = %d\n", __func__, amp_reg_ref_cnt);
+
+#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
+	if(get_hw_rev()>=0x05) 
+#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I577)
+	if(get_hw_rev()>=0x06)      
+#elif defined (CONFIG_KOR_MODEL_SHV_E110S)
+	if(get_hw_rev()>=0x04)
+#endif
+	{
+		if (!amp_reg)
+			return;
+
+		if(regulator_is_enabled(amp_reg)) {
+			ret = regulator_disable(amp_reg);
+			if (ret < 0)
+				pr_err("%s: amp regulator_disable failed (%d)\n",
+						__func__, ret);
+		}
+
+		if(!amp_reg_ref_cnt)
+			amp_reg = NULL;
+
+	}
+}
+#else
+void yda165_avdd_power_on(void)
+{
+	return;
+}
+
+void yda165_avdd_power_off(void)
+{
+	return;
+}
+#endif
 
 static struct yda165_i2c_data yda165_data = {
 	.ampgain = init_ampgain,
@@ -7673,160 +7085,13 @@ static struct i2c_board_info motor_i2c_borad_info[] = {
 };
 
 #ifdef CONFIG_SERIAL_MSM_HS
-#if 0 //SAMSUNG_BT_CONFIG
-static int configure_uart_gpios(int on)
-{
-	int ret = 0, i;
-	int uart_gpios[] = {53, 54, 55, 56};
-	for (i = 0; i < ARRAY_SIZE(uart_gpios); i++) {
-		if (on) {
-			ret = msm_gpiomux_get(uart_gpios[i]);
-			if (unlikely(ret))
-				break;
-		} else {
-			ret = msm_gpiomux_put(uart_gpios[i]);
-			if (unlikely(ret))
-				return ret;
-		}
-	}
-	if (ret)
-		for (; i >= 0; i--)
-			msm_gpiomux_put(uart_gpios[i]);
-	return ret;
-}
-#endif
 static struct msm_serial_hs_platform_data msm_uart_dm1_pdata = {
        .inject_rx_on_wakeup = 1,
        .rx_to_inject = 0xFD,
-#if 0 //SAMSUNG_BT_CONFIG
-       .gpio_config = configure_uart_gpios,
-#endif
 };
-#endif
-
-
-#if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
-
-static struct gpio_led gpio_exp_leds_config[] = {
-	{
-		.name = "left_led1:green",
-		.gpio = GPIO_LEFT_LED_1,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "left_led2:red",
-		.gpio = GPIO_LEFT_LED_2,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "left_led3:green",
-		.gpio = GPIO_LEFT_LED_3,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "wlan_led:orange",
-		.gpio = GPIO_LEFT_LED_WLAN,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "left_led5:green",
-		.gpio = GPIO_LEFT_LED_5,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "right_led1:green",
-		.gpio = GPIO_RIGHT_LED_1,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "right_led2:red",
-		.gpio = GPIO_RIGHT_LED_2,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "right_led3:green",
-		.gpio = GPIO_RIGHT_LED_3,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "bt_led:blue",
-		.gpio = GPIO_RIGHT_LED_BT,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-	{
-		.name = "right_led5:green",
-		.gpio = GPIO_RIGHT_LED_5,
-		.active_low = 1,
-		.retain_state_suspended = 0,
-		.default_state = LEDS_GPIO_DEFSTATE_OFF,
-	},
-};
-
-static struct gpio_led_platform_data gpio_leds_pdata = {
-	.num_leds = ARRAY_SIZE(gpio_exp_leds_config),
-	.leds = gpio_exp_leds_config,
-};
-
-static struct platform_device gpio_leds = {
-	.name          = "leds-gpio",
-	.id            = -1,
-	.dev           = {
-		.platform_data = &gpio_leds_pdata,
-	},
-};
-
-static struct gpio_led fluid_gpio_leds[] = {
-	{
-		.name			= "dual_led:green",
-		.gpio			= GPIO_LED1_GREEN_N,
-		.default_state		= LEDS_GPIO_DEFSTATE_OFF,
-		.active_low		= 1,
-		.retain_state_suspended = 0,
-	},
-	{
-		.name			= "dual_led:red",
-		.gpio			= GPIO_LED2_RED_N,
-		.default_state		= LEDS_GPIO_DEFSTATE_OFF,
-		.active_low		= 1,
-		.retain_state_suspended = 0,
-	},
-};
-
-static struct gpio_led_platform_data gpio_led_pdata = {
-	.leds		= fluid_gpio_leds,
-	.num_leds	= ARRAY_SIZE(fluid_gpio_leds),
-};
-
-static struct platform_device fluid_leds_gpio = {
-	.name	= "leds-gpio",
-	.id	= -1,
-	.dev	= {
-		.platform_data	= &gpio_led_pdata,
-	},
-};
-
 #endif
 
 #if defined(CONFIG_MSM_RPM_LOG) || defined(CONFIG_MSM_RPM_LOG_MODULE)
-
 static struct msm_rpm_log_platform_data msm_rpm_log_pdata = {
 	.phys_addr_base = 0x00106000,
 	.reg_offsets = {
@@ -8174,7 +7439,6 @@ static struct rpm_regulator_init_data rpm_regulator_init_data[] = {
 	RPM_LDO(PM8058_L6,  0, 1, 0, 3000000, 3600000,  LDO50HMIN),
 	RPM_LDO(PM8058_L7,  0, 1, 0, 1800000, 1800000,  LDO50HMIN),
 	RPM_LDO(PM8058_L8,  0, 1, 0, 1800000, 3050000, LDO300HMIN),
-//	RPM_LDO(PM8058_L9,  0, 1, 0, 1800000, 1800000, LDO300HMIN),
 	RPM_LDO(PM8058_L9,  0, 1, 0, 3000000, 3000000, LDO300HMIN),
 	RPM_LDO(PM8058_L10, 0, 1, 0, 1500000, 2600000, LDO300HMIN),
 	RPM_LDO(PM8058_L11, 0, 1, 0, 2850000, 2850000, LDO150HMIN),
@@ -8245,11 +7509,7 @@ static struct rpm_regulator_init_data rpm_regulator_init_data[] = {
 	RPM_PC(PM8058_L20,  0, SLEEP_B, RPM_VREG_PIN_CTRL_NONE),
 	RPM_PC(PM8058_L21,  1, SLEEP_B, RPM_VREG_PIN_CTRL_NONE),
 	RPM_PC(PM8058_S2,   0, ENABLE,  RPM_VREG_PIN_CTRL_PM8058_A0),
-#if 1 // SAMSUNG LDO SETTING
 	RPM_PC(PM8901_L0,   0, SLEEP_B, RPM_VREG_PIN_CTRL_NONE),
-#else
-	RPM_PC(PM8901_L0,   0, ENABLE,  RPM_VREG_PIN_CTRL_PM8901_A0),
-#endif
 	RPM_PC(PM8901_S4,   0, ENABLE,  RPM_VREG_PIN_CTRL_PM8901_A0),
 };
 
@@ -8301,18 +7561,6 @@ static struct platform_device *early_devices[] __initdata = {
 	&msm_device_dmov_adm1,
 };
 
-#if 0 //(defined(CONFIG_MARIMBA_CORE)) && (defined(CONFIG_MSM_BT_POWER) || defined(CONFIG_MSM_BT_POWER_MODULE))
-
-static int bluetooth_power(int);
-static struct platform_device msm_bt_power_device = {
-	.name	 = "bt_power",
-	.id	 = -1,
-	.dev	 = {
-		.platform_data = &bluetooth_power,
-	},
-};
-#endif
-
 /* Bluetooth */
 #ifdef CONFIG_BT_BCM4330
 static struct platform_device bcm4330_bluetooth_device = {
@@ -8352,7 +7600,7 @@ static struct platform_device a2220_i2c_device = {
 #endif
 
 static struct a2220_platform_data a2220_data = {
-	.gpio_a2220_micsel = 0, // ??
+	.gpio_a2220_micsel = 0,
 	.gpio_a2220_wakeup = MSM_AUD_A2220_WAKEUP,
 	.gpio_a2220_reset = MSM_AUD_A2220_RESET,
 	.gpio_a2220_clk = MSM_AUD_A2220_CLK,
@@ -8382,14 +7630,12 @@ static struct a2220_platform_data a2220_data = {
 		1, /*A2220_PATH_BYPASS_MULTIMEDIA*/
 		1, /*A2220_PATH_BYPASS_MULTIMEDIA_ALL*/
 	}
-	/*.gpio_a2220_int = MAHIMAHI_AUD_A2220_INT,*/
 };
 
 static struct i2c_board_info rev1_i2c_a2220_devices[] = {
 	{
 		I2C_BOARD_INFO("audience_a2220", 0x3E),
 		.platform_data = &a2220_data,
-		/*.irq = MSM_GPIO_TO_INT(MAHIMAHI_AUD_A2220_INT)*/
 	},
 };
 #else /* CONFIG_USE_A2220_B */
@@ -8405,8 +7651,8 @@ extern int a2220_ioctl2(unsigned int cmd , unsigned long arg);
 
 #if !defined (CONFIG_TARGET_LOCALE_USA)
 static struct i2c_gpio_platform_data a2220_i2c_gpio_data = {
-	.sda_pin    = 35, // check done
-	.scl_pin    = 36, //check done
+	.sda_pin    = 35,
+	.scl_pin    = 36,
 	.udelay	= 1,
 };
 
@@ -8420,22 +7666,21 @@ static struct platform_device a2220_i2c_device = {
 #endif
 
 static struct a2220_platform_data a2220_data = {
-	.gpio_a2220_micsel = 0, // ??
+	.gpio_a2220_micsel = 0,
 	.gpio_a2220_wakeup = MSM_AUD_A2220_WAKEUP,
 	.gpio_a2220_reset = MSM_AUD_A2220_RESET,
 	.gpio_a2220_clk = MSM_AUD_A2220_CLK,
-	/*.gpio_a2220_int = MAHIMAHI_AUD_A2220_INT,*/
 };
 
 static struct i2c_board_info rev1_i2c_a2220_devices[] = {
 	{
 		I2C_BOARD_INFO("audience_a2220", 0x3E),
 		.platform_data = &a2220_data,
-		/*.irq = MSM_GPIO_TO_INT(MAHIMAHI_AUD_A2220_INT)*/
 	},
 };
 #endif /* CONFIG_USE_A2220_B */
 #endif //CONFIG_VP_A2220
+
 static struct platform_device *rumi_sim_devices[] __initdata = {
 	&smc91x_device,
 	&msm_device_uart_dm12,
@@ -8473,19 +7718,18 @@ static struct platform_device *rumi_sim_devices[] __initdata = {
 	&msm_kgsl_3d0,
 	&msm_kgsl_2d0,
 	&msm_kgsl_2d1,
-#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) || defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
+#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL)
 	&lcdc_ld9040_panel_device,
-#else		
-#if !defined (CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-	&lcdc_samsung_panel_device,
 #endif
-#endif
-#ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
-	&mipi_dsi_s6e8aa0_hd720_panel_device,
+#if defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
+	&lcdc_S6E63M0_panel_device,
 #endif
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	&hdmi_msm_device,
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL */
+#ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
+	&mipi_dsi_s6e8aa0_hd720_panel_device,
+#endif
 #ifdef CONFIG_MSM_CAMERA
 #ifndef CONFIG_MSM_CAMERA_V4L2
 #ifdef CONFIG_SENSOR_M5MO
@@ -8516,254 +7760,7 @@ static struct platform_device *rumi_sim_devices[] __initdata = {
 	&msm_device_vidc,
 };
 
-#if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
-enum {
-	SX150X_CORE,
-	SX150X_DOCKING,
-	SX150X_SURF,
-	SX150X_LEFT_FHA,
-	SX150X_RIGHT_FHA,
-	SX150X_SOUTH,
-	SX150X_NORTH,
-	SX150X_CORE_FLUID,
-};
-
-static struct sx150x_platform_data sx150x_data[] __initdata = {
-	[SX150X_CORE] = {
-		.gpio_base         = GPIO_CORE_EXPANDER_BASE,
-		.oscio_is_gpo      = false,
-		.io_pullup_ena     = 0x0c08,
-		.io_pulldn_ena     = 0x4060,
-		.io_open_drain_ena = 0x000c,
-		.io_polarity       = 0,
-		.irq_summary       = -1, /* see fixup_i2c_configs() */
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE,
-	},
-	[SX150X_DOCKING] = {
-		.gpio_base         = GPIO_DOCKING_EXPANDER_BASE,
-		.oscio_is_gpo      = false,
-		.io_pullup_ena     = 0x5e06,
-		.io_pulldn_ena     = 0x81b8,
-		.io_open_drain_ena = 0,
-		.io_polarity       = 0,
-		.irq_summary       = PM8058_GPIO_IRQ(PM8058_IRQ_BASE,
-						     UI_INT2_N),
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE +
-				     GPIO_DOCKING_EXPANDER_BASE -
-				     GPIO_EXPANDER_GPIO_BASE,
-	},
-	[SX150X_SURF] = {
-		.gpio_base         = GPIO_SURF_EXPANDER_BASE,
-		.oscio_is_gpo      = false,
-		.io_pullup_ena     = 0,
-		.io_pulldn_ena     = 0,
-		.io_open_drain_ena = 0,
-		.io_polarity       = 0,
-		.irq_summary       = PM8058_GPIO_IRQ(PM8058_IRQ_BASE,
-						     UI_INT1_N),
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE +
-				     GPIO_SURF_EXPANDER_BASE -
-				     GPIO_EXPANDER_GPIO_BASE,
-	},
-	[SX150X_LEFT_FHA] = {
-		.gpio_base         = GPIO_LEFT_KB_EXPANDER_BASE,
-		.oscio_is_gpo      = false,
-		.io_pullup_ena     = 0,
-		.io_pulldn_ena     = 0x40,
-		.io_open_drain_ena = 0,
-		.io_polarity       = 0,
-		.irq_summary       = PM8058_GPIO_IRQ(PM8058_IRQ_BASE,
-						     UI_INT3_N),
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE +
-				     GPIO_LEFT_KB_EXPANDER_BASE -
-				     GPIO_EXPANDER_GPIO_BASE,
-	},
-	[SX150X_RIGHT_FHA] = {
-		.gpio_base         = GPIO_RIGHT_KB_EXPANDER_BASE,
-		.oscio_is_gpo      = true,
-		.io_pullup_ena     = 0,
-		.io_pulldn_ena     = 0,
-		.io_open_drain_ena = 0,
-		.io_polarity       = 0,
-		.irq_summary       = PM8058_GPIO_IRQ(PM8058_IRQ_BASE,
-						     UI_INT3_N),
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE +
-				     GPIO_RIGHT_KB_EXPANDER_BASE -
-				     GPIO_EXPANDER_GPIO_BASE,
-	},
-	[SX150X_SOUTH] = {
-		.gpio_base    = GPIO_SOUTH_EXPANDER_BASE,
-		.irq_base     = GPIO_EXPANDER_IRQ_BASE +
-				GPIO_SOUTH_EXPANDER_BASE -
-				GPIO_EXPANDER_GPIO_BASE,
-		.irq_summary  = PM8058_GPIO_IRQ(PM8058_IRQ_BASE, UI_INT3_N),
-	},
-	[SX150X_NORTH] = {
-		.gpio_base    = GPIO_NORTH_EXPANDER_BASE,
-		.irq_base     = GPIO_EXPANDER_IRQ_BASE +
-				GPIO_NORTH_EXPANDER_BASE -
-				GPIO_EXPANDER_GPIO_BASE,
-		.irq_summary  = PM8058_GPIO_IRQ(PM8058_IRQ_BASE, UI_INT3_N),
-		.oscio_is_gpo = true,
-		.io_open_drain_ena = 0x30,
-	},
-	[SX150X_CORE_FLUID] = {
-		.gpio_base         = GPIO_CORE_EXPANDER_BASE,
-		.oscio_is_gpo      = false,
-		.io_pullup_ena     = 0x0408,
-		.io_pulldn_ena     = 0x4060,
-		.io_open_drain_ena = 0x0008,
-		.io_polarity       = 0,
-		.irq_summary       = -1, /* see fixup_i2c_configs() */
-		.irq_base          = GPIO_EXPANDER_IRQ_BASE,
-	},
-};
-
 #ifdef CONFIG_SENSORS_MSM_ADC
-/* Configuration of EPM expander is done when client
- * request an adc read
- */
-static struct sx150x_platform_data sx150x_epmdata = {
-	.gpio_base         = GPIO_EPM_EXPANDER_BASE,
-	.irq_base	   = GPIO_EXPANDER_IRQ_BASE +
-				GPIO_EPM_EXPANDER_BASE -
-				GPIO_EXPANDER_GPIO_BASE,
-	.irq_summary       = -1,
-};
-#endif
-
-/* sx150x_low_power_cfg
- *
- * This data and init function are used to put unused gpio-expander output
- * lines into their low-power states at boot. The init
- * function must be deferred until a later init stage because the i2c
- * gpio expander drivers do not probe until after they are registered
- * (see register_i2c_devices) and the work-queues for those registrations
- * are processed.  Because these lines are unused, there is no risk of
- * competing with a device driver for the gpio.
- *
- * gpio lines whose low-power states are input are naturally in their low-
- * power configurations once probed, see the platform data structures above.
- */
-struct sx150x_low_power_cfg {
-	unsigned gpio;
-	unsigned val;
-};
-
-static struct sx150x_low_power_cfg
-common_sx150x_lp_cfgs[] __initdata = {
-	{GPIO_WLAN_DEEP_SLEEP_N, 0},
-	{GPIO_EXT_GPS_LNA_EN,    0},
-	{GPIO_MSM_WAKES_BT,      0},
-	{GPIO_USB_UICC_EN,       0},
-	{GPIO_BATT_GAUGE_EN,     0},
-};
-
-static struct sx150x_low_power_cfg
-surf_ffa_sx150x_lp_cfgs[] __initdata = {
-	{GPIO_MIPI_DSI_RST_N,      0},
-	{GPIO_DONGLE_PWR_EN,       0},
-	{GPIO_CAP_TS_SLEEP,        1},
-	{GPIO_WEB_CAMIF_RESET_N,   0},
-};
-
-static void __init
-cfg_gpio_low_power(struct sx150x_low_power_cfg *cfgs, unsigned nelems)
-{
-	unsigned n;
-	int rc;
-
-	for (n = 0; n < nelems; ++n) {
-		rc = gpio_request(cfgs[n].gpio, NULL);
-		if (!rc) {
-			rc = gpio_direction_output(cfgs[n].gpio, cfgs[n].val);
-			gpio_free(cfgs[n].gpio);
-		}
-
-		if (rc) {
-			printk(KERN_NOTICE "%s: failed to sleep gpio %d: %d\n",
-			       __func__, cfgs[n].gpio, rc);
-		}
-	}
-}
-
-static int __init cfg_sx150xs_low_power(void)
-{
-	cfg_gpio_low_power(common_sx150x_lp_cfgs,
-		ARRAY_SIZE(common_sx150x_lp_cfgs));
-	if (!machine_is_msm8x60_fluid())
-		cfg_gpio_low_power(surf_ffa_sx150x_lp_cfgs,
-			ARRAY_SIZE(surf_ffa_sx150x_lp_cfgs));
-	return 0;
-}
-module_init(cfg_sx150xs_low_power);
-
-#ifdef CONFIG_I2C
-#if 0 // removed gpio expander, #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
-static struct i2c_board_info core_expander_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1509q", 0x3e),
-		.platform_data = &sx150x_data[SX150X_CORE]
-	},
-};
-
-static struct i2c_board_info docking_expander_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1509q", 0x3f),
-		.platform_data = &sx150x_data[SX150X_DOCKING]
-	},
-};
-
-static struct i2c_board_info surf_expanders_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1509q", 0x70),
-		.platform_data = &sx150x_data[SX150X_SURF]
-	}
-};
-
-static struct i2c_board_info fha_expanders_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1508q", 0x21),
-		.platform_data = &sx150x_data[SX150X_LEFT_FHA]
-	},
-	{
-		I2C_BOARD_INFO("sx1508q", 0x22),
-		.platform_data = &sx150x_data[SX150X_RIGHT_FHA]
-	}
-};
-
-static struct i2c_board_info fluid_expanders_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1508q", 0x23),
-		.platform_data = &sx150x_data[SX150X_SOUTH]
-	},
-	{
-		I2C_BOARD_INFO("sx1508q", 0x20),
-		.platform_data = &sx150x_data[SX150X_NORTH]
-	}
-};
-
-static struct i2c_board_info fluid_core_expander_i2c_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("sx1509q", 0x3e),
-		.platform_data = &sx150x_data[SX150X_CORE_FLUID]
-	},
-};
-#endif // #if 0 
-
-#ifdef CONFIG_SENSORS_MSM_ADC
-static struct i2c_board_info fluid_expanders_i2c_epm_info[] = {
-	{
-		I2C_BOARD_INFO("sx1509q", 0x3e),
-		.platform_data = &sx150x_epmdata
-	},
-};
-#endif
-#endif
-#endif
-
-#ifdef CONFIG_SENSORS_MSM_ADC
-
 static struct adc_access_fn xoadc_fn = {
 	pm8058_xoadc_select_chan_and_start_conv,
 	pm8058_xoadc_read_adc_code,
@@ -8772,274 +7769,6 @@ static struct adc_access_fn xoadc_fn = {
 	pm8058_xoadc_restore_slot,
 	pm8058_xoadc_calibrate,
 };
-
-#if defined(CONFIG_I2C) && \
-	(defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE))
-static struct regulator *vreg_adc_epm1;
-
-static struct i2c_client *epm_expander_i2c_register_board(void)
-
-{
-	struct i2c_adapter *i2c_adap;
-	struct i2c_client *client = NULL;
-	i2c_adap = i2c_get_adapter(0x0);
-
-	if (i2c_adap == NULL)
-		printk(KERN_ERR "\nepm_expander_i2c_adapter is NULL\n");
-
-	if (i2c_adap != NULL)
-		client = i2c_new_device(i2c_adap,
-			&fluid_expanders_i2c_epm_info[0]);
-	return client;
-
-}
-
-static unsigned int msm_adc_gpio_configure_expander_enable(void)
-{
-	int rc = 0;
-	static struct i2c_client *epm_i2c_client;
-
-	printk(KERN_DEBUG "Enter msm_adc_gpio_configure_expander_enable\n");
-
-	vreg_adc_epm1 = regulator_get(NULL, "8058_s3");
-
-	if (IS_ERR(vreg_adc_epm1)) {
-		printk(KERN_ERR "%s: Unable to get 8058_s3\n", __func__);
-		return 0;
-	}
-
-	rc = regulator_set_voltage(vreg_adc_epm1, 1800000, 1800000);
-	if (rc)
-		printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: "
-				"regulator set voltage failed\n");
-
-	rc = regulator_enable(vreg_adc_epm1);
-	if (rc) {
-		printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: "
-			"Error while enabling regulator for epm s3 %d\n", rc);
-		return rc;
-	}
-
-	printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: Start"
-			" setting the value of the EPM 3.3, 5v and lvlsft\n");
-
-	msleep(1000);
-
-	rc = gpio_request(GPIO_EPM_5V_BOOST_EN, "boost_epm_5v");
-	if (!rc) {
-		printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: "
-				"Configure 5v boost\n");
-		gpio_direction_output(GPIO_EPM_5V_BOOST_EN, 1);
-	} else {
-		printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: "
-				"Error for epm 5v boost en\n");
-		goto exit_vreg_epm;
-	}
-
-	msleep(500);
-
-	rc = gpio_request(GPIO_EPM_3_3V_EN, "epm_3_3v");
-	if (!rc) {
-		gpio_direction_output(GPIO_EPM_3_3V_EN, 1);
-		printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: "
-				"Configure epm 3.3v\n");
-	} else {
-		printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: "
-				"Error for gpio 3.3ven\n");
-		goto exit_vreg_epm;
-	}
-	msleep(500);
-
-	printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: "
-			"Trying to request EPM LVLSFT_EN\n");
-	rc = gpio_request(GPIO_EPM_LVLSFT_EN, "lvsft_en");
-	if (!rc) {
-		gpio_direction_output(GPIO_EPM_LVLSFT_EN, 1);
-		printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: "
-				"Configure the lvlsft\n");
-	} else {
-		printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: "
-				"Error for epm lvlsft_en\n");
-		goto exit_vreg_epm;
-	}
-
-	msleep(500);
-
-	if (!epm_i2c_client)
-		epm_i2c_client = epm_expander_i2c_register_board();
-
-	rc = gpio_request(GPIO_PWR_MON_ENABLE, "pwr_mon_enable");
-	if (!rc)
-		rc = gpio_direction_output(GPIO_PWR_MON_ENABLE, 1);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": GPIO PWR MON Enable issue\n");
-			goto exit_vreg_epm;
-		}
-
-	msleep(1000);
-
-	rc = gpio_request(GPIO_ADC1_PWDN_N, "adc1_pwdn");
-	if (!rc) {
-		rc = gpio_direction_output(GPIO_ADC1_PWDN_N, 1);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": ADC1_PWDN error direction out\n");
-			goto exit_vreg_epm;
-		}
-	}
-
-	msleep(100);
-
-	rc = gpio_request(GPIO_ADC2_PWDN_N, "adc2_pwdn");
-	if (!rc) {
-		rc = gpio_direction_output(GPIO_ADC2_PWDN_N, 1);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": ADC2_PWD error direction out\n");
-			goto exit_vreg_epm;
-		}
-	}
-
-	msleep(1000);
-
-	rc = gpio_request(GPIO_PWR_MON_START, "pwr_mon_start");
-	if (!rc) {
-		rc = gpio_direction_output(GPIO_PWR_MON_START, 0);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-				"Gpio request problem %d\n", rc);
-			goto exit_vreg_epm;
-		}
-	}
-
-	rc = gpio_request(GPIO_EPM_SPI_ADC1_CS_N, "spi_adc1_cs");
-	if (!rc) {
-		rc = gpio_direction_output(GPIO_EPM_SPI_ADC1_CS_N, 0);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": EPM_SPI_ADC1_CS_N error\n");
-			goto exit_vreg_epm;
-		}
-	}
-
-	rc = gpio_request(GPIO_EPM_SPI_ADC2_CS_N, "spi_adc2_cs");
-	if (!rc) {
-		rc = gpio_direction_output(GPIO_EPM_SPI_ADC2_CS_N, 0);
-		if (rc) {
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": EPM_SPI_ADC2_Cs_N error\n");
-			goto exit_vreg_epm;
-		}
-	}
-
-	printk(KERN_DEBUG "msm_adc_gpio_configure_expander_enable: Set "
-			"the power monitor reset for epm\n");
-
-	rc = gpio_request(GPIO_PWR_MON_RESET_N, "pwr_mon_reset_n");
-	if (!rc) {
-		gpio_direction_output(GPIO_PWR_MON_RESET_N, 0);
-		if (rc)	{
-			printk(KERN_ERR "msm_adc_gpio_configure_expander_enable"
-					": Error in the power mon reset\n");
-			goto exit_vreg_epm;
-		}
-	}
-
-	msleep(1000);
-
-	gpio_set_value_cansleep(GPIO_PWR_MON_RESET_N, 1);
-
-	msleep(500);
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC1_CS_N, 1);
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC2_CS_N, 1);
-
-	return rc;
-
-exit_vreg_epm:
-	regulator_disable(vreg_adc_epm1);
-
-	printk(KERN_ERR "msm_adc_gpio_configure_expander_enable: Exit."
-			" rc = %d.\n", rc);
-	return rc;
-};
-
-static unsigned int msm_adc_gpio_configure_expander_disable(void)
-{
-	int rc = 0;
-
-	gpio_set_value_cansleep(GPIO_PWR_MON_RESET_N, 0);
-	gpio_free(GPIO_PWR_MON_RESET_N);
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC1_CS_N, 0);
-	gpio_free(GPIO_EPM_SPI_ADC1_CS_N);
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC2_CS_N, 0);
-	gpio_free(GPIO_EPM_SPI_ADC2_CS_N);
-
-	gpio_set_value_cansleep(GPIO_PWR_MON_START, 0);
-	gpio_free(GPIO_PWR_MON_START);
-
-	gpio_direction_output(GPIO_ADC1_PWDN_N, 0);
-	gpio_free(GPIO_ADC1_PWDN_N);
-
-	gpio_direction_output(GPIO_ADC2_PWDN_N, 0);
-	gpio_free(GPIO_ADC2_PWDN_N);
-
-	gpio_set_value_cansleep(GPIO_PWR_MON_ENABLE, 0);
-	gpio_free(GPIO_PWR_MON_ENABLE);
-
-	gpio_set_value_cansleep(GPIO_EPM_LVLSFT_EN, 0);
-	gpio_free(GPIO_EPM_LVLSFT_EN);
-
-	gpio_set_value_cansleep(GPIO_EPM_5V_BOOST_EN, 0);
-	gpio_free(GPIO_EPM_5V_BOOST_EN);
-
-	gpio_set_value_cansleep(GPIO_EPM_3_3V_EN, 0);
-	gpio_free(GPIO_EPM_3_3V_EN);
-
-	rc = regulator_disable(vreg_adc_epm1);
-	if (rc)
-		printk(KERN_DEBUG "msm_adc_gpio_configure_expander_disable: "
-			"Error while enabling regulator for epm s3 %d\n", rc);
-	regulator_put(vreg_adc_epm1);
-
-	printk(KERN_DEBUG "Exi msm_adc_gpio_configure_expander_disable\n");
-	return rc;
-};
-
-unsigned int msm_adc_gpio_expander_enable(int cs_enable)
-{
-	int rc = 0;
-
-	printk(KERN_DEBUG "msm_adc_gpio_expander_enable: cs_enable = %d",
-		cs_enable);
-
-	if (cs_enable < 16) {
-		gpio_set_value_cansleep(GPIO_EPM_SPI_ADC1_CS_N, 0);
-		gpio_set_value_cansleep(GPIO_EPM_SPI_ADC2_CS_N, 1);
-	} else {
-		gpio_set_value_cansleep(GPIO_EPM_SPI_ADC2_CS_N, 0);
-		gpio_set_value_cansleep(GPIO_EPM_SPI_ADC1_CS_N, 1);
-	}
-	return rc;
-};
-
-unsigned int msm_adc_gpio_expander_disable(int cs_disable)
-{
-	int rc = 0;
-
-	printk(KERN_DEBUG "Enter msm_adc_gpio_expander_disable.\n");
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC1_CS_N, 1);
-
-	gpio_set_value_cansleep(GPIO_EPM_SPI_ADC2_CS_N, 1);
-
-	return rc;
-};
-#endif
 
 static struct msm_adc_channels msm_adc_channels_data[] = {
 	{"head_set", CHANNEL_ADC_HDSET, 0, &xoadc_fn, CHAN_PATH_TYPE9,
@@ -9073,13 +7802,6 @@ static char *msm_adc_fluid_device_names[] = {
 static struct msm_adc_platform_data msm_adc_pdata = {
 	.channel = msm_adc_channels_data,
 	.num_chan_supported = ARRAY_SIZE(msm_adc_channels_data),
-#if defined(CONFIG_I2C) && \
-	(defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE))
-	.adc_gpio_enable = msm_adc_gpio_expander_enable,
-	.adc_gpio_disable   = msm_adc_gpio_expander_disable,
-	.adc_fluid_enable = msm_adc_gpio_configure_expander_enable,
-	.adc_fluid_disable  = msm_adc_gpio_configure_expander_disable,
-#endif
 };
 
 static struct platform_device msm_adc_device = {
@@ -9317,10 +8039,10 @@ static struct platform_device opt_i2c_gpio_device = {
 		.platform_data  = &opt_i2c_gpio_data,
 	},
 };
+
 static struct i2c_board_info opt_i2c_borad_info[] = {
 	{
 		I2C_BOARD_INFO("gp2a", 0x88>>1),
-      	//.platform_data  = &opt_i2c_gpio_data,
 	},
 };
 
@@ -9329,8 +8051,8 @@ struct opt_gp2a_platform_data {
 	void	(*gp2a_led_off) (void);
 	void	(*power_on) (void);
 	void	(*power_off) (void);
-    int gp2a_irq;
-    int gp2a_gpio;
+	int gp2a_irq;
+	int gp2a_gpio;
 };
 
 static void proximity_LED_on(void);
@@ -9401,26 +8123,19 @@ static struct i2c_board_info taos_i2c_board_info[] = {
 };
 #endif
 
-
-
 #ifdef CONFIG_TOUCHSCREEN_MELFAS
 static uint32_t melfas_gpio_config_data[] = {
-#if defined(CONFIG_USA_MODEL_SGH_I757)
 	GPIO_CFG(TSP_SDA, 1,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 	GPIO_CFG(TSP_SCL, 1,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
+#if defined(CONFIG_USA_MODEL_SGH_I757)
 	GPIO_CFG(TOUCHSCREEN_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 #else
-	GPIO_CFG(TSP_SDA, 1,
-			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
-	GPIO_CFG(TSP_SCL, 1,
-			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 	GPIO_CFG(TOUCHSCREEN_IRQ, 0,
 			GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
 #endif
-
 };
 
 static void melfas_gpios(void)
@@ -9436,6 +8151,7 @@ static int melfas_power(int on)
 	int rc;
 	struct regulator *l1;
 	struct regulator *l4;
+
 	if(on) {
 		printk("%s On.\n", __func__);
 		l4 = regulator_get(NULL, "8901_l4");
@@ -9544,14 +8260,14 @@ static struct melfas_version tsp_version = {
 };
 
 static struct melfas_tsi_platform_data melfas_pdata = {
-	.x_size					= 720,
-	.y_size					= 1280,
-	.power					= melfas_power,
-	.gpio					= melfas_gpios,
-	.version				= &tsp_version
+	.x_size			= 720,
+	.y_size			= 1280,
+	.power			= melfas_power,
+	.gpio			= melfas_gpios,
+	.version		= &tsp_version
 #ifdef TA_DETECTION
-	.register_cb 			= tsp_register_callback,
-	.read_ta_status 		= tsp_read_ta_status,
+	.register_cb		= tsp_register_callback,
+	.read_ta_status		= tsp_read_ta_status,
 #endif
 };
 
@@ -9564,16 +8280,6 @@ static struct i2c_board_info melfas_board_info[] = {
 };
 #endif
 
-
-
-
-
-
-
-
-
-
-//*********
 static struct platform_device *charm_devices[] __initdata = {
 	&msm_charm_modem,
 #ifdef CONFIG_MSM_SDIO_AL
@@ -9666,7 +8372,7 @@ static struct platform_device *surf_devices[] __initdata = {
 	&msm_batt_device,
 #endif
 #ifdef CONFIG_USB_SWITCH_FSA9480
-	&sec_device_switch,  // samsung switch driver
+	&sec_device_switch,
 #endif
 #ifdef CONFIG_ANDROID_PMEM
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
@@ -9683,29 +8389,16 @@ static struct platform_device *surf_devices[] __initdata = {
 	&msm_kgsl_3d0,
 	&msm_kgsl_2d0,
 	&msm_kgsl_2d1,
-
-#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) || defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
+#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL)
 	&lcdc_ld9040_panel_device,
-#else	
-	#if !defined (CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-	&lcdc_samsung_panel_device,
 #endif
-#endif
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-	&lcdc_nt35582_panel_device,
-#endif
-#ifdef CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT
-	&lcdc_samsung_oled_panel_device,
-#endif
-#ifdef CONFIG_FB_MSM_LCDC_AUO_WVGA
-	&lcdc_auo_wvga_panel_device,
+#if defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
+	&lcdc_S6E63M0_panel_device,
 #endif
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	&hdmi_msm_device,
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL */
 #ifdef CONFIG_FB_MSM_MIPI_DSI
-	&mipi_dsi_toshiba_panel_device,
-	&mipi_dsi_novatek_panel_device,
 #ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
 	&mipi_dsi_s6e8aa0_hd720_panel_device,
 #endif
@@ -9745,9 +8438,6 @@ static struct platform_device *surf_devices[] __initdata = {
 	&msm_rpm_stat_device,
 #endif
 	&msm_device_vidc,
-#if 0 //(defined(CONFIG_MARIMBA_CORE)) && (defined(CONFIG_MSM_BT_POWER) || defined(CONFIG_MSM_BT_POWER_MODULE))
-	&msm_bt_power_device,
-#endif
 
 #if defined (CONFIG_BT_BCM4330)
     &bcm4330_bluetooth_device,
@@ -9767,7 +8457,6 @@ static struct platform_device *surf_devices[] __initdata = {
 		defined(CONFIG_CRYPTO_DEV_QCEDEV_MODULE)
 	&qcedev_device,
 #endif
-
 
 #if defined(CONFIG_TSIF) || defined(CONFIG_TSIF_MODULE)
 #ifdef CONFIG_MSM_USE_TSIF1
@@ -9952,7 +8641,6 @@ static struct platform_device ion_dev = {
 	.dev = { .platform_data = &ion_pdata },
 };
 #endif
-
 
 static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
 	/* Kernel SMI memory pool for video core, used for firmware */
@@ -10236,11 +8924,11 @@ static struct msm_gpio nfc_init_gpio_table[] = {
 
 static void config_gpio_table_for_nfc(void)
 {
-    int i;
+	int i;
 
-    for( i=0; i<ARRAY_SIZE(nfc_init_gpio_table); i++) {
-            gpio_tlmm_config(nfc_init_gpio_table[i].gpio_cfg, GPIO_CFG_ENABLE);
-    }
+	for( i=0; i<ARRAY_SIZE(nfc_init_gpio_table); i++) {
+		gpio_tlmm_config(nfc_init_gpio_table[i].gpio_cfg, GPIO_CFG_ENABLE);
+	}
 
 	return;
 }
@@ -10248,43 +8936,34 @@ static void config_gpio_table_for_nfc(void)
 
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
 /*MHL pin configuration*/
-	struct pm_gpio mhl_sel = {
-		.direction		= PM_GPIO_DIR_OUT,
-		.pull			= PM_GPIO_PULL_NO,
-		.vin_sel		= 4,
-		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,
-	};
-	struct pm_gpio mhl_wake_up = {
-		.direction		= PM_GPIO_DIR_OUT,
-		.pull			= PM_GPIO_PULL_DN,
-		.vin_sel		= 2,
-		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,
-	};
-	struct pm_gpio mhl_int = {
-		.direction		= PM_GPIO_DIR_IN,
-		.pull			= PM_GPIO_PULL_NO,
-		.vin_sel		= 2,
-		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,
-	};
-	struct pm_gpio mhl_rst = {
-		.direction		= PM_GPIO_DIR_OUT,
-		.pull			= PM_GPIO_PULL_NO,
-		.vin_sel		= 4,
-		.function		= PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol	= 0,
-	};
-/*
-    struct pm_gpio hdmi_en= {
-	    .direction		= PM_GPIO_DIR_OUT,
-	    .pull			= PM_GPIO_PULL_NO,
-	    .vin_sel		= 4,
-	    .function		= PM_GPIO_FUNC_NORMAL,
-	    .inv_int_pol	= 0,
-    };
-*/
+struct pm_gpio mhl_sel = {
+	.direction		= PM_GPIO_DIR_OUT,
+	.pull			= PM_GPIO_PULL_NO,
+	.vin_sel		= 4,
+	.function		= PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol	= 0,
+};
+struct pm_gpio mhl_wake_up = {
+	.direction		= PM_GPIO_DIR_OUT,
+	.pull			= PM_GPIO_PULL_DN,
+	.vin_sel		= 2,
+	.function		= PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol	= 0,
+};
+struct pm_gpio mhl_int = {
+	.direction		= PM_GPIO_DIR_IN,
+	.pull			= PM_GPIO_PULL_NO,
+	.vin_sel		= 2,
+	.function		= PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol	= 0,
+};
+struct pm_gpio mhl_rst = {
+	.direction		= PM_GPIO_DIR_OUT,
+	.pull			= PM_GPIO_PULL_NO,
+	.vin_sel		= 4,
+	.function		= PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol	= 0,
+};
 #endif
 
 #ifdef CONFIG_PMIC8058
@@ -10293,11 +8972,11 @@ static void config_gpio_table_for_nfc(void)
 
 #ifdef CONFIG_OPTICAL_GP2A
 static struct pm_gpio ps_vout = {
-	.direction 	 = PM_GPIO_DIR_IN,
-	.pull			 = PM_GPIO_PULL_NO,
-	.vin_sel		 = 2,
-	.function		 = PM_GPIO_FUNC_NORMAL,
-	.inv_int_pol	 = 0,
+	.direction 	= PM_GPIO_DIR_IN,
+	.pull		= PM_GPIO_PULL_NO,
+	.vin_sel	= 2,
+	.function	= PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol	= 0,
 	};
 #endif
 #ifdef CONFIG_SENSORS_AK8975
@@ -10329,22 +9008,22 @@ static struct pm_gpio accel_int = {
 #endif
 #if defined(CONFIG_OPTICAL_TAOS)
 static struct pm_gpio als_int = {		
-	.direction	 = PM_GPIO_DIR_IN,		
-	.pull			 = PM_GPIO_PULL_NO,		
-	.vin_sel		 = 2,		
-	.function		 = PM_GPIO_FUNC_NORMAL,		
-	.inv_int_pol	 = 0,	
+	.direction	= PM_GPIO_DIR_IN,		
+	.pull		= PM_GPIO_PULL_NO,		
+	.vin_sel	= 2,		
+	.function	= PM_GPIO_FUNC_NORMAL,		
+	.inv_int_pol	= 0,	
 };
 #endif
 
 #if defined (CONFIG_SAMSUNG_JACK) || defined (CONFIG_SAMSUNG_EARJACK)
 #if defined (CONFIG_KOR_MODEL_SHV_E110S)
 static struct pm_gpio ear_det_new = {
-		.direction      = PM_GPIO_DIR_IN,
-		.pull           = PM_GPIO_PULL_NO,
-		.vin_sel        = PM8058_GPIO_VIN_L5,//PM_GPIO_VIN_L5,//1.8v -> 2.85v  : rev >= 05
-		.function       = PM_GPIO_FUNC_NORMAL,
-		.inv_int_pol    = 0,
+	.direction      = PM_GPIO_DIR_IN,
+	.pull           = PM_GPIO_PULL_NO,
+	.vin_sel        = PM8058_GPIO_VIN_L5,//PM_GPIO_VIN_L5,//1.8v -> 2.85v  : rev >= 05
+	.function       = PM_GPIO_FUNC_NORMAL,
+	.inv_int_pol    = 0,
 };
 #else
 static struct pm_gpio ear_det = {
@@ -10552,33 +9231,16 @@ static int pm8058_gpios_init(void)
 #endif
 
 #if defined(CONFIG_QS_S5K4E1)
-		{
-			struct pm8058_gpio_cfg qs_hc37_cam_pd_gpio_cfg = {
-			PM8058_GPIO_PM_TO_SYS(26),
-			{
-				.direction		= PM_GPIO_DIR_OUT,
-				.output_value	= 0,
-				.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-				.pull			= PM_GPIO_PULL_DN,
-				.out_strength	= PM_GPIO_STRENGTH_HIGH,
-				.function		= PM_GPIO_FUNC_NORMAL,
-				.vin_sel		= 2,
-				.inv_int_pol	= 0,
-			}
-		};
-#endif
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-	struct pm8058_gpio_cfg pmic_lcdc_nt35582_gpio_cfg = {
-		PM8058_GPIO_PM_TO_SYS(GPIO_NT35582_BL_EN_HW_PIN - 1),
+	struct pm8058_gpio_cfg qs_hc37_cam_pd_gpio_cfg = {
+		PM8058_GPIO_PM_TO_SYS(26),
 		{
 			.direction		= PM_GPIO_DIR_OUT,
+			.output_value	= 0,
 			.output_buffer	= PM_GPIO_OUT_BUF_CMOS,
-			.output_value	= 1,
-			.pull			= PM_GPIO_PULL_UP_30,
-			/* 2.9V  PM_GPIO_VIN_L2, which gives 2.6V */
-			.vin_sel		= PM8058_GPIO_VIN_L5,
+			.pull			= PM_GPIO_PULL_DN,
 			.out_strength	= PM_GPIO_STRENGTH_HIGH,
 			.function		= PM_GPIO_FUNC_NORMAL,
+			.vin_sel		= 2,
 			.inv_int_pol	= 0,
 		}
 	};
@@ -10586,8 +9248,8 @@ static int pm8058_gpios_init(void)
 
 #if defined (CONFIG_SAMSUNG_JACK) || defined (CONFIG_SAMSUNG_EARJACK)
 #if defined (CONFIG_KOR_MODEL_SHV_E110S)
-		pr_info("%s PMIC_GPIO_EAR_DET : ear_det_new\n", __func__);
-		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET), &ear_det_new);
+	pr_info("%s PMIC_GPIO_EAR_DET : ear_det_new\n", __func__);
+	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET), &ear_det_new);
 #else
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_EAR_DET), &ear_det);
 #endif
@@ -10605,7 +9267,7 @@ static int pm8058_gpios_init(void)
 		pr_err("%s PMIC_GPIO_EAR_MICBIAS_EN config failed\n", __func__);
 		return rc;
 	}
-pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
+	pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 	sec_jack_gpio_init();
 #endif
 
@@ -10660,17 +9322,6 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 	}
 #endif
 
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-	if (machine_is_msm8x60_dragon()) {
-		rc = pm8xxx_gpio_config(pmic_lcdc_nt35582_gpio_cfg.gpio,
-				&pmic_lcdc_nt35582_gpio_cfg.cfg);
-		if (rc < 0) {
-			pr_err("%s pmic gpio config failed\n", __func__);
-			return rc;
-		}
-	}
-#endif
-
 #if defined(CONFIG_QS_S5K4E1)
 		/* qs_cam_hc37_cam_pd only for 8660 fluid qs camera*/
 		if (machine_is_msm8x60_fluid()) {
@@ -10703,16 +9354,16 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 	}
 #endif
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
-		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_SEL), &mhl_sel);
-		if (rc) {
-			pr_err("%s PMIC_GPIO_MHL_SEL config failed\n", __func__);
-			return rc;
-		}
-		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_RST), &mhl_rst);
-		if (rc) {
-			pr_err("%s PMIC_GPIO_MHL_RST config failed\n", __func__);
-			return rc;
-		}
+	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_SEL), &mhl_sel);
+	if (rc) {
+		pr_err("%s PMIC_GPIO_MHL_SEL config failed\n", __func__);
+		return rc;
+	}
+	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_RST), &mhl_rst);
+	if (rc) {
+		pr_err("%s PMIC_GPIO_MHL_RST config failed\n", __func__);
+		return rc;
+	}
 #if defined(CONFIG_KOR_MODEL_SHV_E110S)
 	if (get_hw_rev() < 7)
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_9), &mhl_int);
@@ -10730,12 +9381,12 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 	else
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_31), &mhl_int);
 #elif defined (CONFIG_USA_MODEL_SGH_I727)
-		if (get_hw_rev() < 0x0b)
+	if (get_hw_rev() < 0x0b)
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_9), &mhl_int);
 	else
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_31), &mhl_int);
 #elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-		if (get_hw_rev() < 0x0e)
+	if (get_hw_rev() < 0x0e)
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_9), &mhl_int);
 	else
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_31), &mhl_int);
@@ -10744,10 +9395,10 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 #else
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_INT_9), &mhl_int);
 #endif
-		if (rc) {
-			pr_err("%s PMIC_GPIO_MHL_INT config failed\n", __func__);
-			return rc;
-		}
+	if (rc) {
+		pr_err("%s PMIC_GPIO_MHL_INT config failed\n", __func__);
+		return rc;
+	}
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_MHL_WAKE_UP), &mhl_wake_up);
 	if (rc) {
 		pr_err("%s PMIC_GPIO_MHL_WAKE_UP config failed\n", __func__);
@@ -10782,9 +9433,7 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 	if( get_hw_rev() >= 0x07 ){
 		gpio_tlmm_config(GPIO_CFG(MSM_GPIO_GYRO_FIFO_INT, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_8MA), GPIO_CFG_ENABLE);
 		gpio_set_value_cansleep(MSM_GPIO_GYRO_FIFO_INT, 0);
-	}
-	else
-
+	} else
 #endif    
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_GYRO_FIFO_INT), &gyro_int);
 	if (rc) {
@@ -10811,7 +9460,6 @@ pr_err("%s PMIC_GPIO_EAR_DET : OK \n", __func__);
 		gpio_set_value_cansleep(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_ACCEL_INT), 0);		
 	}
 #endif
-
 
 #if defined(CONFIG_OPTICAL_GP2AP020A00F)
 	rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PMIC_GPIO_ALS_INT), &als_int);
@@ -10844,32 +9492,7 @@ static const unsigned int ffa_keymap[] = {
 	KEY(0, 2, KEY_MENU),		
 	KEY(0, 3, KEY_HOME),
 	KEY(0, 4, KEY_VOLUMEDOWN),
-	KEY(0, 5, KEY_VOLUMEUP),	
-#if 0
-	KEY(0, 0, KEY_FN_F1),	 /* LS - PUSH1 */
-	KEY(0, 1, KEY_UP),	 /* NAV - UP */
-	KEY(0, 2, KEY_LEFT),	 /* NAV - LEFT */
-	KEY(0, 3, KEY_VOLUMEUP), /* Shuttle SW_UP */
-
-	KEY(1, 0, KEY_FN_F2), 	 /* LS - PUSH2 */
-	KEY(1, 1, KEY_RIGHT),    /* NAV - RIGHT */
-	KEY(1, 2, KEY_DOWN),     /* NAV - DOWN */
-	KEY(1, 3, KEY_VOLUMEDOWN),
-
-	KEY(2, 3, KEY_ENTER),     /* SW_PUSH key */
-
-	KEY(4, 0, KEY_CAMERA_FOCUS), /* RS - PUSH1 */
-	KEY(4, 1, KEY_UP),	  /* USER_UP */
-	KEY(4, 2, KEY_LEFT),	  /* USER_LEFT */
-	KEY(4, 3, KEY_HOME),	  /* Right switch: MIC Bd */
-	KEY(4, 4, KEY_FN_F3),	  /* Reserved MIC */
-
-	KEY(5, 0, KEY_CAMERA), /* RS - PUSH2 */
-	KEY(5, 1, KEY_RIGHT),	  /* USER_RIGHT */
-	KEY(5, 2, KEY_DOWN),	  /* USER_DOWN */
-	KEY(5, 3, KEY_BACK),	  /* Left switch: MIC */
-	KEY(5, 4, KEY_MENU),	  /* Center switch: MIC */
-#endif
+	KEY(0, 5, KEY_VOLUMEUP),
 };
 
 static const unsigned int dragon_keymap[] = {
@@ -11657,9 +10280,6 @@ static void msm_timpani_shutdown_power(void)
 
 	regulator_put(vreg_timpani_2);
 }
-/* Qualcomm i2c patch begins */
-
-
 
 static unsigned int msm_timpani_reset(void)
 {
@@ -11707,7 +10327,6 @@ fail:
 	return rc;
 }
 
-/* qualcomm patch end */
 /* Power analog function of codec */
 static struct regulator *vreg_timpani_cdc_apwr;
 static int msm_timpani_codec_power(int vreg_on)
@@ -11783,6 +10402,7 @@ void __ref init_a2220(void)
 	printk("init_a2220 - \n");
 }
 #endif
+
 static struct marimba_codec_platform_data timpani_codec_pdata = {
 	.marimba_codec_power =  msm_timpani_codec_power,
 #ifdef CONFIG_VP_A2220
@@ -11825,6 +10445,7 @@ static struct i2c_board_info wm8903_codec_i2c_info[] = {
 	},
 };
 #endif
+
 #ifdef CONFIG_PMIC8901
 
 #define PM8901_GPIO_INT           91
@@ -12210,44 +10831,6 @@ struct i2c_registry {
 };
 
 static struct i2c_registry msm8x60_i2c_devices[] __initdata = {
-#if 0 // removed gpio expander, #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
-	{
-		I2C_SURF | I2C_FFA | I2C_DRAGON,
-		MSM_GSBI8_QUP_I2C_BUS_ID,
-		core_expander_i2c_info,
-		ARRAY_SIZE(core_expander_i2c_info),
-	},
-	{
-		I2C_SURF | I2C_FFA | I2C_DRAGON,
-		MSM_GSBI8_QUP_I2C_BUS_ID,
-		docking_expander_i2c_info,
-		ARRAY_SIZE(docking_expander_i2c_info),
-	},
-	{
-		I2C_SURF,
-		MSM_GSBI8_QUP_I2C_BUS_ID,
-		surf_expanders_i2c_info,
-		ARRAY_SIZE(surf_expanders_i2c_info),
-	},
-	{
-		I2C_SURF | I2C_FFA | I2C_DRAGON,
-		MSM_GSBI3_QUP_I2C_BUS_ID,
-		fha_expanders_i2c_info,
-		ARRAY_SIZE(fha_expanders_i2c_info),
-	},
-	{
-		I2C_FLUID,
-		MSM_GSBI3_QUP_I2C_BUS_ID,
-		fluid_expanders_i2c_info,
-		ARRAY_SIZE(fluid_expanders_i2c_info),
-	},
-	{
-		I2C_FLUID,
-		MSM_GSBI8_QUP_I2C_BUS_ID,
-		fluid_core_expander_i2c_info,
-		ARRAY_SIZE(fluid_core_expander_i2c_info),
-	},
-#endif
 #if defined(CONFIG_VIDEO_MHL_V1) || defined(CONFIG_VIDEO_MHL_V2)
 	{
 		I2C_SURF | I2C_FFA | I2C_FLUID,
@@ -12448,6 +11031,9 @@ static void fixup_i2c_configs(void)
 		sx150x_data[SX150X_CORE_FLUID].irq_summary =
 			PM8058_GPIO_IRQ(PM8058_IRQ_BASE, UI_INT1_N);
 #endif
+#ifdef CONFIG_SENSORS_YDA165
+	platform_device_register(&amp_i2c_gpio_device);
+#endif
 #endif
 }
 
@@ -12618,7 +11204,6 @@ static void __init msm8x60_init_buses(void)
 #endif
 
 #ifdef CONFIG_MSM_BUS_SCALING
-
 	/* RPM calls are only enabled on V2 */
 	if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) == 2) {
 		msm_bus_apps_fabric_pdata.rpm_enabled = 1;
@@ -12645,12 +11230,6 @@ static void __init msm8x60_map_io(void)
 		pr_err("socinfo_init() failed!\n");
 
 #ifdef CONFIG_SEC_DEBUG
-	/* onlyjazz : now sec_debug is ready to run */
-#if 0
-	sec_getlog_supply_meminfo(meminfo.bank[0].size, meminfo.bank[0].start,
-				  meminfo.bank[1].size, meminfo.bank[1].start);
-#endif
-
 	sec_getlog_supply_meminfo(0x40000000, 0x40000000, 0x00, 0x00);
 #endif
 }
@@ -13743,7 +12322,6 @@ static void __init msm8x60_init_mmc(void)
 #endif
 }
 
-
 #if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
 static void tsp_power_init(void)
 {
@@ -13753,14 +12331,13 @@ static void tsp_power_init(void)
 	struct regulator *l1;
 	struct regulator *L4;
 #endif
+
 #ifdef CONFIG_BATTERY_SEC
 	if(is_lpm_boot){
    	        printk("%s: MXT224 Power On skipped by LPM\n", __func__);
 		return;
        }
 #endif
-
-	printk("[TSP] Power Down S to discharge for unexpected leackage current\n");
 
 #if defined(CONFIG_KOR_MODEL_SHV_E110S)
 	rc = gpio_request(TOUCHSCREEN_IRQ, "TOUCHSCREEN_IRQ");
@@ -13835,23 +12412,19 @@ static void tsp_power_init(void)
 error2:
     gpio_free(TSP_SDA);
 error1:
-    gpio_free(TOUCHSCREEN_IRQ);
-	
+    gpio_free(TOUCHSCREEN_IRQ);	
 #elif defined(CONFIG_KOR_MODEL_SHV_E120L)
 	struct regulator *l3;
 
 	l3 = regulator_get(NULL, "8058_l3");
-	//		   if (IS_ERR(l17))
-	//			return -1;
-
 	ret = regulator_set_voltage(l3, 1800000, 1800000);
 	if (ret) {
-	printk("%s: error setting voltage\n", __func__);
+		printk("%s: error setting voltage\n", __func__);
 	}
 
 	ret = regulator_enable(l3);
 	if (ret) {
-	printk("%s: error enabling regulator\n", __func__);
+		printk("%s: error enabling regulator\n", __func__);
 	}
 	
 	l1 = regulator_get(NULL, "8901_l1");
@@ -13866,7 +12439,6 @@ error1:
 		printk("%s: error enabling regulator\n", __func__);
 	}
 #elif defined(CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_T989)
-
 	rc = gpio_request(TOUCHSCREEN_IRQ, "TOUCHSCREEN_IRQ");
 	if (rc) {
 		pr_err("'%s'(%d) gpio_request failed, rc=%d\n",	"TOUCHSCREEN_IRQ", TOUCHSCREEN_IRQ, rc);
@@ -13936,8 +12508,7 @@ error1:
 error2:
     gpio_free(TSP_SDA);
 error1:
-    gpio_free(TOUCHSCREEN_IRQ);
-    
+    gpio_free(TOUCHSCREEN_IRQ);    
 #elif defined(CONFIG_USA_MODEL_SGH_I717)
 	rc = gpio_request(TOUCHSCREEN_IRQ, "TOUCHSCREEN_IRQ");
 	if (rc) {
@@ -13989,14 +12560,14 @@ error1:
 
 	ret = regulator_set_voltage(l1, 3300000, 3300000);
 	if (ret) {
-	printk("%s: error setting voltage\n", __func__);
+		printk("%s: error setting voltage\n", __func__);
 	}
 
 	if (regulator_is_enabled(l1)) {
 		ret = regulator_disable(l1);
-	if (ret) {
-	printk("%s: error enabling regulator\n", __func__);
-	}
+		if (ret) {
+			printk("%s: error enabling regulator\n", __func__);
+		}
 	}	
 	if (regulator_is_enabled(L4)) {
 		rc = regulator_disable(L4);
@@ -14014,7 +12585,6 @@ error2:
     gpio_free(TSP_SDA);
 error1:
     gpio_free(TOUCHSCREEN_IRQ);
-
 #elif defined (CONFIG_JPN_MODEL_SC_03D)
 	rc = gpio_request(TOUCHSCREEN_IRQ, "TOUCHSCREEN_IRQ");
 	if (rc) {
@@ -14047,351 +12617,8 @@ error2:
 	gpio_free(TSP_SDA);
 error1:
 	gpio_free(TOUCHSCREEN_IRQ);
-#endif	
-
-
-}
 #endif
-
-
-
-#if !defined(CONFIG_GPIO_SX150X) && !defined(CONFIG_GPIO_SX150X_MODULE)
-static inline void display_common_power(int on) {}
-#else
-#if !defined(CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) \
-	&& !defined(CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)\
-	&& !defined(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PANEL) \
-	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) \
-	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
-
-#define _GET_REGULATOR(var, name) do {					\
-	if (var == NULL) {						\
-		var = regulator_get(NULL, name);			\
-		if (IS_ERR(var)) {					\
-			pr_err("'%s' regulator not found, rc=%ld\n",	\
-				name, PTR_ERR(var));			\
-			var = NULL;					\
-		}							\
-	}								\
-} while (0)
-
-static int dsub_regulator(int on)
-{
-	static struct regulator *dsub_reg;
-	static struct regulator *mpp0_reg;
-	static int dsub_reg_enabled;
-	int rc = 0;
-
-	_GET_REGULATOR(dsub_reg, "8901_l3");
-	if (IS_ERR(dsub_reg)) {
-		printk(KERN_ERR "%s: failed to get reg 8901_l3 err=%ld",
-		       __func__, PTR_ERR(dsub_reg));
-		return PTR_ERR(dsub_reg);
-	}
-
-	_GET_REGULATOR(mpp0_reg, "8901_mpp0");
-	if (IS_ERR(mpp0_reg)) {
-		printk(KERN_ERR "%s: failed to get reg 8901_mpp0 err=%ld",
-		       __func__, PTR_ERR(mpp0_reg));
-		return PTR_ERR(mpp0_reg);
-	}
-
-	if (on && !dsub_reg_enabled) {
-		rc = regulator_set_voltage(dsub_reg, 3300000, 3300000);
-		if (rc) {
-			printk(KERN_ERR "%s: failed to set reg 8901_l3 voltage"
-			       " err=%d", __func__, rc);
-			goto dsub_regulator_err;
-		}
-		rc = regulator_enable(dsub_reg);
-		if (rc) {
-			printk(KERN_ERR "%s: failed to enable reg 8901_l3"
-			       " err=%d", __func__, rc);
-			goto dsub_regulator_err;
-		}
-		rc = regulator_enable(mpp0_reg);
-		if (rc) {
-			printk(KERN_ERR "%s: failed to enable reg 8901_mpp0"
-			       " err=%d", __func__, rc);
-			goto dsub_regulator_err;
-		}
-		dsub_reg_enabled = 1;
-	} else if (!on && dsub_reg_enabled) {
-		rc = regulator_disable(dsub_reg);
-		if (rc)
-			printk(KERN_WARNING "%s: failed to disable reg 8901_l3"
-			       " err=%d", __func__, rc);
-		rc = regulator_disable(mpp0_reg);
-		if (rc)
-			printk(KERN_WARNING "%s: failed to disable reg "
-			       "8901_mpp0 err=%d", __func__, rc);
-		dsub_reg_enabled = 0;
-	}
-
-	return rc;
-
-dsub_regulator_err:
-	regulator_put(mpp0_reg);
-	regulator_put(dsub_reg);
-	return rc;
 }
-
-static int display_power_on;
-static void setup_display_power(void)
-{
-	if (display_power_on)
-		if (lcdc_vga_enabled) {
-			dsub_regulator(1);
-			gpio_set_value_cansleep(GPIO_LVDS_SHUTDOWN_N, 0);
-			gpio_set_value_cansleep(GPIO_BACKLIGHT_EN, 0);
-			if (machine_is_msm8x60_ffa() ||
-			    machine_is_msm8x60_fusn_ffa())
-				gpio_set_value_cansleep(GPIO_DONGLE_PWR_EN, 1);
-		} else {
-			dsub_regulator(0);
-			gpio_set_value_cansleep(GPIO_LVDS_SHUTDOWN_N, 1);
-			gpio_set_value_cansleep(GPIO_BACKLIGHT_EN, 1);
-			if (machine_is_msm8x60_ffa() ||
-			    machine_is_msm8x60_fusn_ffa())
-				gpio_set_value_cansleep(GPIO_DONGLE_PWR_EN, 0);
-		}
-	else {
-		dsub_regulator(0);
-		if (machine_is_msm8x60_ffa() || machine_is_msm8x60_fusn_ffa())
-			gpio_set_value_cansleep(GPIO_DONGLE_PWR_EN, 0);
-		/* BACKLIGHT */
-		gpio_set_value_cansleep(GPIO_BACKLIGHT_EN, 0);
-		/* LVDS */
-		gpio_set_value_cansleep(GPIO_LVDS_SHUTDOWN_N, 0);
-	}
-}
-
-#define _GET_REGULATOR(var, name) do {					\
-	if (var == NULL) {						\
-		var = regulator_get(NULL, name);			\
-		if (IS_ERR(var)) {					\
-			pr_err("'%s' regulator not found, rc=%ld\n",	\
-				name, PTR_ERR(var));			\
-			var = NULL;					\
-		}							\
-	}								\
-} while (0)
-
-#define GPIO_RESX_N (GPIO_EXPANDER_GPIO_BASE + 2)
-
-static void display_common_power(int on)
-{
-	int rc;
-	static struct regulator *display_reg;
-
-	if (machine_is_msm8x60_surf() || machine_is_msm8x60_ffa() ||
-	    machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa()) {
-		if (on) {
-			/* LVDS */
-			_GET_REGULATOR(display_reg, "8901_l2");
-			if (!display_reg)
-				return;
-			rc = regulator_set_voltage(display_reg,
-				3300000, 3300000);
-			if (rc)
-				goto out;
-			rc = regulator_enable(display_reg);
-			if (rc)
-				goto out;
-			rc = gpio_request(GPIO_LVDS_SHUTDOWN_N,
-				"LVDS_STDN_OUT_N");
-			if (rc) {
-				printk(KERN_ERR "%s: LVDS gpio %d request"
-					"failed\n", __func__,
-					 GPIO_LVDS_SHUTDOWN_N);
-				goto out2;
-			}
-
-			/* BACKLIGHT */
-			rc = gpio_request(GPIO_BACKLIGHT_EN, "BACKLIGHT_EN");
-			if (rc) {
-				printk(KERN_ERR "%s: BACKLIGHT gpio %d request"
-					"failed\n", __func__,
-					 GPIO_BACKLIGHT_EN);
-				goto out3;
-			}
-
-			if (machine_is_msm8x60_ffa() ||
-			    machine_is_msm8x60_fusn_ffa()) {
-				rc = gpio_request(GPIO_DONGLE_PWR_EN,
-						  "DONGLE_PWR_EN");
-				if (rc) {
-					printk(KERN_ERR "%s: DONGLE_PWR_EN gpio"
-					       " %d request failed\n", __func__,
-					       GPIO_DONGLE_PWR_EN);
-					goto out4;
-				}
-			}
-
-			gpio_direction_output(GPIO_LVDS_SHUTDOWN_N, 0);
-			gpio_direction_output(GPIO_BACKLIGHT_EN, 0);
-			if (machine_is_msm8x60_ffa() ||
-			    machine_is_msm8x60_fusn_ffa())
-				gpio_direction_output(GPIO_DONGLE_PWR_EN, 0);
-			mdelay(20);
-			display_power_on = 1;
-			setup_display_power();
-		} else {
-			if (display_power_on) {
-				display_power_on = 0;
-				setup_display_power();
-				mdelay(20);
-				if (machine_is_msm8x60_ffa() ||
-				    machine_is_msm8x60_fusn_ffa())
-					gpio_free(GPIO_DONGLE_PWR_EN);
-				goto out4;
-			}
-		}
-	}
-#if defined(CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT) || \
-	defined(CONFIG_FB_MSM_LCDC_AUO_WVGA)
-	else if (machine_is_msm8x60_fluid()) {
-		static struct regulator *fluid_reg;
-		static struct regulator *fluid_reg2;
-
-		if (on) {
-			_GET_REGULATOR(fluid_reg, "8901_l2");
-			if (!fluid_reg)
-				return;
-			_GET_REGULATOR(fluid_reg2, "8058_s3");
-			if (!fluid_reg2) {
-				regulator_put(fluid_reg);
-				return;
-			}
-			rc = gpio_request(GPIO_RESX_N, "RESX_N");
-			if (rc) {
-				regulator_put(fluid_reg2);
-				regulator_put(fluid_reg);
-				return;
-			}
-			regulator_set_voltage(fluid_reg, 2850000, 2850000);
-			regulator_set_voltage(fluid_reg2, 1800000, 1800000);
-			regulator_enable(fluid_reg);
-			regulator_enable(fluid_reg2);
-			msleep(20);
-			gpio_direction_output(GPIO_RESX_N, 0);
-			udelay(10);
-			gpio_set_value_cansleep(GPIO_RESX_N, 1);
-			display_power_on = 1;
-			setup_display_power();
-		} else {
-			gpio_set_value_cansleep(GPIO_RESX_N, 0);
-			gpio_free(GPIO_RESX_N);
-			msleep(20);
-			regulator_disable(fluid_reg2);
-			regulator_disable(fluid_reg);
-			regulator_put(fluid_reg2);
-			regulator_put(fluid_reg);
-			display_power_on = 0;
-			setup_display_power();
-			fluid_reg = NULL;
-			fluid_reg2 = NULL;
-		}
-	}
-#endif
-#if defined(CONFIG_FB_MSM_LCDC_NT35582_WVGA)
-	else if (machine_is_msm8x60_dragon()) {
-		static struct regulator *dragon_reg;
-		static struct regulator *dragon_reg2;
-
-		if (on) {
-			_GET_REGULATOR(dragon_reg, "8901_l2");
-			if (!dragon_reg)
-				return;
-			_GET_REGULATOR(dragon_reg2, "8058_l16");
-			if (!dragon_reg2) {
-				regulator_put(dragon_reg);
-				dragon_reg = NULL;
-				return;
-			}
-
-			rc = gpio_request(GPIO_NT35582_BL_EN, "lcdc_bl_en");
-			if (rc) {
-				pr_err("%s: gpio %d request failed with rc=%d\n",
-					__func__, GPIO_NT35582_BL_EN, rc);
-				regulator_put(dragon_reg);
-				regulator_put(dragon_reg2);
-				dragon_reg = NULL;
-				dragon_reg2 = NULL;
-				return;
-			}
-
-			if (gpio_tlmm_config(GPIO_CFG(GPIO_NT35582_RESET, 0,
-				GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
-				GPIO_CFG_16MA), GPIO_CFG_ENABLE)) {
-				pr_err("%s: config gpio '%d' failed!\n",
-					__func__, GPIO_NT35582_RESET);
-				gpio_free(GPIO_NT35582_BL_EN);
-				regulator_put(dragon_reg);
-				regulator_put(dragon_reg2);
-				dragon_reg = NULL;
-				dragon_reg2 = NULL;
-				return;
-			}
-
-			rc = gpio_request(GPIO_NT35582_RESET, "lcdc_reset");
-			if (rc) {
-				pr_err("%s: unable to request gpio %d (rc=%d)\n",
-					__func__, GPIO_NT35582_RESET, rc);
-				gpio_free(GPIO_NT35582_BL_EN);
-				regulator_put(dragon_reg);
-				regulator_put(dragon_reg2);
-				dragon_reg = NULL;
-				dragon_reg2 = NULL;
-				return;
-			}
-
-			regulator_set_voltage(dragon_reg, 3300000, 3300000);
-			regulator_set_voltage(dragon_reg2, 1800000, 1800000);
-			regulator_enable(dragon_reg);
-			regulator_enable(dragon_reg2);
-			msleep(20);
-
-			gpio_set_value_cansleep(GPIO_NT35582_RESET, 1);
-			msleep(20);
-			gpio_set_value_cansleep(GPIO_NT35582_RESET, 0);
-			msleep(20);
-			gpio_set_value_cansleep(GPIO_NT35582_RESET, 1);
-			msleep(50);
-
-			gpio_set_value_cansleep(GPIO_NT35582_BL_EN, 1);
-
-			display_power_on = 1;
-		} else if ((dragon_reg != NULL) && (dragon_reg2 != NULL)) {
-			gpio_free(GPIO_NT35582_RESET);
-			gpio_free(GPIO_NT35582_BL_EN);
-			regulator_disable(dragon_reg2);
-			regulator_disable(dragon_reg);
-			regulator_put(dragon_reg2);
-			regulator_put(dragon_reg);
-			display_power_on = 0;
-			dragon_reg = NULL;
-			dragon_reg2 = NULL;
-		}
-	}
-#endif
-	return;
-
-out4:
-	gpio_free(GPIO_BACKLIGHT_EN);
-out3:
-	gpio_free(GPIO_LVDS_SHUTDOWN_N);
-out2:
-	regulator_disable(display_reg);
-out:
-	regulator_put(display_reg);
-	display_reg = NULL;
-}
-#undef _GET_REGULATOR
-#else
-static inline void display_common_power(int on) {}
-static inline void setup_display_power(void) {}
-#endif
 #endif
 
 static int mipi_dsi_panel_power(int on);
@@ -14399,7 +12626,7 @@ static int mipi_dsi_panel_power(int on);
 #if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) || defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
 
 #define MIPI_STR "[Mipi_LCD] "
-#define LCD_GPIO_RESET	    (28)
+#define LCD_GPIO_RESET		(28)
 #define LCD_GPIO_OLED_ID	(7)
 
 #if defined (CONFIG_USA_MODEL_SGH_I757)
@@ -14437,8 +12664,7 @@ static void mipi_S6E8AA0_panel_gpio_init(void)
 	printk(MIPI_STR "%s\n", __func__);
 
 	loop_count= ARRAY_SIZE(hd720_gpio_config_data);
-	for( i=0; i<loop_count; i++)
-	{
+	for( i=0; i<loop_count; i++) {
 		rc = gpio_tlmm_config(hd720_gpio_config_data[i].gpio_cfg, 1);
 		if (rc) {
 			pr_err("%s: gpio_tlmm_config FAIL(%dth) = %d\n", __func__, i, rc);
@@ -14446,8 +12672,7 @@ static void mipi_S6E8AA0_panel_gpio_init(void)
 	}
 
 	loop_count= ARRAY_SIZE(hd720_pm8058_gpio_config_gpio);
-	for( i=0; i<loop_count; i++)
-	{
+	for( i=0; i<loop_count; i++) {
 		rc = pm8xxx_gpio_config(PM8058_GPIO_PM_TO_SYS(PM8058_GPIO(hd720_pm8058_gpio_config_gpio[i])),
 				&(hd720_pm8058_gpio_config_data[i].cfg));
 		if (rc < 0) {
@@ -14455,8 +12680,7 @@ static void mipi_S6E8AA0_panel_gpio_init(void)
 		}
 	}
 #if defined (CONFIG_USA_MODEL_SGH_I757)
-	if (get_hw_rev()>=6)
-	{
+	if (get_hw_rev() >=6 ) {
 		gpio_tlmm_config(GPIO_CFG(LCD_GPIO_2_2V_EN, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), 1);
 	}
 #endif
@@ -14474,27 +12698,25 @@ static void mipi_S6E8AA0_panel_reset_down(void)
 
 static int mipi_S6E8AA0_panel_power(int enable)
 {
-    static struct regulator *l19 = NULL;
-    static struct regulator *l17 = NULL;
-    static struct regulator *l3 = NULL;
-    static struct regulator *l12 = NULL;
-    int ret;
-    //int	isDaliLgtRev01 = false;
+	static struct regulator *l19 = NULL;
+	static struct regulator *l17 = NULL;
+	static struct regulator *l3 = NULL;
+	static struct regulator *l12 = NULL;
+	int ret;
 
-    int isUse_LDO3 = false;
-    int LDO3_voltage = 2200000;
-    int isUse_LDO12 = false;
-    int LDO12_voltage = 2200000;
-    int isUse_LDO19 = false;
-    int LDO19_voltage = 3100000;
-    int isUse_LDO17 = false;
-    int LDO17_voltage = 2200000;
+	int isUse_LDO3 = false;
+	int LDO3_voltage = 2200000;
+	int isUse_LDO12 = false;
+	int LDO12_voltage = 2200000;
+	int isUse_LDO19 = false;
+	int LDO19_voltage = 3100000;
+	int isUse_LDO17 = false;
+	int LDO17_voltage = 2200000;
 
 #if defined(CONFIG_USA_MODEL_SGH_I757)
-	if (get_hw_rev()>=6)	{
+	if (get_hw_rev() >= 6){
 		isUse_LDO3 = 0;
-	}
-	else	{
+	} else {
 		isUse_LDO3 = true;
 		LDO3_voltage = 2200000;
 	}
@@ -14508,196 +12730,173 @@ static int mipi_S6E8AA0_panel_power(int enable)
 	LDO12_voltage = 2200000;
 	isUse_LDO19 = true;
 	LDO19_voltage = 3100000;
-	printk("[Mipi_LCD] %s: Enable=%d, Unknown Model Case\n", __FUNCTION__, enable);
 #endif
 
 	 if(l3 == NULL && isUse_LDO3)	 {
-		 l3 = regulator_get(NULL, "8058_l3");
-		 if (IS_ERR(l3)) {
-		 	printk( MIPI_STR "Fail to get handle LDO3\n" );
-					 return -1;
+		l3 = regulator_get(NULL, "8058_l3");
+		if (IS_ERR(l3)) {
+			printk( MIPI_STR "Fail to get handle LDO3\n" );
+			return -1;
 		}
 
-		 ret = regulator_set_voltage(l3, LDO3_voltage, LDO3_voltage);
-				 if (ret) {
-		 	printk( MIPI_STR "Fail to control LDO3\n" );
-		 } else {
-		 	printk( MIPI_STR "Use LDO3, volt=%d\n", LDO3_voltage);
-		 }
+		ret = regulator_set_voltage(l3, LDO3_voltage, LDO3_voltage);
+		if (ret) {
+			printk( MIPI_STR "Fail to control LDO3\n" );
+		} else {
+			printk( MIPI_STR "Use LDO3, volt=%d\n", LDO3_voltage);
+		}
 	 }
 
 	 if(l12 == NULL && isUse_LDO12)	 {
-		 l12 = regulator_get(NULL, "8058_l12");
-		 if (IS_ERR(l12)) {
-		 	printk( MIPI_STR "Fail to get handle LDO12\n" );
-		 return -1;
+		l12 = regulator_get(NULL, "8058_l12");
+		if (IS_ERR(l12)) {
+			printk( MIPI_STR "Fail to get handle LDO12\n" );
+			return -1;
 		}
 
-		 ret = regulator_set_voltage(l12, LDO12_voltage, LDO12_voltage);
-		 if (ret) {
-		 	printk( MIPI_STR "Fail to control LDO12\n" );
-		 } else {
-		 	printk( MIPI_STR "Use LDO12, volt=%d\n", LDO12_voltage);
-		 }
+		ret = regulator_set_voltage(l12, LDO12_voltage, LDO12_voltage);
+		if (ret) {
+			printk( MIPI_STR "Fail to control LDO12\n" );
+		} else {
+			printk( MIPI_STR "Use LDO12, volt=%d\n", LDO12_voltage);
+		}
 	 }
 
 	 if(l17 == NULL && isUse_LDO17)	 {
-		 l17 = regulator_get(NULL, "8058_l17");
-		 if (IS_ERR(l17)) {
-		 	printk( MIPI_STR "Fail to get handle LDO17\n" );
-		 return -1;
+		l17 = regulator_get(NULL, "8058_l17");
+		if (IS_ERR(l17)) {
+			printk( MIPI_STR "Fail to get handle LDO17\n" );
+			return -1;
 		}
 
-		 ret = regulator_set_voltage(l17, LDO17_voltage, LDO17_voltage);
-		 if (ret) {
-		 	printk( MIPI_STR "Fail to control LDO17\n" );
-		 } else {
-		 	printk( MIPI_STR "Use LDO17, volt=%d\n", LDO17_voltage);
-		 }
+		ret = regulator_set_voltage(l17, LDO17_voltage, LDO17_voltage);
+		if (ret) {
+			printk( MIPI_STR "Fail to control LDO17\n" );
+		} else {
+			printk( MIPI_STR "Use LDO17, volt=%d\n", LDO17_voltage);
+		}
 	}
 
 	if(l19 == NULL && isUse_LDO19 )	 {
-		 l19 = regulator_get(NULL, "8058_l19");
-		 if (IS_ERR(l19)) {
-		 	printk( MIPI_STR "Fail to get handle LDO19\n" );
-				 return -1;
+		l19 = regulator_get(NULL, "8058_l19");
+		if (IS_ERR(l19)) {
+			printk( MIPI_STR "Fail to get handle LDO19\n" );
+			return -1;
 		}
 
-		 ret = regulator_set_voltage(l19, LDO19_voltage, LDO19_voltage);
-			 if (ret) {
-		 	printk( MIPI_STR "Fail to control LDO19\n" );
-		 } else {
-		 	printk( MIPI_STR "Use LDO19, volt=%d\n", LDO19_voltage);
-		 }
+		ret = regulator_set_voltage(l19, LDO19_voltage, LDO19_voltage);
+		if (ret) {
+			printk( MIPI_STR "Fail to control LDO19\n" );
+		} else {
+			printk( MIPI_STR "Use LDO19, volt=%d\n", LDO19_voltage);
+		}
 	}
 
 	if (enable) {
 		if( l3 != NULL ) {
-			 ret = regulator_enable(l3);
-			 if (ret) {
-			 	printk( MIPI_STR "Fail to enable LDO3\n" );
-			 }
-	        }
-
+			ret = regulator_enable(l3);
+			if (ret) {
+				printk( MIPI_STR "Fail to enable LDO3\n" );
+			}
+		}
 		if( l12 != NULL ) {
-			 ret = regulator_enable(l12);
-                         if (ret) {
-			 	printk( MIPI_STR "Fail to enable LDO12\n" );
-			 }
+			ret = regulator_enable(l12);
+			if (ret) {
+				printk( MIPI_STR "Fail to enable LDO12\n" );
+			}
 		}
-
 		if( l17 != NULL ) {
-			 ret = regulator_enable(l17);
-			 if (ret) {
-			 	printk( MIPI_STR "Fail to enable LDO17\n" );
-			 }
+			ret = regulator_enable(l17);
+			if (ret) {
+				printk( MIPI_STR "Fail to enable LDO17\n" );
+			}
 		}
-
 #if defined (CONFIG_USA_MODEL_SGH_I757)
-		if (get_hw_rev()>=6)	{
+		if (get_hw_rev()>=6) {
 			gpio_set_value(LCD_GPIO_2_2V_EN, 1);
 		}
 #endif
 		msleep(5);
-
 		if( l19 != NULL ) {
-		         ret = regulator_enable(l19);
-			 if (ret) {
-			 	printk( MIPI_STR "Fail to enable LDO19\n" );
-			 }
+			ret = regulator_enable(l19);
+			if (ret) {
+				printk( MIPI_STR "Fail to enable LDO19\n" );
+			}
 		}
-
-		 mipi_S6E8AA0_panel_gpio_init();
-		 msleep(25);
-		 mipi_S6E8AA0_panel_reset_up();
-		 msleep(5);
-
-         } else {
-
-		mipi_S6E8AA0_panel_reset_down();
-
+		mipi_S6E8AA0_panel_gpio_init();
+		msleep(25);
+		mipi_S6E8AA0_panel_reset_up();
 		msleep(5);
-
+	} else {
+		mipi_S6E8AA0_panel_reset_down();
+		msleep(5);
 		if( l19 != NULL ) {
 			ret = regulator_disable(l19);
-	                if (ret) {
-			 	printk( MIPI_STR "Fail to disable LDO19\n" );
+			if (ret) {
+				printk( MIPI_STR "Fail to disable LDO19\n" );
 			}
 		}
-
 		msleep(5);
-
 		if( l12 != NULL ) {
 			ret = regulator_disable(l12);
-		        if (ret) {
-			 	printk( MIPI_STR "Fail to disable LDO12\n" );
+			if (ret) {
+				printk( MIPI_STR "Fail to disable LDO12\n" );
 			}
 		}
-                if( l17 != NULL ) {
-                        ret = regulator_disable(l17);
-                        if (ret) {
-                                printk( MIPI_STR "Fail to disable LDO17\n" );
-                        }
-                }
+		if( l17 != NULL ) {
+			ret = regulator_disable(l17);
+			if (ret) {
+				printk( MIPI_STR "Fail to disable LDO17\n" );
+			}
+		}
+	}
 
-    }
-    return ret;
+	return ret;
 }
 #endif
 
- static int lcdc_LD9040_panel_power(int enable)
+static int display_common_power(int enable)
 {
 	static struct regulator *l3 = NULL;
-    static struct regulator *l19 = NULL;
+	static struct regulator *l19 = NULL;
 	int ret;
 
 	printk("[kmj] %s:enable:%d\n", __FUNCTION__, enable);
 
-    if(l3 == NULL)
-    {
-        	l3 = regulator_get(NULL, "8058_l3");
-        	if (IS_ERR(l3))
-        		return -1;
+	if(l3 == NULL) {
+		l3 = regulator_get(NULL, "8058_l3");
+		if (IS_ERR(l3))
+			return -1;
+		ret = regulator_set_voltage(l3, 1800000, 1800000);
+		if (ret)
+			printk("%s: error setting voltage\n", __func__);
+	}
+	if(l19 == NULL) {            
+		l19 = regulator_get(NULL, "8058_l19");
+		if (IS_ERR(l19))
+			return -1;
+		ret = regulator_set_voltage(l19, 3000000, 3000000);
+		if (ret)
+			printk("%s: error setting voltage\n", __func__);
+	}
 
-        	ret = regulator_set_voltage(l3, 1800000, 1800000);
-        	if (ret) {
-        		printk("%s: error setting voltage\n", __func__);
-        	}
-    }
-            
-    if(l19 == NULL)
-    {            
-        	l19 = regulator_get(NULL, "8058_l19");
-        	if (IS_ERR(l19))
-        		return -1;
-
-        	ret = regulator_set_voltage(l19, 3000000, 3000000);
-        	if (ret) {
-        		printk("%s: error setting voltage\n", __func__);
-        	}
-    }
-    
 	if (enable) {
+		ret = regulator_enable(l3);
+		if (ret)
+			printk("%s: error enabling regulator\n", __func__);
 
-        	ret = regulator_enable(l3);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}
-        	ret = regulator_enable(l19);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}        	
+		ret = regulator_enable(l19);
+		if (ret)
+			printk("%s: error enabling regulator\n", __func__);
 	} else {
-        	ret = regulator_disable(l3);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}
-        	ret = regulator_disable(l19);
-        	if (ret) {
-        		printk("%s: error enabling regulator\n", __func__);
-        	}        		
-        }
-        
+		ret = regulator_disable(l3);
+		if (ret)
+			printk("%s: error enabling regulator\n", __func__);
+		ret = regulator_disable(l19);
+		if (ret)
+			printk("%s: error enabling regulator\n", __func__);
+	}
+
 	return ret;
 }
 
@@ -14708,8 +12907,7 @@ static void lcdc_samsung_panel_power(int on)
 {
 	int n, ret = 0;
 
-//	display_common_power(on);
-    lcdc_LD9040_panel_power(on);
+	display_common_power(on);
 
 	for (n = 0; n < LCDC_NUM_GPIO; n++) {
 		if (on) {
@@ -14912,7 +13110,7 @@ static int hdmi_cec_power(int on)
 error:
 	regulator_disable(reg_8901_l3);
 	return rc;
-#else/*CONFIG_VIDEO_MHL_V1 || CONFIG_VIDEO_MHL_V2*/
+#else
 	printk("%s: skipped when MHL is being used\n", __func__);
 	return 0;
 #endif
@@ -14933,16 +13131,16 @@ static int hdmi_panel_power(int on)
 #undef _GET_REGULATOR
 
 #endif /* CONFIG_FB_MSM_HDMI_MSM_PANEL */
+
 #ifdef CONFIG_KEYPAD_CYPRESS_TOUCH
 struct regulator *TKEY_L12 = NULL;
 struct regulator *TKEY_L3B = NULL;
 static int __init tkey_device_init(void)
 {
 	int rc;
-	
-// add_celox for rev02 tkey        
+	     
 #if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
-	struct regulator *lvs2;   // modified for LGU 
+	struct regulator *lvs2;
 #endif
 
 #ifdef CONFIG_BATTERY_SEC
@@ -14950,43 +13148,40 @@ static int __init tkey_device_init(void)
 		return 0;
 #endif
 
+	gpio_tlmm_config(GPIO_CFG(156, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
+	gpio_tlmm_config(GPIO_CFG(157, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
 
-gpio_tlmm_config(GPIO_CFG(156, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
-gpio_tlmm_config(GPIO_CFG(157, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
-
-// add_celox for rev02 tkey
 #if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
-		lvs2 = regulator_get(NULL, "8901_lvs2");
-		rc = regulator_enable(lvs2);
-        if(rc)	
-			printk("[TKEY] %s: error enabling regulator\n", __func__);
-        else 
-            printk("[TKEY] %s: 8901_lvs2 On \n", __func__);
-		regulator_put(lvs2);
+	lvs2 = regulator_get(NULL, "8901_lvs2");
+	rc = regulator_enable(lvs2);
+	if(rc)	
+		printk("[TKEY] %s: error enabling regulator\n", __func__);
+	else 
+		printk("[TKEY] %s: 8901_lvs2 On \n", __func__);
+	regulator_put(lvs2);
 #endif	
 
-	//TKEY_L12 = regulator_get(&rpm_vreg_device[RPM_VREG_ID_PM8058_L12].dev, "8058_l12");
 	TKEY_L12 = regulator_get(NULL, "8058_l12");
 
-		if (IS_ERR(TKEY_L12)) {
-			rc = PTR_ERR(TKEY_L12);
-		    pr_err("%s: L12 get failed (%d)\n", __func__, rc);
-			return rc;
-		}
-		rc = regulator_set_voltage(TKEY_L12, 3300000, 3300000);
-		if (rc) {
-			pr_err("%s: L12 set level failed (%d)\n", __func__, rc);
-			return rc;
-		}
-		rc = regulator_enable(TKEY_L12);
-		if (rc) {
-			pr_err("%s: L12vreg enable failed (%d)\n", __func__, rc);
-			return rc;
-		}
-		regulator_put(TKEY_L12);
-		printk("[TKEY] %s: TKEY_L12 3.3 V Set \n", __func__);
+	if (IS_ERR(TKEY_L12)) {
+		rc = PTR_ERR(TKEY_L12);
+	    pr_err("%s: L12 get failed (%d)\n", __func__, rc);
+		return rc;
+	}
+	rc = regulator_set_voltage(TKEY_L12, 3300000, 3300000);
+	if (rc) {
+		pr_err("%s: L12 set level failed (%d)\n", __func__, rc);
+		return rc;
+	}
+	rc = regulator_enable(TKEY_L12);
+	if (rc) {
+		pr_err("%s: L12vreg enable failed (%d)\n", __func__, rc);
+		return rc;
+	}
+	regulator_put(TKEY_L12);
+	printk("[TKEY] %s: TKEY_L12 3.3 V Set \n", __func__);
 
-		return 0;
+	return 0;
 }
 
 #if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
@@ -15000,15 +13195,12 @@ int tkey_vdd_enable(int onoff)
 	if (IS_ERR(lvs2))
 		return -1;
 
-	if(onoff)
-	{
+	if(onoff) {
 		ret = regulator_enable(lvs2);
 		if (ret) {
 			printk("%s: error enabling regulator\n", __func__);
 		}
-	}
-	else
-	{
+	} else {
 		ret = regulator_disable(lvs2);
 		if (ret) {
 			printk("%s: error enabling regulator\n", __func__);
@@ -15032,7 +13224,7 @@ int tkey_led_vdd_enable(int onoff)
 #elif defined(CONFIG_USA_MODEL_SGH_I727)
 	if(get_hw_rev()>=0x0a)
 #elif defined(CONFIG_USA_MODEL_SGH_I757) || defined(CONFIG_USA_MODEL_SGH_I577)
-    if(true)
+	if(true)
 #else
 	if(get_hw_rev()>=0x04)
 #endif
@@ -15041,8 +13233,7 @@ int tkey_led_vdd_enable(int onoff)
 		if (IS_ERR(l12))
 			return -1;
 
-		if(onoff)
-		{
+		if(onoff) {
 			ret = regulator_set_voltage(l12, 3300000, 3300000);
 
 			if (ret) {
@@ -15050,14 +13241,12 @@ int tkey_led_vdd_enable(int onoff)
 			}
 
 			if(!regulator_is_enabled(l12)) {
-			ret = regulator_enable(l12);
-			if (ret) {
-				printk("%s: error enabling regulator\n", __func__);
+				ret = regulator_enable(l12);
+				if (ret) {
+					printk("%s: error enabling regulator\n", __func__);
 				}
 			}
-		}
-		else
-		{
+		} else {
 			ret = regulator_set_voltage(l12, 3300000, 3300000);
 
 			if (ret) {
@@ -15065,9 +13254,9 @@ int tkey_led_vdd_enable(int onoff)
 			}
 
 			if(regulator_is_enabled(l12)) {
-			ret = regulator_disable(l12);
-			if (ret) {
-				printk("%s: error enabling regulator\n", __func__);
+				ret = regulator_disable(l12);
+				if (ret) {
+					printk("%s: error enabling regulator\n", __func__);
 				}
 			}
 		}
@@ -15081,7 +13270,8 @@ EXPORT_SYMBOL(tkey_led_vdd_enable);
 
 
 static struct regulator *vsensor_2p85 = NULL;
-#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_EUR_MODEL_GT_I9210)|| defined(CONFIG_USA_MODEL_SGH_I577)|| defined(CONFIG_USA_MODEL_SGH_T769)
+#if defined(CONFIG_KOR_MODEL_SHV_E110S) || defined(CONFIG_EUR_MODEL_GT_I9210) \
+	|| defined(CONFIG_USA_MODEL_SGH_I577)|| defined(CONFIG_USA_MODEL_SGH_T769)
 static struct regulator *vsensor_2p85_magnetic = NULL;
 #endif
 #if defined(CONFIG_USA_MODEL_SGH_I757) || defined (CONFIG_CAN_MODEL_SGH_I757M)
@@ -15112,12 +13302,12 @@ static void taos_power_on(void)
 			printk("%s: error vsensor_3p setting voltage ret=%d\n", __func__, ret);
 	}
 
-
 	sensor_power_3p_prox_cnt++;
 	ret = regulator_enable(vsensor_3p_proximity);
 	if (ret) {
 		printk("%s: error enabling regulator\n", __func__);
 	}
+
 	pr_info("[TAOS] %s: sensor_power_3p_prox_cnt=%d\n", __func__, sensor_power_3p_prox_cnt);
 }
 static void taos_power_off(void)
@@ -15158,21 +13348,21 @@ static void sensor_power_on_vdd(int vdd_2p85_on, int vdd_1p8_on, int vdd_2p4_on,
 	}
 
 	if(vsensor_1p8 == NULL) {
-	vsensor_1p8 = regulator_get(NULL, "8058_l20");
-	if (IS_ERR(vsensor_1p8))
+		vsensor_1p8 = regulator_get(NULL, "8058_l20");
+		if (IS_ERR(vsensor_1p8))
 			return;
 
-	ret = regulator_set_voltage(vsensor_1p8, 1800000, 1800000);
-			if (ret)
+		ret = regulator_set_voltage(vsensor_1p8, 1800000, 1800000);
+		if (ret)
 		printk("%s: error vsensor_1p8 setting voltage ret=%d\n", __func__, ret);
-		}
+	}
 
 	if(vdd_1p8_on) {
 		sensor_power_1p8_cnt++;
 		ret = regulator_enable(vsensor_1p8);
 		if (ret)
-				printk("%s: error enabling regulator\n", __func__);
-			}
+			printk("%s: error enabling regulator\n", __func__);
+	}
 
 #if defined (CONFIG_OPTICAL_GP2AP020A00F)
 	if(vsensor_2p4 == NULL) {
@@ -15213,8 +13403,8 @@ static void sensor_power_on_vdd(int vdd_2p85_on, int vdd_1p8_on, int vdd_2p4_on,
 		}
 	}
 #endif
-
-	printk("%s: vdd_2p85=%d, vdd_1p8=%d, vdd_2p_4=%d, vdd_2p85_mag=%d\n", __func__,	sensor_power_2p85_cnt, sensor_power_1p8_cnt, sensor_power_2p4_cnt, sensor_power_2p85_mag_cnt);
+	printk("%s: vdd_2p85=%d, vdd_1p8=%d, vdd_2p_4=%d, vdd_2p85_mag=%d\n", __func__,
+		sensor_power_2p85_cnt, sensor_power_1p8_cnt, sensor_power_2p4_cnt, sensor_power_2p85_mag_cnt);
 }
 
 static void sensor_power_off_vdd(int vdd_2p85_off, int vdd_1p8_off, int vdd_2p4_off, int vdd_2p85_mag_off)
@@ -15268,13 +13458,13 @@ static void sensor_power_off_vdd(int vdd_2p85_off, int vdd_1p8_off, int vdd_2p4_
 	printk("%s: vdd_2p85=%d, vdd_1p8=%d, vdd_2p_4=%d, vdd_2p85_mag=%d\n", __func__,	sensor_power_2p85_cnt, sensor_power_1p8_cnt, sensor_power_2p4_cnt, sensor_power_2p85_mag_cnt);
 }
 
+#if defined (CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
 static int __init sensor_device_init(void)
 {
 #ifdef CONFIG_BATTERY_SEC
 	if(is_lpm_boot)
 		return 0;
 #endif
-#if defined (CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
 #if defined(CONFIG_USA_MODEL_SGH_T769)
 	gpio_tlmm_config(GPIO_CFG(SENSOR_ALS_SDA, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),1);
 	gpio_tlmm_config(GPIO_CFG(SENSOR_ALS_SCL, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),1);
@@ -15282,11 +13472,9 @@ static int __init sensor_device_init(void)
 	gpio_tlmm_config(GPIO_CFG(SENSOR_ALS_SDA, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
 	gpio_tlmm_config(GPIO_CFG(SENSOR_ALS_SCL, 0, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),1);
 #endif
-#endif
 	return 0;
 }
 
-#if defined (CONFIG_OPTICAL_GP2A) || defined (CONFIG_OPTICAL_TAOS)
 static int LED_onoff(u8 onoff)
 {
 	int rc;
@@ -15409,7 +13597,6 @@ static int lcdc_panel_power(int on)
 static uint32_t vibrator_device_gpio_config[] = {
 	GPIO_CFG(30, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 	GPIO_CFG(31, 2, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
-
 };
 
 static void config_gpio_tables_forvib(uint32_t *table, int len)
@@ -15431,20 +13618,13 @@ static int __init vibrator_device_gpio_init(void)
 	return 0;
 }
 
-
 #ifdef CONFIG_MSM_BUS_SCALING
-// Celox SKT
 static struct msm_bus_vectors rotator_init_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_ROTATOR,
-		.dst = MSM_BUS_SLAVE_SMI,
-#if 1	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */		
+		.dst = MSM_BUS_SLAVE_SMI,	
 		.ab = 0,
 		.ib = 0,
-#else	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */			
-		.ab = (1024 * 600 * 4 * 2 * 60),
-		.ib = (1024 * 600 * 4 * 2 * 60 * 1.5),
-#endif	
 	},
 	{
 		.src = MSM_BUS_MASTER_ROTATOR,
@@ -15585,14 +13765,8 @@ static struct msm_bus_vectors mdp_sd_ebi_vectors[] = {
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
 		.dst = MSM_BUS_SLAVE_SMI,
-		
-#if 1	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */
 		.ab = 0,
 		.ib = 0,
-#else	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */
-		.ab = 388800000,
-		.ib = 486000000 * 2,
-#endif	/* onlyjazz.el26 : end */
 	},
 	/* Master and slaves can be from different fabrics */
 	{
@@ -15652,7 +13826,6 @@ static struct msm_bus_vectors mdp_1080p_vectors[] = {
 };
 
 #else
-// Celox SKT
 static struct msm_bus_vectors mdp_sd_smi_vectors[] = {
 	/* Default case static display/UI/2d/3d if FB SMI */
 	{
@@ -15678,13 +13851,10 @@ static struct msm_bus_vectors mdp_sd_ebi_vectors[] = {
 #if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
 		.ab = 740000000,
 		.ib = 900000000,
-#elif 1	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */
-		.ab = 0,
-		.ib = 0,
-#else	/* onlyjazz.el26 : temporarilly use non-zero bandwidth in order to avoid mmfab rate change during smi_clk is disabled */
+#else
 		.ab = 216000000,
 		.ib = 270000000 * 2,
-#endif	/* onlyjazz.el26 : end */
+#endif
 	},
 	/* Master and slaves can be from different fabrics */
 	{
@@ -15893,7 +14063,6 @@ static struct lcdc_platform_data dtv_hdmi_prim_pdata = {
 };
 #endif
 
-
 static struct lcdc_platform_data lcdc_pdata = {
 	.lcdc_power_save   = lcdc_panel_power,
 };
@@ -15901,11 +14070,11 @@ static struct lcdc_platform_data lcdc_pdata = {
 #if !defined(CONFIG_FB_MSM_MIPI_S6D6AA0_WXGA_PANEL) \
 	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL) \
 	&& !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_WXGA_Q1_PANEL)
-
 #define MDP_VSYNC_GPIO			28
 #else
 #define MDP_VSYNC_GPIO (-1)
 #endif
+
 /*
  * MIPI_DSI only use 8058_LDO0 which need always on
  * therefore it need to be put at low power mode if
@@ -15924,6 +14093,7 @@ static int mipi_dsi_panel_power(int on)
 #ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
 	mipi_S6E8AA0_panel_power(on);
 #endif
+
 	mipi_dsi_power_save_on = flag_on;
 
 	if (ldo0 == NULL) {	/* init */
@@ -15962,8 +14132,8 @@ out:
 	ldo0 = NULL;
 	return rc;
 }
-#if defined(CONFIG_FB_MSM_MIPI_DSI)
 
+#ifdef CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL
 static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.vsync_gpio = MDP_VSYNC_GPIO,
 	.dsi_power_save   = mipi_dsi_panel_power,
@@ -16031,14 +14201,6 @@ static struct msm_panel_common_pdata mdp_pdata = {
 	.mem_hid = MEMTYPE_EBI1,
 #endif
 };
-#if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-int mdp_core_clk_rate_table[] = {
-	85330000,
-	96000000,
-	200000000, // 11.10.11 : 160->200, barcode+Lockscreen = BlackScreen issue
-	200000000,
-};
-#endif
 
 static void __init reserve_mdp_memory(void)
 {
@@ -16126,9 +14288,11 @@ static void __init msm_fb_add_devices(void)
 		msm_fb_register_device("mdp", NULL);
 	else
 		msm_fb_register_device("mdp", &mdp_pdata);
-#if !defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
+#if defined (CONFIG_FB_MSM_LCDC_LD9040_WVGA_PANEL) \
+	|| defined (CONFIG_FB_MSM_LCDC_S6E63M0_WVGA_PANEL)
 	msm_fb_register_device("lcdc", &lcdc_pdata);
-#else
+#endif
+#if defined(CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
 	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
 #endif
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -16176,448 +14340,6 @@ static void set_mdp_clocks_for_wuxga(void)
 
 	mdp_pdata.mdp_max_clk = 200000000;
 }
-
-#if 0 // (defined(CONFIG_MARIMBA_CORE)) && (defined(CONFIG_MSM_BT_POWER) || defined(CONFIG_MSM_BT_POWER_MODULE))
-
-static const struct {
-	char *name;
-	int vmin;
-	int vmax;
-} bt_regs_info[] = {
-	{ "8058_s3", 1800000, 1800000 },
-	{ "8058_s2", 1300000, 1300000 },
-	{ "8058_l8", 2900000, 3050000 },
-};
-
-static struct {
-	bool enabled;
-} bt_regs_status[] = {
-	{ false },
-	{ false },
-	{ false },
-};
-static struct regulator *bt_regs[ARRAY_SIZE(bt_regs_info)];
-
-static int bahama_bt(int on)
-{
-	int rc;
-	int i;
-	struct marimba config = { .mod_id =  SLAVE_ID_BAHAMA};
-
-	struct bahama_variant_register {
-		const size_t size;
-		const struct bahama_config_register *set;
-	};
-
-	const struct bahama_config_register *p;
-
-	u8 version;
-
-	const struct bahama_config_register v10_bt_on[] = {
-		{ 0xE9, 0x00, 0xFF },
-		{ 0xF4, 0x80, 0xFF },
-		{ 0xE4, 0x00, 0xFF },
-		{ 0xE5, 0x00, 0x0F },
-#ifdef CONFIG_WLAN
-		{ 0xE6, 0x38, 0x7F },
-		{ 0xE7, 0x06, 0xFF },
-#endif
-		{ 0xE9, 0x21, 0xFF },
-		{ 0x01, 0x0C, 0x1F },
-		{ 0x01, 0x08, 0x1F },
-	};
-
-	const struct bahama_config_register v20_bt_on_fm_off[] = {
-		{ 0x11, 0x0C, 0xFF },
-		{ 0x13, 0x01, 0xFF },
-		{ 0xF4, 0x80, 0xFF },
-		{ 0xF0, 0x00, 0xFF },
-		{ 0xE9, 0x00, 0xFF },
-#ifdef CONFIG_WLAN
-		{ 0x81, 0x00, 0x7F },
-		{ 0x82, 0x00, 0xFF },
-		{ 0xE6, 0x38, 0x7F },
-		{ 0xE7, 0x06, 0xFF },
-#endif
-		{ 0xE9, 0x21, 0xFF },
-	};
-
-	const struct bahama_config_register v20_bt_on_fm_on[] = {
-		{ 0x11, 0x0C, 0xFF },
-		{ 0x13, 0x01, 0xFF },
-		{ 0xF4, 0x86, 0xFF },
-		{ 0xF0, 0x06, 0xFF },
-		{ 0xE9, 0x00, 0xFF },
-#ifdef CONFIG_WLAN
-		{ 0x81, 0x00, 0x7F },
-		{ 0x82, 0x00, 0xFF },
-		{ 0xE6, 0x38, 0x7F },
-		{ 0xE7, 0x06, 0xFF },
-#endif
-		{ 0xE9, 0x21, 0xFF },
-	};
-
-	const struct bahama_config_register v10_bt_off[] = {
-		{ 0xE9, 0x00, 0xFF },
-	};
-
-	const struct bahama_config_register v20_bt_off_fm_off[] = {
-		{ 0xF4, 0x84, 0xFF },
-		{ 0xF0, 0x04, 0xFF },
-		{ 0xE9, 0x00, 0xFF }
-	};
-
-	const struct bahama_config_register v20_bt_off_fm_on[] = {
-		{ 0xF4, 0x86, 0xFF },
-		{ 0xF0, 0x06, 0xFF },
-		{ 0xE9, 0x00, 0xFF }
-	};
-	const struct bahama_variant_register bt_bahama[2][3] = {
-		{
-			{ ARRAY_SIZE(v10_bt_off), v10_bt_off },
-			{ ARRAY_SIZE(v20_bt_off_fm_off), v20_bt_off_fm_off },
-			{ ARRAY_SIZE(v20_bt_off_fm_on), v20_bt_off_fm_on }
-		},
-		{
-			{ ARRAY_SIZE(v10_bt_on), v10_bt_on },
-			{ ARRAY_SIZE(v20_bt_on_fm_off), v20_bt_on_fm_off },
-			{ ARRAY_SIZE(v20_bt_on_fm_on), v20_bt_on_fm_on }
-		}
-	};
-
-	u8 offset = 0; /* index into bahama configs */
-
-	on = on ? 1 : 0;
-	version = read_bahama_ver();
-
-	if (version ==  VER_UNSUPPORTED) {
-		dev_err(&msm_bt_power_device.dev,
-			"%s: unsupported version\n",
-			__func__);
-		return -EIO;
-	}
-
-	if (version == VER_2_0) {
-		if (marimba_get_fm_status(&config))
-			offset = 0x01;
-	}
-
-	/* Voting off 1.3V S2 Regulator,BahamaV2 used in Normal mode */
-	if (on && (version == VER_2_0)) {
-		for (i = 0; i < ARRAY_SIZE(bt_regs_info); i++) {
-			if ((!strcmp(bt_regs_info[i].name, "8058_s2"))
-				&& (bt_regs_status[i].enabled == true)) {
-				if (regulator_disable(bt_regs[i])) {
-					dev_err(&msm_bt_power_device.dev,
-						"%s: regulator disable failed",
-						__func__);
-				}
-				bt_regs_status[i].enabled = false;
-				break;
-			}
-		}
-	}
-
-	p = bt_bahama[on][version + offset].set;
-
-	dev_info(&msm_bt_power_device.dev,
-		"%s: found version %d\n", __func__, version);
-
-	for (i = 0; i < bt_bahama[on][version + offset].size; i++) {
-		u8 value = (p+i)->value;
-		rc = marimba_write_bit_mask(&config,
-			(p+i)->reg,
-			&value,
-			sizeof((p+i)->value),
-			(p+i)->mask);
-		if (rc < 0) {
-			dev_err(&msm_bt_power_device.dev,
-				"%s: reg %d write failed: %d\n",
-				__func__, (p+i)->reg, rc);
-			return rc;
-		}
-		dev_dbg(&msm_bt_power_device.dev,
-			"%s: reg 0x%02x write value 0x%02x mask 0x%02x\n",
-				__func__, (p+i)->reg,
-				value, (p+i)->mask);
-	}
-	/* Update BT Status */
-	if (on)
-		marimba_set_bt_status(&config, true);
-	else
-		marimba_set_bt_status(&config, false);
-
-	return 0;
-}
-
-static int bluetooth_use_regulators(int on)
-{
-	int i, recover = -1, rc = 0;
-
-	for (i = 0; i < ARRAY_SIZE(bt_regs_info); i++) {
-		bt_regs[i] = on ? regulator_get(&msm_bt_power_device.dev,
-						bt_regs_info[i].name) :
-				(regulator_put(bt_regs[i]), NULL);
-		if (IS_ERR(bt_regs[i])) {
-			rc = PTR_ERR(bt_regs[i]);
-			dev_err(&msm_bt_power_device.dev,
-				"regulator %s get failed (%d)\n",
-				bt_regs_info[i].name, rc);
-			recover = i - 1;
-			bt_regs[i] = NULL;
-			break;
-		}
-
-		if (!on)
-			continue;
-
-		rc = regulator_set_voltage(bt_regs[i],
-					  bt_regs_info[i].vmin,
-					  bt_regs_info[i].vmax);
-		if (rc < 0) {
-			dev_err(&msm_bt_power_device.dev,
-				"regulator %s voltage set (%d)\n",
-				bt_regs_info[i].name, rc);
-			recover = i;
-			break;
-		}
-	}
-
-	if (on && (recover > -1))
-		for (i = recover; i >= 0; i--) {
-			regulator_put(bt_regs[i]);
-			bt_regs[i] = NULL;
-		}
-
-	return rc;
-}
-
-static int bluetooth_switch_regulators(int on)
-{
-	int i, rc = 0;
-
-	for (i = 0; i < ARRAY_SIZE(bt_regs_info); i++) {
-		if (on && (bt_regs_status[i].enabled == false)) {
-			rc = regulator_enable(bt_regs[i]);
-			if (rc < 0) {
-				dev_err(&msm_bt_power_device.dev,
-					"regulator %s %s failed (%d)\n",
-					bt_regs_info[i].name,
-					"enable", rc);
-				if (i > 0) {
-					while (--i) {
-						regulator_disable(bt_regs[i]);
-						bt_regs_status[i].enabled
-								 = false;
-					}
-					break;
-				}
-			}
-			bt_regs_status[i].enabled = true;
-		} else if (!on && (bt_regs_status[i].enabled == true)) {
-			rc = regulator_disable(bt_regs[i]);
-			if (rc < 0) {
-				dev_err(&msm_bt_power_device.dev,
-					"regulator %s %s failed (%d)\n",
-					bt_regs_info[i].name,
-					"disable", rc);
-				break;
-			}
-			bt_regs_status[i].enabled = false;
-		}
-	}
-	return rc;
-}
-
-static struct msm_xo_voter *bt_clock;
-
-static int bluetooth_power(int on)
-{
-	int rc = 0;
-	int id;
-
-	/* In case probe function fails, cur_connv_type would be -1 */
-	id = adie_get_detected_connectivity_type();
-	if (id != BAHAMA_ID) {
-		pr_err("%s: unexpected adie connectivity type: %d\n",
-			__func__, id);
-		return -ENODEV;
-	}
-
-	if (on) {
-
-		rc = bluetooth_use_regulators(1);
-		if (rc < 0)
-			goto out;
-
-		rc = bluetooth_switch_regulators(1);
-
-		if (rc < 0)
-			goto fail_put;
-
-		bt_clock = msm_xo_get(MSM_XO_TCXO_D0, "bt_power");
-
-		if (IS_ERR(bt_clock)) {
-			pr_err("Couldn't get TCXO_D0 voter\n");
-			goto fail_switch;
-		}
-
-		rc = msm_xo_mode_vote(bt_clock, MSM_XO_MODE_ON);
-
-		if (rc < 0) {
-			pr_err("Failed to vote for TCXO_DO ON\n");
-			goto fail_vote;
-		}
-
-		rc = bahama_bt(1);
-
-		if (rc < 0)
-			goto fail_clock;
-
-		msleep(10);
-
-		rc = msm_xo_mode_vote(bt_clock, MSM_XO_MODE_PIN_CTRL);
-
-		if (rc < 0) {
-			pr_err("Failed to vote for TCXO_DO pin control\n");
-			goto fail_vote;
-		}
-	} else {
-		/* check for initial RFKILL block (power off) */
-		/* some RFKILL versions/configurations rfkill_register */
-		/* calls here for an initial set_block */
-		/* avoid calling i2c and regulator before unblock (on) */
-		if (platform_get_drvdata(&msm_bt_power_device) == NULL) {
-			dev_info(&msm_bt_power_device.dev,
-				"%s: initialized OFF/blocked\n", __func__);
-			goto out;
-		}
-
-		bahama_bt(0);
-
-fail_clock:
-		msm_xo_mode_vote(bt_clock, MSM_XO_MODE_OFF);
-fail_vote:
-		msm_xo_put(bt_clock);
-fail_switch:
-		bluetooth_switch_regulators(0);
-fail_put:
-		bluetooth_use_regulators(0);
-	}
-
-out:
-	if (rc < 0)
-		on = 0;
-	dev_info(&msm_bt_power_device.dev,
-		"Bluetooth power switch: state %d result %d\n", on, rc);
-
-	return rc;
-}
-
-#endif /*CONFIG_MARIMBA_CORE, CONFIG_MSM_BT_POWER, CONFIG_MSM_BT_POWER_MODULE*/
-
-#if  defined (CONFIG_KOR_MODEL_SHV_E110S) || defined (CONFIG_TARGET_LOCALE_USA)
-/* YDA165 AVDD regulator */
-static struct regulator *amp_reg = NULL;
-static int amp_reg_ref_cnt = 0;
-
-void yda165_avdd_power_on(void)
-{
-	int ret;
-
-#ifdef CONFIG_BATTERY_SEC
-	if(is_lpm_boot)
-		return;
-#endif
-
-	amp_reg_ref_cnt++;
-	pr_info("%s : amp_reg_ref_cnt = %d\n", __func__, amp_reg_ref_cnt);
-	
-#if defined (CONFIG_KOR_MODEL_SHV_E110S)
-	if(get_hw_rev()>=0x04)
-#elif defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-	if(get_hw_rev()>=0x05) 
-#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I577)
-	if(get_hw_rev()>=0x06)
-#endif
-	{
-		if(!amp_reg) {
-#if defined (CONFIG_KOR_MODEL_SHV_E110S)
-			if(get_hw_rev()>=0x06)
-				amp_reg = regulator_get(NULL, "8901_l3");
-			else
-#endif
-#if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
-#if defined(CONFIG_KOR_MODEL_SHV_E110S)
-			amp_reg = vreg_l2a;
-#else
-			amp_reg = regulator_get(NULL, "8058_l2");
-#endif
-#else
-			amp_reg = regulator_get(NULL, "8058_l2");
-#endif
-			if (IS_ERR(amp_reg)) {
-				pr_err("%s: regulator get failed (%ld)\n", __func__, PTR_ERR(amp_reg));
-				return;
-			}
-		}
-
-		ret = regulator_set_voltage(amp_reg, 2600000, 2600000);
-		if (ret) {
-			pr_err("%s: error setting voltage\n", __func__);
-		}
-		
-		ret = regulator_enable(amp_reg);
-		if (ret) {
-			pr_err("%s: error enabling regulator\n", __func__);
-		}
-
-		pr_info("YDA165 AVDD set to 2.6V for %d revison.\n", get_hw_rev());
-	}
-
-}
-
-void yda165_avdd_power_off(void)
-{
-	int ret;
-
-	amp_reg_ref_cnt--;
-	pr_info("%s : amp_reg_ref_cnt = %d\n", __func__, amp_reg_ref_cnt);
-
-#if defined (CONFIG_USA_MODEL_SGH_T989) || defined (CONFIG_USA_MODEL_SGH_T769)
-	if(get_hw_rev()>=0x05) 
-#elif defined (CONFIG_USA_MODEL_SGH_I727) || defined(CONFIG_USA_MODEL_SGH_I577)
-	if(get_hw_rev()>=0x06)      
-#elif defined (CONFIG_KOR_MODEL_SHV_E110S)
-	if(get_hw_rev()>=0x04)
-#endif
-	{
-		if (!amp_reg)
-			return;
-
-		if(regulator_is_enabled(amp_reg)) {
-			ret = regulator_disable(amp_reg);
-			if (ret < 0)
-				pr_err("%s: amp regulator_disable failed (%d)\n",
-						__func__, ret);
-		}
-
-		if(!amp_reg_ref_cnt)
-			amp_reg = NULL;
-
-	}
-}
-#else
-void yda165_avdd_power_on(void)
-{
-	return;
-}
-
-void yda165_avdd_power_off(void)
-{
-	return;
-}
-#endif
 
 static void __init msm8x60_cfg_smsc911x(void)
 {
@@ -16750,12 +14472,14 @@ static ssize_t store_sec_debug_level(struct device *dev,
 }
 static DEVICE_ATTR(sec_debug_level, S_IRUGO | S_IWUGO, show_sec_debug_level, store_sec_debug_level);
 #endif /*CONFIG_SEC_DEBUG*/
+
 #ifdef CONFIG_BROADCOM_WIFI
 int __init brcm_wlan_init(void);
 #endif
 #ifdef CONFIG_BATTERY_SEC
 extern unsigned int sec_get_lpm_mode(void);
 #endif
+
 static void __init msm8x60_init(struct msm_board_data *board_data)
 {
 	uint32_t soc_platform_version;
@@ -16770,7 +14494,6 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 #ifdef CONFIG_BATTERY_SEC
 	is_lpm_boot = sec_get_lpm_mode();
 #endif
-
 #ifdef CONFIG_SEC_DEBUG
 	sec_debug_init();
 #endif
@@ -16875,10 +14598,9 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 #endif
 	msm8x60_init_mmc();
 #ifdef CONFIG_USB_SWITCH_FSA9480
-		LTE_switch_init();
-		fsa9480_gpio_init();
+	LTE_switch_init();
+	fsa9480_gpio_init();
 #endif
-
 #if defined(CONFIG_PN544_NFC)
 	config_gpio_table_for_nfc();
 #endif
@@ -16893,13 +14615,7 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 		pm8058_platform_data.keypad_pdata = &dragon_keypad_data;
 	else
 		pm8058_platform_data.keypad_pdata = &ffa_keypad_data;
-#if 0//ndef CONFIG_MSM_CAMERA_V4L2
-	/* Specify reset pin for OV9726 */
-	if (machine_is_msm8x60_dragon()) {
-		msm_camera_sensor_ov9726_data.sensor_reset = 62;
-		ov9726_sensor_8660_info.mount_angle = 270;
-	}
-#endif
+
 #ifdef CONFIG_BATTERY_MSM8X60
 	if (machine_is_msm8x60_surf() || machine_is_msm8x60_ffa() ||
 		machine_is_msm8x60_fusion() || machine_is_msm8x60_dragon() ||
@@ -16987,8 +14703,8 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 	if (machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())
 		platform_add_devices(charm_devices, ARRAY_SIZE(charm_devices));
 
-#if !defined(CONFIG_PN544_NFC)
-#if defined(CONFIG_SPI_QUP) || defined(CONFIG_SPI_QUP_MODULE)
+#if defined(CONFIG_SPI_QUP) || defined(CONFIG_SPI_QUP_MODULE) \
+	&& !defined(CONFIG_PN544_NFC)
 	if (machine_is_msm8x60_fluid())
 		platform_device_register(&msm_gsbi10_qup_spi_device);
 	else
@@ -16996,7 +14712,7 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 		platform_device_register(&msm_gsbi1_qup_spi_device);
 #endif
 #endif
-#endif
+
 #if defined(CONFIG_TDMB) || defined(CONFIG_TDMB_MODULE)
 	tdmb_dev_init();
 #endif
@@ -17008,9 +14724,6 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 	if (!machine_is_msm8x60_sim())
 		msm_fb_add_devices();
 	fixup_i2c_configs();
-#ifdef CONFIG_SENSORS_YDA165
-	platform_device_register(&amp_i2c_gpio_device); // YDA165WORK
-#endif
 	register_i2c_devices();
 
 	if (machine_is_msm8x60_dragon())
@@ -17018,32 +14731,6 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 			= GPIO_ETHERNET_RESET_N_DRAGON;
 
 	platform_device_register(&smsc911x_device);
-
-#if (defined(CONFIG_SPI_QUP)) && \
-	(defined(CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT) || \
-	defined(CONFIG_FB_MSM_LCDC_AUO_WVGA) || \
-	defined(CONFIG_FB_MSM_LCDC_NT35582_WVGA))
-
-	if (machine_is_msm8x60_fluid()) {
-#ifdef CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT
-		if (SOCINFO_VERSION_MAJOR(soc_platform_version) < 3) {
-			spi_register_board_info(lcdc_samsung_spi_board_info,
-				ARRAY_SIZE(lcdc_samsung_spi_board_info));
-		} else
-#endif
-		{
-#ifdef CONFIG_FB_MSM_LCDC_AUO_WVGA
-			spi_register_board_info(lcdc_auo_spi_board_info,
-				ARRAY_SIZE(lcdc_auo_spi_board_info));
-#endif
-		}
-#ifdef CONFIG_FB_MSM_LCDC_NT35582_WVGA
-	} else if (machine_is_msm8x60_dragon()) {
-		spi_register_board_info(lcdc_nt35582_spi_board_info,
-			ARRAY_SIZE(lcdc_nt35582_spi_board_info));
-#endif
-	}
-#endif
 
 	msm_pm_set_platform_data(msm_pm_data, ARRAY_SIZE(msm_pm_data));
 	msm_pm_set_rpm_wakeup_irq(RPM_SCSS_CPU0_WAKE_UP_IRQ);
@@ -17053,10 +14740,8 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 
 	pm8058_gpios_init();
 
-#if 1 // SAMSUNG LDO SETTING
 	/* turn off unused ldo */
 	pmic_regulator_force_off();
-#endif
 
 #ifdef CONFIG_SENSORS_MSM_ADC
 	if (machine_is_msm8x60_fluid()) {
@@ -17073,7 +14758,7 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 #ifdef CONFIG_BATTERY_SEC
 	if(!is_lpm_boot)
 #endif
-		msm_snddev_init();
+	msm_snddev_init();
 #endif
 
 #if defined(CONFIG_GPIO_SX150X) || defined(CONFIG_GPIO_SX150X_MODULE)
@@ -17083,24 +14768,24 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 		platform_device_register(&gpio_leds);
 #endif
 
-#if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
-	tsp_power_init();
-#endif
-
 	msm8x60_multi_sdio_init();
 
 	if (machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())
 		msm_fusion_setup_pinctrl();
 
+#if defined(CONFIG_TOUCHSCREEN_QT602240) || defined(CONFIG_TOUCHSCREEN_MXT768E)
+	tsp_power_init();
+#endif
+#if defined (CONFIG_OPTICAL_GP2A) || defined(CONFIG_OPTICAL_TAOS)
 	sensor_device_init();
-
+#endif
 #ifdef CONFIG_KEYPAD_CYPRESS_TOUCH
 	tkey_device_init();
 #endif
 #ifdef CONFIG_BROADCOM_WIFI
 	brcm_wlan_init();
 #endif
-vibrator_device_gpio_init();
+	vibrator_device_gpio_init();
 
 #if defined(CONFIG_SEC_DEBUG) && defined(CONFIG_SEC_MISC)	
 	{
