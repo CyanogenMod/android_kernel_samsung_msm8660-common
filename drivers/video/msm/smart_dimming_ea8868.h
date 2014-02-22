@@ -9,10 +9,8 @@
  *
 */
 
-
 #ifndef __SMART_DIMMING_H__
 #define __SMART_DIMMING_H__
-
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -20,18 +18,6 @@
 #include <linux/mutex.h>
 #include <linux/wait.h>
 #include <linux/ctype.h>
-
-
-#if 0 
-typedef unsigned long long  u64;
-typedef signed long long    s64;
-typedef unsigned int	    u32;
-typedef signed int	        s32;
-typedef unsigned short	    u16;
-typedef signed short	    s16;
-typedef unsigned char	    u8;
-typedef signed char	        s8;
-#endif
 
 enum {
     CI_RED      = 0,
@@ -64,54 +50,38 @@ enum {
     AD_IVMAX    =   8,
 };
 
-
 #define MAX_GRADATION   300
 
-
 struct str_voltage_entry{
-    //u32 g22_value;
     u32 v[CI_MAX];
 };
 
 struct str_table_info {
-    //et : start gray value
     u8 st;
-    // end gray value, st + count
     u8 et;
     u8 count;
     const u8 *offset_table;
-    // rv : ratio value 
     u32 rv;
 };
-
 
 struct str_flookup_table{
     u16 entry;
     u16 count;
 };
 
-
 struct str_smart_dim{
     s16 mtp[CI_MAX][IV_MAX];
-    //s16 adjust_mtp[CI_MAX][IV_MAX];
     struct str_voltage_entry ve[256];
     u8 *default_gamma; 
     struct str_table_info t_info[IV_TABLE_MAX];
-    //u8 v_table_array[256];
     const struct str_flookup_table *flooktbl;
     const u32 *g22_tbl;
     const u32 *g300_gra_tbl;
     u32 adjust_volt[CI_MAX][AD_IVMAX];
-    //u32 *ad_cv;
-    //u32 *ad_dv;
-    //u32 refvolt;
 };
-
-
 
 int init_table_info(struct str_smart_dim *smart, unsigned char* srcGammaTable);
 u8 calc_voltage_table(struct str_smart_dim *smart, const u8 *mtp);
 u32 calc_gamma_table(struct str_smart_dim *smart, u32 gv, u8 result[]);
-
 
 #endif
