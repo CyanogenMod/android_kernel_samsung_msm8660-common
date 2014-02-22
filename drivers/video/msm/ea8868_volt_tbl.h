@@ -3,7 +3,6 @@
 
 #include "ea8868_smart_dimming.h"
 
-
 const u32 v1_voltage_tbl[V1_VOLTAGE_COUNT] = {
 4999168,	4990976,	4982784,	4974592,	
 4966400,	4957184,	4948992,	4940800,	
@@ -110,9 +109,7 @@ const u32 cv20_dv320_ratio_tbl[V15_VOLTAGE_COUNT] = {
 845,	848,	851,	854,	
 858,	861,	864,	867,	
 870,	874,	877,	880,	
-
 };
-
 
 const u32 cv64_dv320_ratio_tbl[V35_VOLTAGE_COUNT] = {
 205,	208,	211,	214,	
@@ -179,10 +176,7 @@ const u32 cv64_dv320_ratio_tbl[V35_VOLTAGE_COUNT] = {
 986,	989,	992,	995,	
 998,	1002,	1005,	1008,	
 1011,	1014,	1018,	1021,	
-
 };
-
-
 
 const u32 v255_voltage_tbl[V255_VOLTAGE_COUNT] = {
 4194304,	4186112,	4177920,	4168704,	
@@ -285,7 +279,6 @@ const u32 v255_voltage_tbl[V255_VOLTAGE_COUNT] = {
 940032,	    930816,	
 };
 
-
 const u32 gamma_22_tbl[256] = {
 0,	    0,	    0,	    0,	
 0,	    0,	    0,	    0,	
@@ -351,9 +344,7 @@ const u32 gamma_22_tbl[256] = {
 929,	938,	946,	955,	
 963,	972,	980,	989,	
 998,	1006,	1015,	1024,	
-
 };
-
 
 const u32 gamma_250_gra_table[256] = {
 0,      1,      6,      15, 
@@ -421,7 +412,6 @@ const u32 gamma_250_gra_table[256] = {
 240794, 242935, 245087, 247249, 
 249421, 251604, 253797, 256000, 
 };
-
 
 const struct str_flookup_table flookup_tbl[250] = {
 {  0,   0},  {  1,  21},
@@ -552,5 +542,4 @@ const struct str_flookup_table flookup_tbl[250] = {
 {  0,   0},  {255,   1},
 
 };
-
 #endif
