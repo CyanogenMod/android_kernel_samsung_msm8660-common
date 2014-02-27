@@ -16,6 +16,9 @@
 #include <linux/mfd/pmic8058.h>
 #include <linux/mfd/pmic8901.h>
 #include <mach/irqs.h>
+#ifdef CONFIG_TARGET_SERIES_CELOX
+#include <mach/board-celox.h>
+#endif
 
 /* Macros assume PMIC GPIOs start at 0 */
 #define PM8058_GPIO_BASE			NR_MSM_GPIOS
