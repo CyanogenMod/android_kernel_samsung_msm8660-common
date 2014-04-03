@@ -205,16 +205,7 @@ struct msm_hdmi_mode_timing_info {
 	LUT[MODE] = mode;\
 	} while (0)
 
-static inline void MSM_HDMI_MODES_INIT_TIMINGS(
-	struct msm_hdmi_mode_timing_info *lut)
-{
-	int i;
 
-	for (i = 0; i < HDMI_VFRMT_MAX; i++) {
-		struct msm_hdmi_mode_timing_info mode = VFRMT_NOT_SUPPORTED(i);
-		lut[i] = mode;
-	}
-}
 
 static inline void MSM_HDMI_MODES_SET_SUPP_TIMINGS(
 	struct msm_hdmi_mode_timing_info *lut, int type)
