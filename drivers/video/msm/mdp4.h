@@ -302,8 +302,7 @@ struct mdp4_overlay_pipe {
 	uint32 src_format;
 	uint32 src_width;	/* source img width */
 	uint32 src_height;	/* source img height */
-	uint32 prev_src_width;	/* source img width */
-	uint32 prev_src_height;	/* source img height */
+	uint32 frame_size;	/* TILE frame size */
 	uint32 is_3d;
 	uint32 src_width_3d;	/* source img width */
 	uint32 src_height_3d;	/* source img height */
@@ -388,7 +387,6 @@ struct mdp4_overlay_pipe {
 	struct completion comp;
 	struct completion dmas_comp;
 	struct mdp4_iommu_pipe_info iommu;
-	struct msm_fb_data_type *mfd;
 };
 
 struct mdp4_statistic {
@@ -485,7 +483,6 @@ uint32 mdp4_overlay_unpack_pattern(struct mdp4_overlay_pipe *pipe);
 uint32 mdp4_overlay_op_mode(struct mdp4_overlay_pipe *pipe);
 void mdp4_lcdc_base_swap(int cndx, struct mdp4_overlay_pipe *pipe);
 void mdp4_lcdc_overlay(struct msm_fb_data_type *mfd);
-void mdp4_overlay_update_cached_reg(struct msm_fb_data_type *mfd);
 
 
 #ifdef CONFIG_FB_MSM_DTV
@@ -724,6 +721,7 @@ static inline void mdp4_mddi_blt_stop(struct msm_fb_data_type *mfd)
 }
 void mdp4_dsi_video_free_base_pipe(struct msm_fb_data_type *mfd);
 void mdp4_dsi_cmd_free_base_pipe(struct msm_fb_data_type *mfd);
+
 #ifdef CONFIG_FB_MSM_MDP40
 static inline void mdp3_dsi_cmd_dma_busy_wait(struct msm_fb_data_type *mfd)
 {
@@ -1010,7 +1008,6 @@ void mdp4_overlay_iommu_unmap_freelist(int mixer);
 void mdp4_overlay_iommu_vsync_cnt(void);
 void mdp4_iommu_unmap(struct mdp4_overlay_pipe *pipe);
 void mdp4_iommu_attach(void);
-void mdp4_iommu_detach(void);
 int mdp4_v4l2_overlay_set(struct fb_info *info, struct mdp_overlay *req,
 		struct mdp4_overlay_pipe **ppipe);
 void mdp4_v4l2_overlay_clear(struct mdp4_overlay_pipe *pipe);

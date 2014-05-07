@@ -23,7 +23,6 @@
 #include "linux/proc_fs.h"
 
 #include <mach/hardware.h>
-#include <mach/msm_subsystem_map.h>
 #include <linux/io.h>
 #include <mach/board.h>
 
@@ -52,7 +51,6 @@
 #define MSM_FB_DEFAULT_PAGE_SIZE 2
 #define MFD_KEY  0x11161126
 #define MSM_FB_MAX_DEV_LIST 32
-#define MDP_MAX_CACHED_REG 128
 
 struct disp_info_type_suspend {
 	boolean op_enable;
@@ -187,7 +185,8 @@ struct msm_fb_data_type {
 	struct list_head writeback_register_queue;
 	wait_queue_head_t wait_q;
 	struct ion_client *iclient;
-	struct msm_mapped_buffer *map_buffer;
+	unsigned long display_iova;
+	unsigned long rotator_iova;
 	struct mdp_buf_type *ov0_wb_buf;
 	struct mdp_buf_type *ov1_wb_buf;
 	u32 ov_start;
@@ -212,9 +211,6 @@ struct msm_fb_data_type {
 	boolean panel_driver_on;
 	int vsync_sysfs_created;
 	void *cpu_pm_hdl;
-	struct mdp_table_entry cached_reg[MDP_MAX_CACHED_REG];
-	uint32 cached_reg_cnt;
-	uint32 cache_reg_en;
 };
 
 struct msm_fb_backup_type {

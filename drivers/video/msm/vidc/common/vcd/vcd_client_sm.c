@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -96,8 +96,8 @@ static u32 vcd_encode_start_in_open(struct vcd_clnt_ctxt *cctxt)
 		 cctxt->in_buf_pool.validated != cctxt->in_buf_pool.count) ||
 	    cctxt->out_buf_pool.validated !=
 	    cctxt->out_buf_pool.count) {
-		VCD_MSG_ERROR("Buffer pool is not completely setup yet");
-		return VCD_ERR_BAD_STATE;
+		VCD_MSG_HIGH("%s: Buffer pool is not completely setup yet",
+			__func__);
 	}
 
 	rc = vcd_sched_add_client(cctxt);
@@ -541,6 +541,12 @@ static u32 vcd_set_property_cmn
 			}
 			break;
 		}
+	case VCD_I_SET_TURBO_CLK:
+	{
+		if (cctxt->sched_clnt_hdl)
+			rc = vcd_set_perf_turbo_level(cctxt);
+		break;
+	}
 	case VCD_I_INTRA_PERIOD:
 	   {
 		  struct vcd_property_i_period *iperiod =
@@ -578,7 +584,8 @@ static u32 vcd_get_property_cmn
     (struct vcd_clnt_ctxt *cctxt,
      struct vcd_property_hdr *prop_hdr, void *prop_val)
 {
-	int rc;
+	int rc = VCD_ERR_FAIL;
+	u32 prop_handled = true;
 	VCD_MSG_LOW("vcd_get_property_cmn in %d:", cctxt->clnt_state.state);
 	VCD_MSG_LOW("property Id = %d", prop_hdr->prop_id);
 	if (!prop_hdr->sz || !prop_hdr->prop_id) {
@@ -586,13 +593,6 @@ static u32 vcd_get_property_cmn
 
 		return VCD_ERR_ILLEGAL_PARM;
 	}
-	rc = ddl_get_property(cctxt->ddl_handle, prop_hdr, prop_val);
-	if (rc) {
-		/* Some properties aren't known to ddl that we can handle */
-		if (prop_hdr->prop_id != VCD_I_VOP_TIMING_CONSTANT_DELTA)
-			VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
-	}
-
 	switch (prop_hdr->prop_id) {
 	case VCD_I_VOP_TIMING_CONSTANT_DELTA:
 	{
@@ -602,8 +602,30 @@ static u32 vcd_get_property_cmn
 		delta->constant_delta = cctxt->time_frame_delta;
 		rc = VCD_S_SUCCESS;
 	}
+	break;
+	case VCD_I_GET_CURR_PERF_LEVEL:
+	{
+		u32 curr_perf_level = 0;
+		curr_perf_level = vcd_get_curr_perf_level(
+			cctxt->dev_ctxt);
+		*(u32 *)prop_val = curr_perf_level;
+		VCD_MSG_LOW("%s: curr_perf_level = %u",
+			__func__, curr_perf_level);
+		rc = VCD_S_SUCCESS;
 	}
-	return rc;
+	break;
+	default:
+		prop_handled = false;
+	break;
+	}
+
+	if (prop_handled) {
+		VCD_MSG_LOW("%s: property %u handled at vcd level",
+			__func__, prop_hdr->prop_id);
+		return rc;
+	}
+
+	return ddl_get_property(cctxt->ddl_handle, prop_hdr, prop_val);
 }
 
 static u32 vcd_set_buffer_requirements_cmn
@@ -956,6 +978,12 @@ static void vcd_clnt_cb_in_run
 	case VCD_EVT_IND_INFO_OUTPUT_RECONFIG:
 		{
 			vcd_handle_ind_info_output_reconfig(cctxt, status);
+			break;
+		}
+	case VCD_EVT_IND_INFO_LTRUSE_FAILED:
+		{
+			rc = vcd_handle_ltr_use_failed(cctxt,
+				payload, sz, status);
 			break;
 		}
 	default:
@@ -1616,6 +1644,7 @@ void vcd_do_client_state_transition(struct vcd_clnt_ctxt *cctxt,
 	if (!cctxt || to_state >= VCD_CLIENT_STATE_MAX) {
 		VCD_MSG_ERROR("Bad parameters. cctxt=%p, to_state=%d",
 			      cctxt, to_state);
+		return;
 	}
 
 	state_ctxt = &cctxt->clnt_state;
@@ -1738,7 +1767,7 @@ static const struct vcd_clnt_state_table vcd_clnt_table_flushing = {
 	 vcd_get_buffer_requirements_cmn,
 	 NULL,
 	 NULL,
-	 NULL,
+	 vcd_free_buffer_cmn,
 	 vcd_fill_output_buffer_cmn,
 	 vcd_clnt_cb_in_flushing,
 	 },

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -14,6 +14,7 @@
 #include "vcd_ddl.h"
 #include "vcd_ddl_shared_mem.h"
 #include "vcd_ddl_metadata.h"
+#include "vcd_res_tracker_api.h"
 
 static u32 *ddl_metadata_hdr_entry(struct ddl_client_context *ddl,
 	u32 meta_data)
@@ -52,6 +53,12 @@ static u32 *ddl_metadata_hdr_entry(struct ddl_client_context *ddl,
 		case VCD_METADATA_QCOMFILLER:
 			skip_words = 21;
 		break;
+		case VCD_METADATA_USER_DATA:
+			skip_words = 27;
+		break;
+		case VCD_METADATA_EXT_DATA:
+			skip_words = 30;
+		break;
 		}
 	} else {
 		buffer = (u32 *) ddl->codec_data.encoder.meta_data_input.
@@ -68,6 +75,9 @@ static u32 *ddl_metadata_hdr_entry(struct ddl_client_context *ddl,
 		break;
 		case VCD_METADATA_QCOMFILLER:
 			skip_words = 6;
+		break;
+		case VCD_METADATA_LTR_INFO:
+			skip_words = 9;
 		break;
 		}
 	}
@@ -123,31 +133,54 @@ void ddl_set_default_meta_data_hdr(struct ddl_client_context *ddl)
 		hdr_entry[DDL_METADATA_HDR_PORT_INDEX] = 1;
 		hdr_entry[DDL_METADATA_HDR_TYPE_INDEX] =
 			VCD_METADATA_PASSTHROUGH;
+		hdr_entry = ddl_metadata_hdr_entry(ddl,
+			VCD_METADATA_USER_DATA);
+		hdr_entry[DDL_METADATA_HDR_VERSION_INDEX] = 0x00000101;
+		hdr_entry[DDL_METADATA_HDR_PORT_INDEX] = 1;
+		hdr_entry[DDL_METADATA_HDR_TYPE_INDEX] =
+			VCD_METADATA_USER_DATA;
+		hdr_entry = ddl_metadata_hdr_entry(ddl,
+			VCD_METADATA_EXT_DATA);
+		hdr_entry[DDL_METADATA_HDR_VERSION_INDEX] = 0x00000101;
+		hdr_entry[DDL_METADATA_HDR_PORT_INDEX] = 1;
+		hdr_entry[DDL_METADATA_HDR_TYPE_INDEX] =
+			VCD_METADATA_EXT_DATA;
 	} else {
 		hdr_entry = ddl_metadata_hdr_entry(ddl, VCD_METADATA_ENC_SLICE);
 		hdr_entry[DDL_METADATA_HDR_VERSION_INDEX] = 0x00000101;
 		hdr_entry[DDL_METADATA_HDR_PORT_INDEX] = 1;
 		hdr_entry[DDL_METADATA_HDR_TYPE_INDEX] = VCD_METADATA_ENC_SLICE;
+		hdr_entry = ddl_metadata_hdr_entry(ddl, VCD_METADATA_LTR_INFO);
+		hdr_entry[DDL_METADATA_HDR_VERSION_INDEX] = 0x00000101;
+		hdr_entry[DDL_METADATA_HDR_PORT_INDEX] = 1;
+		hdr_entry[DDL_METADATA_HDR_TYPE_INDEX] = VCD_METADATA_LTR_INFO;
 	}
 }
 
 static u32 ddl_supported_metadata_flag(struct ddl_client_context *ddl)
 {
 	u32 flag = 0;
+	enum vcd_codec codec =
+		ddl->codec_data.decoder.codec.codec;
 
 	if (ddl->decoding) {
-		enum vcd_codec codec =
-			ddl->codec_data.decoder.codec.codec;
-
 		flag |= (VCD_METADATA_CONCEALMB | VCD_METADATA_PASSTHROUGH |
-				VCD_METADATA_QPARRAY);
+				VCD_METADATA_QPARRAY |
+				VCD_METADATA_SEPARATE_BUF);
 		if (codec == VCD_CODEC_H264)
 			flag |= (VCD_METADATA_SEI | VCD_METADATA_VUI);
 		else if (codec == VCD_CODEC_VC1 ||
 			codec == VCD_CODEC_VC1_RCV)
 			flag |= VCD_METADATA_VC1;
-	} else
-		flag |= VCD_METADATA_ENC_SLICE;
+		else if (codec == VCD_CODEC_MPEG2)
+			flag |= (VCD_METADATA_USER_DATA |
+				VCD_METADATA_EXT_DATA);
+	} else {
+		if (codec == VCD_CODEC_H264)
+			flag |= VCD_METADATA_ENC_SLICE | VCD_METADATA_LTR_INFO;
+		else
+			flag |= VCD_METADATA_ENC_SLICE;
+	}
 	return flag;
 }
 
@@ -165,8 +198,9 @@ void ddl_set_default_decoder_metadata_buffer_size(struct ddl_decoder_data
 {
 	u32 flag = decoder->meta_data_enable_flag;
 	u32 suffix = 0, size = 0;
-
 	if (!flag) {
+		output_buf_req->meta_buffer_size =
+			DDL_SECURE_METADATA_DEFAULT_SIZE;
 		decoder->suffix = 0;
 		return;
 	}
@@ -210,6 +244,18 @@ void ddl_set_default_decoder_metadata_buffer_size(struct ddl_decoder_data
 		DDL_METADATA_ALIGNSIZE(size);
 		suffix += (size);
 	}
+	if (flag & VCD_METADATA_USER_DATA) {
+		size = DDL_METADATA_HDR_SIZE;
+		size += DDL_METADATA_USER_PAYLOAD_SIZE;
+		DDL_METADATA_ALIGNSIZE(size);
+		suffix += (size);
+	}
+	if (flag & VCD_METADATA_EXT_DATA) {
+		size = DDL_METADATA_HDR_SIZE;
+		size += DDL_METADATA_EXT_PAYLOAD_SIZE;
+		DDL_METADATA_ALIGNSIZE(size);
+		suffix += (size);
+	}
 	size = DDL_METADATA_EXTRADATANONE_SIZE;
 	DDL_METADATA_ALIGNSIZE(size);
 	suffix += (size);
@@ -217,6 +263,9 @@ void ddl_set_default_decoder_metadata_buffer_size(struct ddl_decoder_data
 	DDL_METADATA_ALIGNSIZE(suffix);
 	decoder->suffix = suffix;
 	output_buf_req->sz += suffix;
+	output_buf_req->meta_buffer_size = suffix;
+	output_buf_req->meta_buffer_size =
+		(output_buf_req->meta_buffer_size + 8191) & (~8191);
 	decoder->meta_data_offset = 0;
 	DDL_MSG_LOW("metadata output buf size : %d", suffix);
 }
@@ -237,6 +286,12 @@ void ddl_set_default_encoder_metadata_buffer_size(struct ddl_encoder_data
 		size = DDL_METADATA_HDR_SIZE;
 		size += 4;
 		size += (num_of_mb << 3);
+		DDL_METADATA_ALIGNSIZE(size);
+		suffix += size;
+	}
+	if (flag & VCD_METADATA_LTR_INFO) {
+		size = DDL_METADATA_HDR_SIZE;
+		size += DDL_METADATA_LTR_INFO_PAYLOAD_SIZE;
 		DDL_METADATA_ALIGNSIZE(size);
 		suffix += size;
 	}
@@ -278,6 +333,10 @@ u32 ddl_set_metadata_params(struct ddl_client_context *ddl,
 			if (flag)
 				flag |= DDL_METADATA_MANDATORY;
 			if (*meta_data_enable_flag != flag) {
+				if (VCD_CODEC_MPEG2 == codec)
+					ddl_set_mp2_dump_default(
+						&ddl->codec_data.decoder,
+						flag);
 				*meta_data_enable_flag = flag;
 				if (ddl->decoding)
 					ddl_set_default_decoder_buffer_req(
@@ -357,6 +416,7 @@ void ddl_vidc_metadata_enable(struct ddl_client_context *ddl)
 	u32 qp_enable = false, concealed_mb_enable = false;
 	u32 vc1_param_enable = false, sei_nal_enable = false;
 	u32 vui_enable = false, enc_slice_size_enable = false;
+	u32 mp2_data_dump_enable = false;
 
 	if (ddl->decoding)
 		flag = ddl->codec_data.decoder.meta_data_enable_flag;
@@ -380,10 +440,22 @@ void ddl_vidc_metadata_enable(struct ddl_client_context *ddl)
 	}
 
 	DDL_MSG_LOW("metadata enable flag : %d", sei_nal_enable);
+	if (flag & VCD_METADATA_EXT_DATA || flag & VCD_METADATA_USER_DATA) {
+		mp2_data_dump_enable = true;
+		ddl->codec_data.decoder.extn_user_data_enable =
+				mp2_data_dump_enable;
+		vidc_sm_set_mp2datadump_enable(&ddl->shared_mem
+		[ddl->command_channel],
+		&ddl->codec_data.decoder.mp2_datadump_enable);
+	} else {
+		mp2_data_dump_enable = false;
+		ddl->codec_data.decoder.extn_user_data_enable =
+				mp2_data_dump_enable;
+	}
 	vidc_sm_set_metadata_enable(&ddl->shared_mem
 		[ddl->command_channel], extradata_enable, qp_enable,
 		concealed_mb_enable, vc1_param_enable, sei_nal_enable,
-		vui_enable, enc_slice_size_enable);
+		vui_enable, enc_slice_size_enable, mp2_data_dump_enable);
 }
 
 u32 ddl_vidc_encode_set_metadata_output_buf(struct ddl_client_context *ddl)
@@ -415,13 +487,14 @@ u32 ddl_vidc_encode_set_metadata_output_buf(struct ddl_client_context *ddl)
 void ddl_vidc_decode_set_metadata_output(struct ddl_decoder_data *decoder)
 {
 	struct ddl_context *ddl_context;
-	u32 loopc, yuv_size;
+	u32 loopc, yuv_size, dpb;
 	u32 *buffer;
-
+	struct ddl_dec_buffers *dec_buffers = &decoder->hw_bufs;
 	if (!decoder->meta_data_enable_flag) {
 		decoder->meta_data_offset = 0;
 		return;
 	}
+	dpb = decoder->dp_buf.no_of_dec_pic_buf;
 	ddl_context = ddl_get_context();
 	yuv_size = ddl_get_yuv_buffer_size(&decoder->client_frame_size,
 		&decoder->buf_format, !decoder->progressive_only,
@@ -429,15 +502,22 @@ void ddl_vidc_decode_set_metadata_output(struct ddl_decoder_data *decoder)
 	decoder->meta_data_offset = DDL_ALIGN_SIZE(yuv_size,
 		DDL_LINEAR_BUF_ALIGN_GUARD_BYTES, DDL_LINEAR_BUF_ALIGN_MASK);
 	buffer = (u32 *) decoder->meta_data_input.align_virtual_addr;
-	*buffer++ = decoder->suffix;
 	DDL_MSG_LOW("Metadata offset & size : %d/%d",
 		decoder->meta_data_offset, decoder->suffix);
-	for (loopc = 0; loopc < decoder->dp_buf.no_of_dec_pic_buf;
-		++loopc) {
-		*buffer++ = (u32)(decoder->meta_data_offset + (u8 *)
+	if (!(decoder->meta_data_enable_flag & VCD_METADATA_SEPARATE_BUF)) {
+		*buffer++ = decoder->suffix;
+		for (loopc = 0; loopc < dpb; ++loopc) {
+			*buffer++ = (u32)(decoder->meta_data_offset + (u8 *)
 			DDL_OFFSET(ddl_context->dram_base_a.
 			align_physical_addr, decoder->dp_buf.
 			dec_pic_buffers[loopc].vcd_frm.physical));
+		}
+	} else if (res_trk_get_enable_sec_metadata()) {
+		*buffer++ = decoder->actual_output_buf_req.meta_buffer_size;
+		for (loopc = 0; loopc < dpb; ++loopc) {
+			*buffer++ = DDL_ADDR_OFFSET(ddl_context->dram_base_a,
+					dec_buffers->meta_hdr[loopc]);
+		}
 	}
 }
 
@@ -446,29 +526,34 @@ void ddl_process_encoder_metadata(struct ddl_client_context *ddl)
 	struct ddl_encoder_data *encoder = &(ddl->codec_data.encoder);
 	struct vcd_frame_data *out_frame =
 		&(ddl->output_frame.vcd_frm);
-	u32 *qfiller_hdr, *qfiller, start_addr;
-	u32 qfiller_size;
+	u32 metadata_available = false;
+	out_frame->metadata_offset = 0;
+	out_frame->metadata_len = 0;
+	out_frame->curr_ltr_id = 0;
+	out_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
 	if (!encoder->meta_data_enable_flag) {
-		out_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
+		DDL_MSG_HIGH("meta_data is not enabled");
 		return;
 	}
-	if (!encoder->enc_frame_info.meta_data_exists) {
-		out_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
-		return;
+	if (encoder->enc_frame_info.meta_data_exists) {
+		DDL_MSG_LOW("meta_data exists");
+		metadata_available = true;
 	}
-	out_frame->flags |= VCD_FRAME_FLAG_EXTRADATA;
-	DDL_MSG_LOW("processing metadata for encoder");
-	start_addr = (u32) ((u8 *)out_frame->virtual + out_frame->offset);
-	qfiller = (u32 *)((out_frame->data_len +
-				start_addr + 3) & ~3);
-	qfiller_size = (u32)((encoder->meta_data_offset +
-		(u8 *) out_frame->virtual) - (u8 *) qfiller);
-	qfiller_hdr = ddl_metadata_hdr_entry(ddl, VCD_METADATA_QCOMFILLER);
-	*qfiller++ = qfiller_size;
-	*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_VERSION_INDEX];
-	*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_PORT_INDEX];
-	*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_TYPE_INDEX];
-	*qfiller = (u32)(qfiller_size - DDL_METADATA_HDR_SIZE);
+	if ((encoder->meta_data_enable_flag & VCD_METADATA_LTR_INFO) &&
+		(encoder->ltr_control.meta_data_reqd == true)) {
+		out_frame->curr_ltr_id = encoder->ltr_control.curr_ltr_id;
+		DDL_MSG_LOW("%s: increment curr_ltr_id = %d",
+			__func__, (u32)encoder->ltr_control.curr_ltr_id);
+		encoder->ltr_control.curr_ltr_id++;
+		metadata_available = true;
+	}
+	if (metadata_available) {
+		DDL_MSG_LOW("%s: data_len/metadata_offset : %d/%d", __func__,
+			out_frame->data_len, encoder->meta_data_offset);
+		out_frame->metadata_offset = encoder->meta_data_offset;
+		out_frame->metadata_len = encoder->suffix;
+		out_frame->flags |= VCD_FRAME_FLAG_EXTRADATA;
+	}
 }
 
 void ddl_process_decoder_metadata(struct ddl_client_context *ddl)
@@ -476,9 +561,8 @@ void ddl_process_decoder_metadata(struct ddl_client_context *ddl)
 	struct ddl_decoder_data *decoder = &(ddl->codec_data.decoder);
 	struct vcd_frame_data *output_frame =
 		&(ddl->output_frame.vcd_frm);
-	u32 *qfiller_hdr, *qfiller;
-	u32 qfiller_size;
-
+	output_frame->metadata_offset = 0;
+	output_frame->metadata_len = 0;
 	if (!decoder->meta_data_enable_flag) {
 		output_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
 		return;
@@ -487,23 +571,38 @@ void ddl_process_decoder_metadata(struct ddl_client_context *ddl)
 		output_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
 		return;
 	}
-	DDL_MSG_LOW("processing metadata for decoder");
-	DDL_MSG_LOW("data_len/metadata_offset : %d/%d",
-		output_frame->data_len, decoder->meta_data_offset);
-	output_frame->flags |= VCD_FRAME_FLAG_EXTRADATA;
-	if (output_frame->data_len != decoder->meta_data_offset) {
-		qfiller = (u32 *)((u32)((output_frame->data_len +
-			output_frame->offset  +
-				(u8 *) output_frame->virtual) + 3) & ~3);
-		qfiller_size = (u32)((decoder->meta_data_offset +
-				(u8 *) output_frame->virtual) -
-				(u8 *) qfiller);
-		qfiller_hdr = ddl_metadata_hdr_entry(ddl,
-				VCD_METADATA_QCOMFILLER);
-		*qfiller++ = qfiller_size;
-		*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_VERSION_INDEX];
-		*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_PORT_INDEX];
-		*qfiller++ = qfiller_hdr[DDL_METADATA_HDR_TYPE_INDEX];
-		*qfiller = (u32)(qfiller_size - DDL_METADATA_HDR_SIZE);
+	if (!decoder->mp2_datadump_status && decoder->codec.codec ==
+		VCD_CODEC_MPEG2 && !decoder->extn_user_data_enable) {
+		output_frame->flags &= ~(VCD_FRAME_FLAG_EXTRADATA);
+		return;
 	}
+	DDL_MSG_LOW("%s: data_len/metadata_offset : %d/%d", __func__,
+		output_frame->data_len, decoder->meta_data_offset);
+	output_frame->metadata_offset = decoder->meta_data_offset;
+	output_frame->metadata_len = decoder->suffix;
+	output_frame->flags |= VCD_FRAME_FLAG_EXTRADATA;
+}
+
+void ddl_set_mp2_dump_default(struct ddl_decoder_data *decoder, u32 flag)
+{
+
+	if (flag & VCD_METADATA_EXT_DATA) {
+		decoder->mp2_datadump_enable.pictempscalable_extdump_enable =
+			true;
+		decoder->mp2_datadump_enable.picspat_extdump_enable = true;
+		decoder->mp2_datadump_enable.picdisp_extdump_enable = true;
+		decoder->mp2_datadump_enable.copyright_extdump_enable = true;
+		decoder->mp2_datadump_enable.quantmatrix_extdump_enable =
+			true;
+		decoder->mp2_datadump_enable.seqscalable_extdump_enable =
+			true;
+		decoder->mp2_datadump_enable.seqdisp_extdump_enable = true;
+		decoder->mp2_datadump_enable.seq_extdump_enable = true;
+	}
+	if (flag & VCD_METADATA_USER_DATA)
+		decoder->mp2_datadump_enable.userdatadump_enable =
+				DDL_METADATA_USER_DUMP_FULL_MODE;
+	else
+		decoder->mp2_datadump_enable.userdatadump_enable =
+				DDL_METADATA_USER_DUMP_DISABLE_MODE;
 }

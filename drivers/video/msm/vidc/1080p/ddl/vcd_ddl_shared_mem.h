@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -106,8 +106,8 @@ void vidc_sm_set_extended_encoder_control(
 	struct ddl_buf_addr *shared_mem, u32 hec_enable,
 	enum VIDC_SM_frame_skip  frame_skip_mode, u32 seq_hdr_in_band,
 	u32 vbv_buffer_size, u32 cpcfc_enable, u32 sps_pps_control,
-	u32 closed_gop_enable,
-	u32 restrict_bitstream_enable);
+	u32 closed_gop_enable, u32 au_delim_enable, u32 vui_timing_info_enable,
+	u32 restrict_bitstream_enable, u32 ltr_enable);
 void vidc_sm_set_encoder_param_change(struct ddl_buf_addr *shared_mem,
 	u32 bit_rate_chg, u32 frame_rate_chg, u32 i_period_chg);
 void vidc_sm_set_encoder_vop_time(struct ddl_buf_addr *shared_mem,
@@ -140,7 +140,7 @@ void vidc_sm_get_min_yc_dpb_sizes(struct ddl_buf_addr *shared_mem,
 void vidc_sm_set_metadata_enable(struct ddl_buf_addr *shared_mem,
 	u32 extradata_enable, u32 qp_enable, u32 concealed_mb_enable,
 	u32 vc1Param_enable, u32 sei_nal_enable, u32 vui_enable,
-	u32 enc_slice_size_enable);
+	u32 enc_slice_size_enable, u32 mp2_data_dump_enable);
 void vidc_sm_get_metadata_status(struct ddl_buf_addr *shared_mem,
 	u32 *pb_metadata_present);
 void vidc_sm_get_metadata_display_index(struct ddl_buf_addr *shared_mem,
@@ -183,7 +183,7 @@ void vidc_sm_set_decoder_stuff_bytes_consumption(
 void vidc_sm_set_video_core_timeout_value(struct ddl_buf_addr *shared_mem,
     u32 timeout);
 void vidc_sm_get_aspect_ratio_info(struct ddl_buf_addr *shared_mem,
-	struct vcd_aspect_ratio *aspect_ratio_info);
+	enum vcd_codec codec, struct vcd_aspect_ratio *aspect_ratio_info);
 void vidc_sm_set_encoder_slice_batch_int_ctrl(struct ddl_buf_addr *shared_mem,
     u32 slice_batch_int_enable);
 void vidc_sm_get_num_slices_comp(struct ddl_buf_addr *shared_mem,
@@ -194,5 +194,15 @@ void vidc_sm_set_encoder_batch_config(struct ddl_buf_addr *shared_mem,
         u32 output_buffer_size);
 void vidc_sm_get_encoder_batch_output_size(struct ddl_buf_addr *shared_mem,
         u32 *output_buffer_size);
+void vidc_sm_get_mp2datadump_status(struct ddl_buf_addr
+		*shared_mem, u32 *ext_userdata_present);
+void vidc_sm_set_mp2datadump_enable(struct ddl_buf_addr *shared_mem,
+	struct ddl_mp2_datadumpenabletype *ddl_mp2_datadump_enable);
+void vidc_sm_set_mp2datadumpbuffer(struct ddl_buf_addr *shared_mem,
+	u32 mp2datadumpaddr, u32 mp2datadumpsize);
+void vidc_sm_set_h264_encoder_timing_info(struct ddl_buf_addr *shared_mem,
+	u32 num_units_in_tick, u32 time_scale);
+void vidc_sm_get_mp2common_status(struct ddl_buf_addr *shared_mem,
+	u32 *seq_end_code_present);
 
 #endif
