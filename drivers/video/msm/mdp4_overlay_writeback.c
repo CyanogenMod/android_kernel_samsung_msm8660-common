@@ -353,21 +353,6 @@ static void mdp4_writeback_pipe_clean(struct vsync_update *vp)
 	vp->update_cnt = 0;     /* empty queue */
 }
 
-static void mdp4_writeback_pipe_clean(struct vsync_update *vp)
-{
-	struct mdp4_overlay_pipe *pipe;
-	int i;
-
-	pipe = vp->plist;
-	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
-		if (pipe->pipe_used) {
-			mdp4_overlay_iommu_pipe_free(pipe->pipe_ndx, 0);
-			pipe->pipe_used = 0; /* clear */
-		}
-	}
-	vp->update_cnt = 0;     /* empty queue */
-}
-
 int mdp4_wfd_pipe_commit(struct msm_fb_data_type *mfd,
 			int cndx, int wait)
 {
