@@ -4081,27 +4081,26 @@ static void __init msm8x60_init_dsps(void)
 #define MSM_FB_SIZE roundup((roundup((800 * 480 * 4), 4096) * 3) + MSM_FB_EXT_BUF_SIZE, 4096)
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
-#define RAM_CONSOLE_START          0x77800000
-#define RAM_CONSOLE_SIZE            SZ_1M
+#define RAM_CONSOLE_START       0x7D000000
+#define RAM_CONSOLE_SIZE        SZ_1M
 #endif
 
-#define MSM_SMI_BASE          0x38000000
-#define MSM_SMI_SIZE          0x4000000
+#define MSM_SMI_BASE            0x38000000
+#define MSM_SMI_SIZE            0x4000000
 
-#define MSM_ION_SF_SIZE		0x4000000 /* 64MB */
-#define MSM_ION_CAMERA_SIZE	0x1200000 /* 18MB */
-#define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
-#define MSM_ION_MM_SIZE		0x3600000 /* (54MB) Must be a multiple of 64K */
-#define MSM_ION_MFC_SIZE	SZ_8K
-#define MSM_ION_WB_SIZE		0x1400000 /* 20MB */
-#define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
+#define MSM_ION_SF_SIZE		0x2A00000
+#define MSM_ION_CAMERA_SIZE	0xA00000
+#define MSM_ION_MM_FW_SIZE	0x200000
+#define MSM_ION_MM_SIZE		0x3300000
+#define MSM_ION_MFC_SIZE	0x100000
 #define MSM_ION_AUDIO_SIZE	0x4CF000
 
-#ifdef CONFIG_QSEECOM
-#define MSM_ION_HEAP_NUM	9
-#else
-#define MSM_ION_HEAP_NUM	8
-#endif
+#define MSM_ION_MM_FW_BASE	MSM_SMI_BASE
+#define MSM_ION_MM_BASE		0x38200000
+#define MSM_ION_MFC_BASE	0x3B500000
+#define MSM_ION_CAMERA_BASE     0x3B600000
+
+#define MSM_ION_HEAP_NUM	7
 
 static struct resource msm_fb_resources[] = {
 	{
@@ -9644,6 +9643,7 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_CP_MM_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CP,
 			.name	= ION_MM_HEAP_NAME,
+			.base	= MSM_ION_MM_BASE,
 			.size	= MSM_ION_MM_SIZE,
 			.memory_type = ION_SMI_TYPE,
 			.extra_data = (void *) &cp_mm_ion_pdata,
@@ -9652,6 +9652,7 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_MM_FIRMWARE_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CARVEOUT,
 			.name	= ION_MM_FIRMWARE_HEAP_NAME,
+			.base   = MSM_ION_MM_FW_BASE,
 			.size	= MSM_ION_MM_FW_SIZE,
 			.memory_type = ION_SMI_TYPE,
 			.extra_data = (void *) &fw_co_ion_pdata,
@@ -9660,6 +9661,7 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_CP_MFC_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CP,
 			.name	= ION_MFC_HEAP_NAME,
+			.base	= MSM_ION_MFC_BASE,
 			.size	= MSM_ION_MFC_SIZE,
 			.memory_type = ION_SMI_TYPE,
 			.extra_data = (void *) &cp_mfc_ion_pdata,
@@ -9676,28 +9678,11 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_CAMERA_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CARVEOUT,
 			.name	= ION_CAMERA_HEAP_NAME,
+			.base	= MSM_ION_CAMERA_BASE,
 			.size	= MSM_ION_CAMERA_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = &co_ion_pdata,
 		},
-		{
-			.id	= ION_CP_WB_HEAP_ID,
-			.type	= ION_HEAP_TYPE_CP,
-			.name	= ION_WB_HEAP_NAME,
-			.size	= MSM_ION_WB_SIZE,
-			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &cp_wb_ion_pdata,
-		},
-#ifdef CONFIG_QSEECOM
-		{
-			.id	= ION_QSECOM_HEAP_ID,
-			.type	= ION_HEAP_TYPE_CARVEOUT,
-			.name	= ION_QSECOM_HEAP_NAME,
-			.size	= MSM_ION_QSECOM_SIZE,
-			.memory_type = ION_EBI_TYPE,
-			.extra_data = (void *) &co_ion_pdata,
-		},
-#endif
 		{
 			.id	= ION_AUDIO_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CARVEOUT,
@@ -9733,37 +9718,8 @@ static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
 
 static void reserve_ion_memory(void)
 {
-#if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
-	unsigned int i;
-
-	/* Verify size of heap is a multiple of 64K */
-	for (i = 0; i < ion_pdata.nr; i++) {
-		struct ion_platform_heap *heap = &(ion_pdata.heaps[i]);
-
-		if (heap->extra_data && heap->type == ION_HEAP_TYPE_CP) {
-			int map_all = ((struct ion_cp_heap_pdata *)
-				heap->extra_data)->iommu_map_all;
-
-			if (map_all && (heap->size & (SZ_64K-1))) {
-				heap->size = ALIGN(heap->size, SZ_64K);
-				pr_err("Heap %s size is not a multiple of 64K. Adjusting size to %x\n",
-					heap->name, heap->size);
-
-			}
-		}
-	}
-
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_SF_SIZE;
-	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_FW_SIZE;
-	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_SIZE;
-	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MFC_SIZE;
-	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_CAMERA_SIZE;
-	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_WB_SIZE;
-#ifdef CONFIG_QSEECOM
-	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_QSECOM_SIZE;
-#endif
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
-#endif
 }
 
 static void __init msm8x60_calculate_reserve_sizes(void)
@@ -15711,7 +15667,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 #endif
 	.mdp_rev = MDP_REV_41,
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-	.mem_hid = BIT(ION_CP_WB_HEAP_ID),
+	.mem_hid = BIT(ION_CP_MM_HEAP_ID),
 #else
 	.mem_hid = MEMTYPE_EBI1,
 #endif
