@@ -82,9 +82,6 @@
 #include <linux/i2c/k3g.h>
 #endif
 
-#ifdef CONFIG_ANDROID_PMEM
-#include <linux/android_pmem.h>
-#endif
 #ifdef CONFIG_BATTERY_MAX17040
 #include <linux/max17040_battery.h>
 #endif
@@ -4021,15 +4018,6 @@ void disable_charging_before_reset(void)
 }
 #endif /* CONFIG_BATTERY_SEC */
 
-#ifdef CONFIG_FB_MSM_LCDC_DSUB
-/* VGA = 1440 x 900 x 4(bpp) x 2(pages)
-   prim = 1024 x 600 x 4(bpp) x 2(pages)
-   This is the difference. */
-#define MSM_FB_DSUB_PMEM_ADDER (0xA32000-0x4B0000)
-#else
-#define MSM_FB_DSUB_PMEM_ADDER (0)
-#endif
-
 /* Sensors DSPS platform data */
 #ifdef CONFIG_MSM_DSPS
 
@@ -4081,66 +4069,16 @@ static void __init msm8x60_init_dsps(void)
 }
 #endif /* CONFIG_MSM_DSPS */
 
-#if defined (CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-/* prim = 736 x 1280 x 4(bpp) x 2(pages) */
-#define MSM_FB_PRIM_BUF_SIZE (736 * 1280 * 4 * 3) /* 4 bpp x 3 pages */
-#else
-#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-#define MSM_FB_PRIM_BUF_SIZE \
-		(roundup((800 * 480 * 4), 4096) * 3) /* 4 bpp x 3 pages */
-#else
-#define MSM_FB_PRIM_BUF_SIZE \
-		(roundup((800 * 480 * 4), 4096) * 2) /* 4 bpp x 2 pages */
-#endif
-#endif
-
+/* Memory map */
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 #define MSM_FB_EXT_BUF_SIZE  \
 		(roundup((1920 * 1080 * 2), 4096) * 2) /* 2 bpp x 2 page */
-#elif defined(CONFIG_FB_MSM_TVOUT)
-#define MSM_FB_EXT_BUF_SIZE  \
-		(roundup((720 * 576 * 2), 4096) * 2) /* 2 bpp x 2 pages */
 #else
 #define MSM_FB_EXT_BUF_SIZE	0
 #endif
 
 /* Note: must be multiple of 4096 */
-#define MSM_FB_SIZE roundup(MSM_FB_PRIM_BUF_SIZE + MSM_FB_EXT_BUF_SIZE + \
-				MSM_FB_DSUB_PMEM_ADDER, 4096)
-
-#define MSM_PMEM_SF_SIZE 0x4000000 /* 64 Mbytes */
-#define MSM_HDMI_PRIM_PMEM_SF_SIZE 0x4000000 /* 64 Mbytes */
-
-#ifdef CONFIG_FB_MSM_HDMI_AS_PRIMARY
-unsigned char hdmi_is_primary = 1;
-#else
-unsigned char hdmi_is_primary;
-#endif
-
-#ifdef CONFIG_FB_MSM_OVERLAY0_WRITEBACK
-#if defined (CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-#define MSM_FB_OVERLAY0_WRITEBACK_SIZE roundup((1632 * 968 * 3 * 2), 4096)
-#else
-#define MSM_FB_OVERLAY0_WRITEBACK_SIZE roundup((832 * 512 * 3 * 2), 4096)
-#endif
-#else
-#define MSM_FB_OVERLAY0_WRITEBACK_SIZE (0)
-#endif  /* CONFIG_FB_MSM_OVERLAY0_WRITEBACK */
-
-#ifdef CONFIG_FB_MSM_OVERLAY1_WRITEBACK
-#define MSM_FB_OVERLAY1_WRITEBACK_SIZE roundup((1920 * 1088 * 3 * 2), 4096)
-#else
-#define MSM_FB_OVERLAY1_WRITEBACK_SIZE (0)
-#endif  /* CONFIG_FB_MSM_OVERLAY1_WRITEBACK */
-
-#define MSM_PMEM_KERNEL_EBI1_SIZE  0x0 /* 0x600000 -> 0x0 Not used region */
-#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
-#define MSM_PMEM_ADSP_SIZE         0x4200000
-#else
-#define MSM_PMEM_ADSP_BASE         0x40400000
-#define MSM_PMEM_ADSP_SIZE         0x02900000
-#endif
-#define MSM_PMEM_AUDIO_SIZE        0x4CF000
+#define MSM_FB_SIZE roundup((roundup((800 * 480 * 4), 4096) * 3) + MSM_FB_EXT_BUF_SIZE, 4096)
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 #define RAM_CONSOLE_START          0x77800000
@@ -4150,80 +4088,19 @@ unsigned char hdmi_is_primary;
 #define MSM_SMI_BASE          0x38000000
 #define MSM_SMI_SIZE          0x4000000
 
-#define KERNEL_SMI_BASE       (MSM_SMI_BASE)
-#define KERNEL_SMI_SIZE       0x600000
-
-#define USER_SMI_BASE         (KERNEL_SMI_BASE + KERNEL_SMI_SIZE)
-#define USER_SMI_SIZE         (MSM_SMI_SIZE - KERNEL_SMI_SIZE)
-#define MSM_PMEM_SMIPOOL_SIZE USER_SMI_SIZE
-
 #define MSM_ION_SF_SIZE		0x4000000 /* 64MB */
 #define MSM_ION_CAMERA_SIZE	0x1200000 /* 18MB */
 #define MSM_ION_MM_FW_SIZE	0x200000 /* (2MB) */
 #define MSM_ION_MM_SIZE		0x3600000 /* (54MB) Must be a multiple of 64K */
 #define MSM_ION_MFC_SIZE	SZ_8K
-#if defined (CONFIG_FB_MSM_MIPI_S6E8AA0_HD720_PANEL)
-#define MSM_ION_WB_SIZE 	0x1700000 /* 24MB */
-#else
 #define MSM_ION_WB_SIZE		0x1400000 /* 20MB */
-#endif
 #define MSM_ION_QSECOM_SIZE	0x600000 /* (6MB) */
-#define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
+#define MSM_ION_AUDIO_SIZE	0x4CF000
 
-#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 #ifdef CONFIG_QSEECOM
 #define MSM_ION_HEAP_NUM	9
 #else
 #define MSM_ION_HEAP_NUM	8
-#endif
-#define MSM_HDMI_PRIM_ION_SF_SIZE MSM_HDMI_PRIM_PMEM_SF_SIZE
-static unsigned msm_ion_sf_size = MSM_ION_SF_SIZE;
-#else
-#define MSM_ION_HEAP_NUM	1
-#endif
-
-static unsigned fb_size;
-static int __init fb_size_setup(char *p)
-{
-	fb_size = memparse(p, NULL);
-	return 0;
-}
-early_param("fb_size", fb_size_setup);
-
-static unsigned pmem_kernel_ebi1_size = MSM_PMEM_KERNEL_EBI1_SIZE;
-static int __init pmem_kernel_ebi1_size_setup(char *p)
-{
-	pmem_kernel_ebi1_size = memparse(p, NULL);
-	return 0;
-}
-early_param("pmem_kernel_ebi1_size", pmem_kernel_ebi1_size_setup);
-
-#ifdef CONFIG_ANDROID_PMEM
-static unsigned pmem_sf_size = MSM_PMEM_SF_SIZE;
-static int __init pmem_sf_size_setup(char *p)
-{
-	pmem_sf_size = memparse(p, NULL);
-	return 0;
-}
-early_param("pmem_sf_size", pmem_sf_size_setup);
-
-static unsigned pmem_adsp_size = MSM_PMEM_ADSP_SIZE;
-
-static int __init pmem_adsp_size_setup(char *p)
-{
-	pmem_adsp_size = memparse(p, NULL);
-	return 0;
-}
-early_param("pmem_adsp_size", pmem_adsp_size_setup);
-
-static unsigned pmem_audio_size = MSM_PMEM_AUDIO_SIZE;
-
-static int __init pmem_audio_size_setup(char *p)
-{
-	pmem_audio_size = memparse(p, NULL);
-	return 0;
-}
-early_param("pmem_audio_size", pmem_audio_size_setup);
 #endif
 
 static struct resource msm_fb_resources[] = {
@@ -4297,11 +4174,8 @@ static int msm_fb_detect_panel(const char *name)
 #endif
 	if (!strncmp(name, HDMI_PANEL_NAME,
 			strnlen(HDMI_PANEL_NAME,
-				PANEL_NAME_MAX_LEN))) {
-		if (hdmi_is_primary)
-			set_mdp_clocks_for_wuxga();
+				PANEL_NAME_MAX_LEN)))
 		return 0;
-	}
 
 	if (!strncmp(name, TVOUT_PANEL_NAME,
 			strnlen(TVOUT_PANEL_NAME,
@@ -4324,51 +4198,6 @@ static struct platform_device msm_fb_device = {
 	.dev.platform_data = &msm_fb_pdata,
 };
 
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-static struct android_pmem_platform_data android_pmem_pdata = {
-	.name = "pmem",
-	.allocator_type = PMEM_ALLOCATORTYPE_ALLORNOTHING,
-	.cached = 1,
-	.memory_type = MEMTYPE_EBI1,
-};
-
-static struct platform_device android_pmem_device = {
-	.name = "android_pmem",
-	.id = 0,
-	.dev = {.platform_data = &android_pmem_pdata},
-};
-
-static struct android_pmem_platform_data android_pmem_adsp_pdata = {
-	.name = "pmem_adsp",
-	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 0,
-#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
-	.memory_type = MEMTYPE_PMEM_ADSP,
-#else
-	.memory_type = MEMTYPE_EBI1,
-#endif
-};
-
-static struct platform_device android_pmem_adsp_device = {
-	.name = "android_pmem",
-	.id = 2,
-	.dev = { .platform_data = &android_pmem_adsp_pdata },
-};
-
-static struct android_pmem_platform_data android_pmem_audio_pdata = {
-	.name = "pmem_audio",
-	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 0,
-	.memory_type = MEMTYPE_EBI1,
-};
-
-static struct platform_device android_pmem_audio_device = {
-	.name = "android_pmem",
-	.id = 4,
-	.dev = { .platform_data = &android_pmem_audio_pdata },
-};
-#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
 #define PMEM_BUS_WIDTH(_bw) \
 	{ \
 		.vectors = &(struct msm_bus_vectors){ \
@@ -4411,24 +4240,6 @@ void *setup_smi_region(void)
 {
 	return (void *)msm_bus_scale_register_client(&smi_client_pdata);
 }
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-static struct android_pmem_platform_data android_pmem_smipool_pdata = {
-	.name = "pmem_smipool",
-	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
-	.cached = 0,
-	.memory_type = MEMTYPE_SMI,
-	.request_region = request_smi_region,
-	.release_region = release_smi_region,
-	.setup_region = setup_smi_region,
-	.map_on_demand = 1,
-};
-static struct platform_device android_pmem_smipool_device = {
-	.name = "android_pmem",
-	.id = 7,
-	.dev = { .platform_data = &android_pmem_smipool_pdata },
-};
-#endif
-#endif
 
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 static struct resource ram_console_resource[] = {
@@ -5281,38 +5092,18 @@ static struct platform_device mipi_dsi_s6e8aa0_hd720_panel_device = {
 #endif
 #endif
 
-#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION /* onlyjazz.ub02 : workaournd for kernel memory crash by TZBSP XPU */
-
-#define TZBSP_EXEC_BASE 0x42E20000
-#define TZBSP_EXEC_SIZE 0x000E0000
-
-#endif /* onlyjazz.ub02 : end */
-
 static void __init msm8x60_allocate_memory_regions(void)
 {
 	void *addr;
 	unsigned long size;
-	
-#ifndef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION /* onlyjazz.ub02 : workaournd for kernel memory crash by TZBSP XPU */
-    int ret;
-	 ret = reserve_bootmem(TZBSP_EXEC_BASE, TZBSP_EXEC_SIZE, BOOTMEM_EXCLUSIVE);
-	 if (ret < 0) {
-		  printk(KERN_ERR "reserve_bootmem for TZBSP EXEC BASE failed\n");
-	 }
 
-#endif /* onlyjazz.ub02 : end */
-
-	if (hdmi_is_primary)
-		size = roundup((1920 * 1088 * 4 * 2), 4096);
-	else
-		size = MSM_FB_SIZE;
+	size = MSM_FB_SIZE;
 
 	addr = alloc_bootmem_align(size, 0x1000);
 	msm_fb_resources[0].start = __pa(addr);
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
-
 }
 
 void __init msm8x60_set_display_params(char *prim_panel, char *ext_panel)
@@ -5322,16 +5113,8 @@ void __init msm8x60_set_display_params(char *prim_panel, char *ext_panel)
 			PANEL_NAME_MAX_LEN);
 		pr_debug("msm_fb_pdata.prim_panel_name %s\n",
 			msm_fb_pdata.prim_panel_name);
-
-		if (!strncmp((char *)msm_fb_pdata.prim_panel_name,
-			HDMI_PANEL_NAME, strnlen(HDMI_PANEL_NAME,
-				PANEL_NAME_MAX_LEN))) {
-			pr_debug("HDMI is the primary display by"
-				" boot parameter\n");
-			hdmi_is_primary = 1;
-			set_mdp_clocks_for_wuxga();
-		}
 	}
+
 	if (strnlen(ext_panel, PANEL_NAME_MAX_LEN)) {
 		strlcpy(msm_fb_pdata.ext_panel_name, ext_panel,
 			PANEL_NAME_MAX_LEN);
@@ -8458,14 +8241,6 @@ static struct platform_device *rumi_sim_devices[] __initdata = {
 #ifdef CONFIG_I2C_SSBI
 	&msm_device_ssbi3,
 #endif
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	&android_pmem_device,
-	&android_pmem_adsp_device,
-	&android_pmem_smipool_device,
-	&android_pmem_audio_device,
-#endif
-#endif
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
@@ -9668,14 +9443,6 @@ static struct platform_device *surf_devices[] __initdata = {
 #ifdef CONFIG_USB_SWITCH_FSA9480
 	&sec_device_switch,  // samsung switch driver
 #endif
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	&android_pmem_device,
-	&android_pmem_adsp_device,
-	&android_pmem_smipool_device,
-	&android_pmem_audio_device,
-#endif
-#endif
 #ifdef CONFIG_MSM_ROTATOR
 	&msm_rotator_device,
 #endif
@@ -9909,9 +9676,6 @@ static struct ion_platform_data ion_pdata = {
 			.id	= ION_CAMERA_HEAP_ID,
 			.type	= ION_HEAP_TYPE_CARVEOUT,
 			.name	= ION_CAMERA_HEAP_NAME,
-#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
-			.base = MSM_PMEM_ADSP_BASE, // should be physical addr
-#endif
 			.size	= MSM_ION_CAMERA_SIZE,
 			.memory_type = ION_EBI_TYPE,
 			.extra_data = &co_ion_pdata,
@@ -9953,33 +9717,12 @@ static struct platform_device ion_dev = {
 };
 #endif
 
-
 static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
-	/* Kernel SMI memory pool for video core, used for firmware */
-	/* and encoder, decoder scratch buffers */
-	/* Kernel SMI memory pool should always precede the user space */
-	/* SMI memory pool, as the video core will use offset address */
-	/* from the Firmware base */
-	[MEMTYPE_SMI_KERNEL] = {
-		.start	=	KERNEL_SMI_BASE,
-		.limit	=	KERNEL_SMI_SIZE,
-		.size	=	KERNEL_SMI_SIZE,
-		.flags	=	MEMTYPE_FLAGS_FIXED,
-	},
-	/* User space SMI memory pool for video core */
-	/* used for encoder, decoder input & output buffers  */
 	[MEMTYPE_SMI] = {
-		.start	=	USER_SMI_BASE,
-		.limit	=	USER_SMI_SIZE,
+		.start	=	MSM_SMI_BASE,
+		.limit	=	MSM_SMI_SIZE,
 		.flags	=	MEMTYPE_FLAGS_FIXED,
 	},
-#ifdef CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION
-	[MEMTYPE_PMEM_ADSP] = {
-		.start	=	MSM_PMEM_ADSP_BASE,
-		.limit	=	MSM_PMEM_ADSP_SIZE,
-		.flags	=	MEMTYPE_FLAGS_FIXED,
-	},
-#endif
 	[MEMTYPE_EBI0] = {
 		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
 	},
@@ -9992,18 +9735,6 @@ static void reserve_ion_memory(void)
 {
 #if defined(CONFIG_ION_MSM) && defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 	unsigned int i;
-
-	if (hdmi_is_primary) {
-		msm_ion_sf_size = MSM_HDMI_PRIM_ION_SF_SIZE;
-		for (i = 0; i < ion_pdata.nr; i++) {
-			if (ion_pdata.heaps[i].id == ION_SF_HEAP_ID) {
-				ion_pdata.heaps[i].size = msm_ion_sf_size;
-				pr_debug("msm_ion_sf_size 0x%x\n",
-					msm_ion_sf_size);
-				break;
-			}
-		}
-	}
 
 	/* Verify size of heap is a multiple of 64K */
 	for (i = 0; i < ion_pdata.nr; i++) {
@@ -10022,7 +9753,7 @@ static void reserve_ion_memory(void)
 		}
 	}
 
-	msm8x60_reserve_table[MEMTYPE_EBI1].size += msm_ion_sf_size;
+	msm8x60_reserve_table[MEMTYPE_EBI1].size += MSM_ION_SF_SIZE;
 	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_FW_SIZE;
 	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_SIZE;
 	msm8x60_reserve_table[MEMTYPE_SMI].size += MSM_ION_MFC_SIZE;
@@ -10035,60 +9766,14 @@ static void reserve_ion_memory(void)
 #endif
 }
 
-static void __init size_pmem_devices(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	android_pmem_adsp_pdata.size = pmem_adsp_size;
-	android_pmem_smipool_pdata.size = MSM_PMEM_SMIPOOL_SIZE;
-
-	if (hdmi_is_primary)
-		pmem_sf_size = MSM_HDMI_PRIM_PMEM_SF_SIZE;
-	android_pmem_pdata.size = pmem_sf_size;
-	android_pmem_audio_pdata.size = MSM_PMEM_AUDIO_SIZE;
-#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
-#endif /*CONFIG_ANDROID_PMEM*/
-}
-
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-static void __init reserve_memory_for(struct android_pmem_platform_data *p)
-{
-	msm8x60_reserve_table[p->memory_type].size += p->size;
-}
-#endif /*CONFIG_MSM_MULTIMEDIA_USE_ION*/
-#endif /*CONFIG_ANDROID_PMEM*/
-
-static void __init reserve_pmem_memory(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_smipool_pdata);
-	reserve_memory_for(&android_pmem_pdata);
-	reserve_memory_for(&android_pmem_audio_pdata);
-#endif
-	msm8x60_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
-#endif
-}
-
-static void __init reserve_mdp_memory(void);
-
 static void __init msm8x60_calculate_reserve_sizes(void)
 {
-	size_pmem_devices();
-	reserve_pmem_memory();
 	reserve_ion_memory();
-	reserve_mdp_memory();
 }
 
 static int msm8x60_paddr_to_memtype(unsigned int paddr)
 {
-#if defined (CONFIG_SEC_KERNEL_REBASE_FOR_PMEM_OPTIMIZATION)
-	if (paddr >= 0x40000000 && paddr < 0x80000000)
-#else
 	if (paddr >= 0x40000000 && paddr < 0x60000000)
-#endif
 		return MEMTYPE_EBI1;
 	if (paddr >= 0x38000000 && paddr < 0x40000000)
 		return MEMTYPE_SMI;
@@ -16041,18 +15726,6 @@ int mdp_core_clk_rate_table[] = {
 };
 #endif
 
-static void __init reserve_mdp_memory(void)
-{
-	mdp_pdata.ov0_wb_size = MSM_FB_OVERLAY0_WRITEBACK_SIZE;
-	mdp_pdata.ov1_wb_size = MSM_FB_OVERLAY1_WRITEBACK_SIZE;
-#if defined(CONFIG_ANDROID_PMEM) && !defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
-	msm8x60_reserve_table[mdp_pdata.mem_hid].size +=
-		mdp_pdata.ov0_wb_size;
-	msm8x60_reserve_table[mdp_pdata.mem_hid].size +=
-		mdp_pdata.ov1_wb_size;
-#endif
-}
-
 #ifdef CONFIG_FB_MSM_TVOUT
 
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -16133,10 +15806,7 @@ static void __init msm_fb_add_devices(void)
 	msm_fb_register_device("mipi_dsi", &mipi_dsi_pdata);
 #endif
 #ifdef CONFIG_MSM_BUS_SCALING
-	if (hdmi_is_primary)
-		msm_fb_register_device("dtv", &dtv_hdmi_prim_pdata);
-	else
-		msm_fb_register_device("dtv", &dtv_pdata);
+	msm_fb_register_device("dtv", &dtv_pdata);
 #endif
 #ifdef CONFIG_FB_MSM_TVOUT
 	msm_fb_register_device("tvenc", &atv_pdata);
