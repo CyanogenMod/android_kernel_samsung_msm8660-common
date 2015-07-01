@@ -22,7 +22,9 @@
 
 #include <linux/mfd/pm8xxx/core.h>
 #include <linux/input/pmic8xxx-pwrkey.h>
-
+#ifdef CONFIG_TOUCH_CYPRESS_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
 #include <mach/sec_debug.h>
 #include <linux/string.h>
 #include <linux/delay.h>
@@ -195,6 +197,10 @@ static int __devinit pmic8xxx_pwrkey_probe(struct platform_device *pdev)
 	pwrkey->pwr = pwr;
 
 	platform_set_drvdata(pdev, pwrkey);
+#ifdef CONFIG_TOUCH_CYPRESS_SWEEP2WAKE
+	sweep2wake_setdev(pwr);
+	printk(KERN_INFO "[sweep2wake]: set device %s\n", pwr->name);
+#endif
 
 	err = request_any_context_irq(key_press_irq, pwrkey_press_irq,
 		IRQF_TRIGGER_RISING, "pmic8xxx_pwrkey_press", pwrkey);

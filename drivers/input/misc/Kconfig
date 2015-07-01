@@ -12,6 +12,12 @@ menuconfig INPUT_MISC
 
 if INPUT_MISC
 
+config ENHANCED_BLN
+	bool "Enhanced BLN support for backlight notifications"
+	help
+	  Say Y here to use the keypad's backlight as a notification LED for
+	  Android (modified liblights required).
+
 config INPUT_88PM860X_ONKEY
 	tristate "88PM860x ONKEY support"
 	depends on MFD_88PM860X

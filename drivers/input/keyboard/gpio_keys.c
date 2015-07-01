@@ -9,6 +9,9 @@
  */
 
 #include <linux/module.h>
+#ifdef CONFIG_TOUCH_CYPRESS_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
 
 #include <linux/init.h>
 #include <linux/fs.h>
@@ -483,7 +486,12 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	input->id.vendor = 0x0001;
 	input->id.product = 0x0001;
 	input->id.version = 0x0100;
-
+#ifdef CONFIG_TOUCH_CYPRESS_SWEEP2WAKE
+	if (!strcmp(input->name, "gpio-keys")) {
+		sweep2wake_setdev(input);
+		printk(KERN_INFO "[sweep2wake]: set device %s\n", input->name);
+	}
+#endif
 	/* Enable auto repeat feature of Linux input subsystem */
 	if (pdata->rep)
 		__set_bit(EV_REP, input->evbit);

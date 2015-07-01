@@ -199,27 +199,6 @@ static void memzero(void *buf, size_t size)
 }
 #endif
 
-#ifndef memmove
-/* Not static to avoid a conflict with the prototype in the Linux headers. */
-void *memmove(void *dest, const void *src, size_t size)
-{
-	uint8_t *d = dest;
-	const uint8_t *s = src;
-	size_t i;
-
-	if (d < s) {
-		for (i = 0; i < size; ++i)
-			d[i] = s[i];
-	} else if (d > s) {
-		i = size;
-		while (i-- > 0)
-			d[i] = s[i];
-	}
-
-	return dest;
-}
-#endif
-
 /*
  * Since we need memmove anyway, would use it as memcpy too.
  * Commented out for now to avoid breaking things.

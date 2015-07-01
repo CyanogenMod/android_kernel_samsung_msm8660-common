@@ -45,6 +45,11 @@
 #endif
 #define IMMVIBESPIAPI static
 
+#define LEVEL_MAX           100
+#define LEVEL_MIN           50
+#define LEVEL_DEFAULT       100
+#define LEVEL_THRESHOLD     100
+
 /*
 ** This SPI supports only one actuator.
 */
@@ -107,6 +112,7 @@ static bool g_bAmpEnabled = false;
 
 long int freq_count = FREQ_COUNT;
 
+unsigned long pwm_val = 100;
 
 int vibe_set_pwm_freq(int nForce)
 {
@@ -633,6 +639,93 @@ IMMVIBESPIAPI VibeStatus ImmVibeSPI_ForceOut_SetSamples(VibeUInt8 nActuatorIndex
 
 	return VIBE_S_SUCCESS;
 }
+
+static ssize_t pwm_max_show(struct device *dev,
+                            struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", LEVEL_MAX);
+	pr_info("vibrator: pwm max value: %d\n", LEVEL_MAX);
+
+	return count;
+}
+
+static DEVICE_ATTR(pwm_max, S_IRUGO | S_IWUSR,
+                   pwm_max_show, NULL);
+
+static ssize_t pwm_min_show(struct device *dev,
+                            struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", LEVEL_MIN);
+	pr_info("vibrator: pwm min value: %d\n", LEVEL_MIN);
+
+	return count;
+}
+
+static DEVICE_ATTR(pwm_min, S_IRUGO | S_IWUSR,
+                   pwm_min_show, NULL);
+
+static ssize_t pwm_default_show(struct device *dev,
+                                struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", LEVEL_DEFAULT);
+	pr_info("vibrator: pwm default value: %d\n", LEVEL_DEFAULT);
+
+	return count;
+}
+
+static DEVICE_ATTR(pwm_default, S_IRUGO | S_IWUSR,
+                   pwm_default_show, NULL);
+
+static ssize_t pwm_threshold_show(struct device *dev,
+                                  struct device_attribute *attr, char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%d\n", LEVEL_THRESHOLD);
+	pr_info("vibrator: pwm threshold value: %d\n", LEVEL_THRESHOLD);
+
+	return count;
+}
+
+static DEVICE_ATTR(pwm_threshold, S_IRUGO | S_IWUSR,
+                   pwm_threshold_show, NULL);
+
+static ssize_t pwm_value_show(struct device *dev, struct device_attribute *attr,
+                              char *buf)
+{
+	int count;
+
+	count = sprintf(buf, "%lu\n", pwm_val);
+	pr_debug("[VIB] pwm_val: %lu\n", pwm_val);
+
+	return count;
+}
+
+ssize_t pwm_value_store(struct device *dev, struct device_attribute *attr,
+                        const char *buf, size_t size)
+{
+	if (kstrtoul(buf, 0, &pwm_val))
+
+	pr_err("[VIB] %s: error on storing pwm_val\n", __func__);
+	pr_info("[VIB] %s: pwm_val=%lu\n", __func__, pwm_val);
+
+	/* make sure new pwm duty is in range */
+	if(pwm_val > 100)
+		pwm_val = 100;
+	else if (pwm_val < 0)
+		pwm_val = 0;
+
+	return size;
+}
+
+static DEVICE_ATTR(pwm_value, S_IRUGO | S_IWUSR,
+    pwm_value_show, pwm_value_store);
 
 #if 0	/* Unused */
 /*
