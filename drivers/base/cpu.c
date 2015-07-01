@@ -25,6 +25,12 @@ EXPORT_SYMBOL(cpu_sysdev_class);
 static DEFINE_PER_CPU(struct sys_device *, cpu_sys_devices);
 
 #ifdef CONFIG_HOTPLUG_CPU
+
+#ifdef CONFIG_CPU_TOGGLE
+int enabled[NR_CPUS];
+bool toggle_init;
+#endif
+
 static ssize_t show_online(struct sys_device *dev, struct sysdev_attribute *attr,
 			   char *buf)
 {
@@ -62,10 +68,47 @@ static ssize_t __ref store_online(struct sys_device *dev, struct sysdev_attribut
 }
 static SYSDEV_ATTR(online, 0644, show_online, store_online);
 
+#ifdef CONFIG_CPU_TOGGLE
+static ssize_t show_enabled(struct sys_device *dev, struct sysdev_attribute *attr, char *buf)
+{
+	struct cpu *cpu = container_of(dev, struct cpu, sysdev);
+
+	return sprintf(buf, "%d\n", enabled[cpu->sysdev.id]);
+}
+
+static ssize_t __ref store_enabled(struct sys_device *dev, struct sysdev_attribute *attr, const char *buf, size_t count)
+{
+	struct cpu *cpu = container_of(dev, struct cpu, sysdev);
+
+	sscanf(buf, "%du", &enabled[cpu->sysdev.id]);
+
+	cpu_hotplug_driver_lock();
+	if(enabled[cpu->sysdev.id]){
+		if (!cpu_up(cpu->sysdev.id))
+			kobject_uevent(&dev->kobj, KOBJ_ONLINE);
+	}
+	cpu_hotplug_driver_unlock();
+	
+	return count;
+}
+static SYSDEV_ATTR(enabled, 0644, show_enabled, store_enabled);
+
+bool cpu_enabled(unsigned int cpu){
+	return enabled[cpu] || !toggle_init;
+}
+#endif
+
 static void __cpuinit register_cpu_control(struct cpu *cpu)
 {
+	#ifdef CONFIG_CPU_TOGGLE
+	int i;
+	for(i = 0; i < NR_CPUS; i++) enabled[i] = 1;
+	sysdev_create_file(&cpu->sysdev, &attr_enabled);
+	toggle_init = true;
+	#endif
 	sysdev_create_file(&cpu->sysdev, &attr_online);
 }
+
 void unregister_cpu(struct cpu *cpu)
 {
 	int logical_cpu = cpu->sysdev.id;
@@ -73,6 +116,10 @@ void unregister_cpu(struct cpu *cpu)
 	unregister_cpu_under_node(logical_cpu, cpu_to_node(logical_cpu));
 
 	sysdev_remove_file(&cpu->sysdev, &attr_online);
+	#ifdef CONFIG_CPU_TOGGLE
+	sysdev_remove_file(&cpu->sysdev, &attr_enabled);
+	toggle_init = false;
+	#endif
 
 	sysdev_unregister(&cpu->sysdev);
 	per_cpu(cpu_sys_devices, logical_cpu) = NULL;

@@ -80,3 +80,17 @@ config BROADCOM_WIFI
 	default y
 	---help---
 		This is a configuration for broadcom WLAN driver.
+
+config BRCM_CCX
+	bool "Enable CCX"
+	default n
+	---help---
+		Enable Cisco Compatible eXtenstion
+
+config DRIVER_TYPE
+	bool "Build BCMDHD into the kernel"
+	default n
+	---help---
+		This allows you to choose how to build bcmdhd
+		Saying y builds it into the kernel
+		Saying n builds it as a module

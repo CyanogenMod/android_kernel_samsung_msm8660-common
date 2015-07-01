@@ -112,6 +112,8 @@ source "drivers/staging/zsmalloc/Kconfig"
 
 source "drivers/staging/qcache/Kconfig"
 
+source "drivers/staging/snappy/Kconfig"
+
 source "drivers/staging/wlags49_h2/Kconfig"
 
 source "drivers/staging/wlags49_h25/Kconfig"

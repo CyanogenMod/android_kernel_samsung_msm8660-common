@@ -53,6 +53,7 @@ obj-$(CONFIG_KEYBOARD_XTKBD)		+= xtkbd.o
 obj-$(CONFIG_KEYBOARD_QCIKBD)       += qci_kbd.o
 obj-$(CONFIG_KEYBOARD_W90P910)		+= w90p910_keypad.o
 obj-$(CONFIG_KEYBOARD_PMIC8058)		+= pmic8058-keypad.o
+obj-$(CONFIG_TOUCH_CYPRESS_SWEEP2WAKE)	+= s2w-switch.o
 ifdef CONFIG_TARGET_SERIES_DALI
 obj-$(CONFIG_KEYPAD_CYPRESS_TOUCH)                += cypress-touchkey_dali.o
 else ifdef CONFIG_KOR_MODEL_SHV_E160S

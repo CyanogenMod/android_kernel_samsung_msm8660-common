@@ -345,6 +345,13 @@ int __cpuinit cpu_up(unsigned int cpu)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_CPU_TOGGLE
+	if(!cpu_enabled(cpu)){
+		err = -EBUSY;
+		goto out;
+	}
+#endif
+
 #ifdef	CONFIG_MEMORY_HOTPLUG
 	nid = cpu_to_node(cpu);
 	if (!node_online(nid)) {

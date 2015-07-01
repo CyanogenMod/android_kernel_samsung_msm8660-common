@@ -20,6 +20,7 @@ config ARM
 	select HAVE_KERNEL_GZIP
 	select HAVE_KERNEL_LZO
 	select HAVE_KERNEL_LZMA
+	select HAVE_KERNEL_XZ
 	select HAVE_IRQ_WORK
 	select HAVE_PERF_EVENTS
 	select PERF_USE_VMALLOC
@@ -1484,6 +1485,11 @@ config HOTPLUG_CPU
 	help
 	  Say Y here to experiment with turning CPUs off and on.  CPUs
 	  can be controlled through /sys/devices/system/cpu.
+
+config CPU_TOGGLE
+	bool "Support for disabling CPUs through userpace."
+	depends on HOTPLUG_CPU
+	default "n"
 
 config LOCAL_TIMERS
 	bool "Use local timer interrupts"
